@@ -175,6 +175,46 @@ def test_noise_probe_degrades_to_unknown():
     assert verdict in ("ok", "loud", "unknown")
 
 
+# ---- camera watchdog -------------------------------------------------------------
+def test_camera_fallback_marks_honest_env_and_logs_once():
+    from edu_air.ui import ClassroomPipeline
+
+    class FakeSession:
+        mode = "real"
+
+        def __init__(self):
+            self.env_calls = []
+
+        def set_environment(self, **kw):
+            self.env_calls.append(kw)
+
+    pipe = ClassroomPipeline(FakeSession())
+    emitted = []
+    pipe.log_line.connect(emitted.append)
+    assert pipe._camera_fallback is False
+    sess = pipe.session
+    pipe._fallback_from_camera()
+    pipe._fallback_from_camera()          # second call is a no-op
+    assert pipe._camera_fallback is True
+    assert sess.env_calls == [{"hand_visible": False}]
+    assert emitted == ["Camera unavailable — synthetic pointer mode. "
+                       "Close other apps using the webcam and restart."]
+
+
+def test_camera_backend_prefers_directshow_on_windows():
+    from edu_air.ui import _camera_backend
+
+    class FakeCV:
+        CAP_ANY = 0
+        CAP_DSHOW = 700
+
+    class FakeLegacyCV:
+        CAP_ANY = 0
+
+    assert _camera_backend(FakeCV) == 700        # win32 -> DirectShow
+    assert _camera_backend(FakeLegacyCV) == 0    # no DSHOW -> CAP_ANY
+
+
 # ---- i18n ----------------------------------------------------------------------
 def test_new_ux_keys_exist_in_all_languages():
     keys = [

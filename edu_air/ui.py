@@ -21,6 +21,7 @@ HADJ ``SpeechManager``. All UI updates are marshalled through Qt signals.
 
 from __future__ import annotations
 
+import os
 import threading
 import time
 from typing import Optional
@@ -644,6 +645,14 @@ class ClassroomWindow(QMainWindow):
 # ---------------------------------------------------------------------------
 # Camera + gesture + voice pipeline.
 # ---------------------------------------------------------------------------
+def _camera_backend(cv2_mod) -> int:
+    """Pick the video backend: DirectShow fails fast (returns "no frame") on a
+    busy/broken webcam instead of hanging forever like MSMF on Windows."""
+    if os.name == "nt" and hasattr(cv2_mod, "CAP_DSHOW"):
+        return cv2_mod.CAP_DSHOW
+    return getattr(cv2_mod, "CAP_ANY", 0)
+
+
 class ClassroomPipeline(QObject):
     frame_ready = Signal(object)
     voice_ready = Signal(str)
@@ -663,6 +672,7 @@ class ClassroomPipeline(QObject):
         self._preview_h = 200
         self._last_frame = None
         self._demo_fallback = session.mode == "demo"
+        self._camera_fallback = False   # webcam unusable -> synthetic pointer
 
     # ---- lifecycle ------------------------------------------------------------
     def start(self) -> None:
@@ -711,21 +721,45 @@ class ClassroomPipeline(QObject):
             self._noise_thread.start()
 
     def _noise_loop(self) -> None:
-        """Background ambient-noise meter -> classroom traffic light."""
+        """Background ambient-noise meter -> classroom traffic light.
+
+        Backs off when the microphone is busy (e.g. the speech recogniser
+        holds it) so the two consumers never fight over the device."""
         from .voice import NoiseProbe
         probe = NoiseProbe()
         state = "unknown"
-        while not self._noise_closed.wait(2.0):
+        misses = 0
+        period = 2.0
+        while not self._noise_closed.wait(period):
             try:
                 v = probe.read(0.4)
             except Exception:
                 v = "unknown"
-            if v != "unknown":
-                state = v
+            if v == "unknown":
+                misses += 1
+                period = 6.0 if misses >= 2 else 2.0
+                continue
+            misses = 0
+            period = 2.0
+            state = v
             try:
                 self.session.set_environment(ambient_noise=state)
             except Exception:
                 pass
+
+    def _fallback_from_camera(self) -> None:
+        """Camera open/read watchdog: drop the webcam, keep the class going
+        with synthetic pointers and honest "unknown" environment states."""
+        if self._camera_fallback:
+            return
+        self._camera_fallback = True
+        try:
+            self.session.set_environment(hand_visible=False)
+        except Exception:
+            pass
+        self.log_line.emit(
+            "Camera unavailable — synthetic pointer mode. "
+            "Close other apps using the webcam and restart.")
 
     # ---- main loop --------------------------------------------------------------
     def _loop(self) -> None:
@@ -741,11 +775,21 @@ class ClassroomPipeline(QObject):
         cam = None
         cap_w, cap_h = self.session.settings.classroom.capture_size()
         if not self._demo_fallback and cv2 is not None:
+            # DirectShow fails fast (and returns "no frame") on a busy/broken
+            # camera, whereas the default MSMF backend can hang forever on
+            # Windows. Whatever happens below, a watchdog falls back to
+            # synthetic pointers so the app never sticks at "starting…".
             try:
-                cam = cv2.VideoCapture(0)
-                cam.set(cv2.CAP_PROP_FRAME_WIDTH, cap_w)
-                cam.set(cv2.CAP_PROP_FRAME_HEIGHT, cap_h)
+                cam = cv2.VideoCapture(0, _camera_backend(cv2))
+                if cam.isOpened():
+                    cam.set(cv2.CAP_PROP_FRAME_WIDTH, cap_w)
+                    cam.set(cv2.CAP_PROP_FRAME_HEIGHT, cap_h)
             except Exception:
+                try:
+                    if cam is not None:
+                        cam.release()
+                except Exception:
+                    pass
                 cam = None
 
         self.tracker = HandTracker()
@@ -755,6 +799,7 @@ class ClassroomPipeline(QObject):
         t0 = time.monotonic()
         frame_idx = 0
         tracked: list = []
+        camera_dead_at: float | None = None
         while self._running.is_set():
             now = time.monotonic()
             dt = now - t0
@@ -768,6 +813,7 @@ class ClassroomPipeline(QObject):
             if cam is not None:
                 ok, frame = cam.read()
                 if ok:
+                    camera_dead_at = None
                     self._last_frame = frame
                     if frame_idx % every == 0:
                         tracked = self.tracker.detect(frame, cap_w, cap_h)
@@ -777,7 +823,13 @@ class ClassroomPipeline(QObject):
                     real_hands = list(tracked)
                     self._emit_preview(frame)
                 else:
-                    real_hands = self._synthetic_hands(now)
+                    if camera_dead_at is None:
+                        camera_dead_at = now
+                    elif now - camera_dead_at >= 4.0:
+                        self._fallback_from_camera()
+                        if cam is not None:
+                            cam.release()
+                        cam = None
             elif self._demo_fallback:
                 real_hands = self._synthetic_hands(now)
 
