@@ -1,0 +1,5 @@
+# Netlify edge headers — statically equivalent to web/vercel.json and
+# vercel.json (both say: cleanUrls + sw.js no-cache). Kept byte-synced with
+# the SW header block so the service worker is never stale behind Netlify's CDN.
+/sw.js
+  Cache-Control: no-cache, no-store, must-revalidate

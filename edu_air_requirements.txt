@@ -1,0 +1,24 @@
+# EDU-AIR — contactless classroom system
+# Reuses the HADJ NO-TOUCH AI infrastructure; Python 3.10-3.12 (Windows).
+#
+# Install with:  py -3.12 -m pip install -r edu_air_requirements.txt
+
+# --- core runtime -------------------------------------------------------
+PySide6>=6.5          # classroom control window + projection overlay
+opencv-python>=4.8    # webcam capture + homography for projector calibration
+mediapipe==0.10.21    # hand landmark tracking (voice-classroom gestures)
+numpy>=1.24,<2.0
+pywin32>=306          # Win32 keyboard/mouse drivers (real mode)
+
+# --- voice ----------------------------------------------------------------
+SpeechRecognition>=3.10   # EN / FR / AR classroom voice commands
+sounddevice>=0.4
+
+# --- development / testing -----------------------------------------------
+pytest>=7.0
+
+# NOTES
+# - Vosk (offline, fully local) can be enabled in hadj_no_touch.voice.
+# - pycaw/comtypes are optional for precise volume control; not required by
+#   the classroom profile, so they are intentionally omitted here.
+# - The app runs fully in demo mode (--demo) with no camera/mic/OS access.

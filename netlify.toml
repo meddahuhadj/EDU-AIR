@@ -1,0 +1,21 @@
+# Netlify deployment for HADJ NO-TOUCH AI — static landing site ONLY.
+#
+# This publishes the `web/` folder (index.html / app.js / styles.css / sw.js /
+# manifest) to Netlify's edge, exactly like the existing vercel.json publishes
+# the same folder to Vercel. It NEVER deploys the AI itself: `hadj_no_touch/`
+# is a local desktop application (camera + mic + hand tracking) that must run
+# on the user's own machine and never leaves it. Nothing in this file can or
+# does push the AI anywhere — Web hosting cannot host a local desktop app.
+[build]
+  # No build command: web/ is already static and deployable as-is.
+  command = ""
+
+  # Publish the static landing folder. `cleanUrls`/SPA behavior is described in
+  # headers below; keep in sync with vercel.json (cleanUrls: true).
+  publish = "web"
+
+[build.environment]
+  # Honest: there is nothing to install or compile. Spread is deliberate —
+  # this file is green only when the web/ folder truly exists on disk.
+  PYTHON_VERSION = "off"   # no Python runtime is involved in a static deploy
+  NODE_VERSION = "off"     # no build step, no bundler

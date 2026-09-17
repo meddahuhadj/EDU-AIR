@@ -1,0 +1,34 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+
+# Local user data (created at runtime under %LOCALAPPDATA% too)
+*.db
+*.db-wal
+*.db-shm
+config.json
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+.vercel
+
+# Heavy local PWA copy (large installer zip, excluded)
+edu_air_web/downloads/
+web/downloads/
+
+
+# PWA copy lives on the main branch, not this desktop branch
+edu_air_web/
