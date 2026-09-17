@@ -37,6 +37,12 @@
   let quizAnswered = -1; // -1 none, 0..3 chosen option
   let quizRevealed = false;
 
+  let paint = "cyan";
+  let focusMode = false;
+  let motionOk = true;
+  let pulses = [];
+  let pulseTimer = null;
+
   /* ---------------- dom refs ---------------- */
   const H = {
     slide: $("#hud-slide"),
@@ -49,6 +55,12 @@
   };
   const quizPanel = () => $("#quiz-panel");
   const shell = $("#stage-shell");
+  const demoCard = $("#demo-card");
+  const focusBtn = $("#focus-btn");
+  const focusLbl = $("#focus-lbl");
+  const focusExit = $("#focus-exit");
+  const motionBtn = $("#motion-btn");
+  const motionLbl = $("#motion-lbl");
 
   /* ---------------- helpers ---------------- */
   function pos(e) {
@@ -79,6 +91,38 @@
     drawSlide();
     drawStrokes();
     if (!paused) drawPointer();
+    drawPulses();
+  }
+
+  function drawPulses() {
+    if (!pulses.length) return;
+    const now = performance.now();
+    const alive = [];
+    for (const p of pulses) {
+      const k = (now - p.start) / 650;
+      if (k >= 1) continue;
+      alive.push(p);
+      const e = 1 - Math.pow(1 - k, 3);
+      ctx.globalAlpha = 1 - k;
+      ctx.strokeStyle = p.color;
+      ctx.lineWidth = Math.max(1, 4 * (1 - k));
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r0 + (p.maxR - p.r0) * e, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    pulses = alive;
+  }
+
+  function addPulse(x, y, color, big) {
+    if (!motionOk) return;
+    pulses.push({ x, y, color, r0: big ? 18 : 8, maxR: big ? 60 : 26, start: performance.now() });
+    if (pulses.length > 8) pulses.shift();
+    if (pulseTimer) clearTimeout(pulseTimer);
+    pulseTimer = setTimeout(() => {
+      pulseTimer = null;
+      if (pulses.length) { pulses = []; drawScene(); }
+    }, 700);
   }
 
   function drawSlide() {
@@ -203,7 +247,7 @@
   }
 
   /* ---------------- stroke tools ---------------- */
-  const COLORS = { draw: "#34D399", highlight: "#FFD166", erase: "#0C1512" };
+  const PALETTE = { cyan: "#4DC8FF", amber: "#FFD166", blue: "#5B8CFF", magenta: "#FF5DA2", white: "#FFFFFF" };
 
   function addPoint(p) {
     if (tool === "erase") {
@@ -211,7 +255,7 @@
       return;
     }
     if (!dragStroke) {
-      dragStroke = { tool, color: COLORS[tool], width: tool === "draw" ? 4 : 8, pts: [p] };
+      dragStroke = { tool, color: PALETTE[paint], width: tool === "draw" ? 4 : 8, pts: [p] };
       strokes.push(dragStroke);
     } else {
       const last = dragStroke.pts[dragStroke.pts.length - 1];
@@ -331,6 +375,7 @@
     if (!quizOn || quizAnswered >= 0 || quizRevealed) return;
     quizAnswered = i;
     if (i === QUIZ_ANSWER[quizIdx]) quizScore++;
+    addPulse(CW * 0.5, CH * 0.5, i === QUIZ_ANSWER[quizIdx] ? "#34D399" : "#F87171", true);
     renderQuizDoor();
     drawScene();
   }
@@ -347,6 +392,7 @@
     quizAnswered = -1;
     quizRevealed = false;
     quizIdx = (quizIdx + 1) % QUIZ_Q;
+    addPulse(CW * 0.5, CH * 0.5, "#FFD166", true);
     renderQuizDoor();
     drawScene();
   }
@@ -359,6 +405,7 @@
       quizScore = 0;
       if (quizIdx >= QUIZ_Q) quizIdx = 0;
     }
+    addPulse(CW * 0.5, CH * 0.5, "#FFD166", true);
     renderHud();
     renderQuizDoor();
     drawScene();
@@ -424,6 +471,7 @@
     pointer.x = p.x; pointer.y = p.y;
     setHint();
     addPoint(p);
+    addPulse(p.x, p.y, tool === "point" ? "#FFD166" : tool === "erase" ? "#94A3B8" : PALETTE[paint], false);
     drawScene();
   });
   window.addEventListener("pointermove", (e) => {
@@ -441,9 +489,10 @@
     if (dragStroke) {
       const moved = dragStroke.pts.length;
       if (moved <= 1 && tool !== "erase") {
-        strokes.push({ tool: "point", color: COLORS.draw, width: 8, pts: [p, { x: p.x + 0.01, y: p.y + 0.01 }] });
+        strokes.push({ tool: "point", color: PALETTE[paint], width: 8, pts: [p, { x: p.x + 0.01, y: p.y + 0.01 }] });
       }
       dragStroke = null;
+      addPulse(p.x, p.y, tool === "erase" ? "#94A3B8" : PALETTE[paint], false);
     }
     setHint();
     drawScene();
@@ -454,7 +503,8 @@
     const el = e.target;
     if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT")) return;
     if (e.code === "F5") { e.preventDefault(); slide = 0; clearBoard(); renderHud(); drawScene(); }
-    else if (e.code === "Escape") { e.preventDefault(); slide = 0; clearBoard(); renderHud(); drawScene(); }
+    else if (e.code === "Escape") { e.preventDefault(); if (focusMode) { toggleFocus(); } else { slide = 0; clearBoard(); renderHud(); drawScene(); } }
+    else if (e.key === "f" || e.key === "F") { toggleFocus(); }
     else if (e.key === "ArrowRight") { updateSlide(1); }
     else if (e.key === "ArrowLeft") { updateSlide(-1); }
     else if (e.key === "b" || e.key === "B") { togglePause(); }
@@ -481,6 +531,58 @@
   $("#timer-btn").addEventListener("click", toggleTimer);
   $("#quiz-btn").addEventListener("click", toggleQuiz);
 
+  /* ---------------- palette swatches ---------------- */
+  $$(".swatch").forEach((b) => {
+    b.addEventListener("click", () => {
+      paint = b.dataset.paint;
+      $$(".swatch").forEach((o) => o.classList.toggle("active", o === b));
+    });
+  });
+
+  /* ---------------- presentation: focus + motion ---------------- */
+  function syncFocusUI() {
+    focusLbl.textContent = t(focusMode ? "demo.focusExit" : "demo.focus");
+    focusBtn.setAttribute("aria-pressed", String(focusMode));
+    focusBtn.classList.toggle("active", focusMode);
+  }
+
+  function toggleFocus() {
+    focusMode = !focusMode;
+    demoCard.classList.toggle("focus", focusMode);
+    syncFocusUI();
+    drawScene();
+  }
+
+  focusBtn.addEventListener("click", toggleFocus);
+  focusExit.addEventListener("click", toggleFocus);
+
+  const matchReduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)");
+
+  function motionPref() {
+    try { return localStorage.getItem("edu.air.motion"); } catch (e) { return null; }
+  }
+
+  function applyMotion() {
+    const saved = motionPref();
+    motionOk = saved ? saved === "on" : !(matchReduce && matchReduce.matches);
+    document.documentElement.dataset.motion = motionOk ? "on" : "off";
+    motionLbl.textContent = t(motionOk ? "demo.motionOn" : "demo.motionOff");
+    motionBtn.setAttribute("aria-pressed", String(motionOk));
+    motionBtn.classList.toggle("active", motionOk);
+    if (!motionOk) pulses = [];
+    drawScene();
+  }
+
+  motionBtn.addEventListener("click", () => {
+    const want = !motionOk;
+    try { localStorage.setItem("edu.air.motion", want ? "on" : "off"); } catch (e) {}
+    applyMotion();
+  });
+
+  if (matchReduce) {
+    matchReduce.addEventListener("change", () => applyMotion());
+  }
+
   /* ---------------- language switcher ---------------- */
   const select = $("#lang-select");
   const currentTag = $("#lang-current");
@@ -502,6 +604,8 @@
     renderHud();
     renderQuizDoor();
     syncLang();
+    applyMotion();
+    syncFocusUI();
     drawScene();
   };
 
@@ -541,6 +645,8 @@
     renderHud();
     updateToolbar();
     renderQuizDoor();
+    applyMotion();
+    syncFocusUI();
     drawScene();
     H.hint.textContent = t("demo.hintMove");
   }

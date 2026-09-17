@@ -275,6 +275,7 @@ html[dir="rtl"] .vhead th{text-align:right}
 
 /* ------------------------------- demo ------------------------------- */
 .demo-card{
+  position:relative;
   background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);
   overflow:hidden;
 }
@@ -296,6 +297,19 @@ html[dir="rtl"] .vhead th{text-align:right}
   position:absolute;inset:0;border-radius:0;pointer-events:none;
   background:radial-gradient(120% 90% at 50% 30%, transparent 60%, rgba(0,0,0,.35));
 }
+.focus-exit{
+  position:absolute;right:12px;bottom:12px;display:none;z-index:5;cursor:pointer;
+  padding:8px 14px;border-radius:999px;
+  background:rgba(12,21,18,.82);border:1px solid var(--border-hi);color:var(--chalk);
+  font-family:var(--mono);font-size:12px;font-weight:650;
+}
+.focus-exit:hover{border-color:var(--teal);background:rgba(12,21,18,.95)}
+.demo-card.focus .hud,
+.demo-card.focus .demo-hint,
+.demo-card.focus .demo-tip,
+.demo-card.focus .toolbar{display:none}
+.demo-card.focus .focus-exit{display:inline-block}
+html[dir="rtl"] .focus-exit{right:auto;left:12px}
 
 .toolbar{display:flex;gap:10px;flex-wrap:wrap;padding:14px 16px;border-top:1px solid var(--border);background:var(--surface-2)}
 .tool-group{display:flex;gap:6px;flex-wrap:wrap;padding-right:12px;margin-right:12px;border-right:1px solid var(--border)}
@@ -308,6 +322,17 @@ html[dir="rtl"] .vhead th{text-align:right}
 .tool:hover{border-color:var(--teal);color:var(--chalk)}
 .tool.active{background:var(--green);border-color:var(--green);color:#05271C}
 .tool-clear:hover{border-color:var(--amber);color:var(--amber-bright)}
+
+.tool-colors{align-items:center;gap:8px}
+.swatch{
+  width:26px;height:26px;border-radius:50%;cursor:pointer;padding:0;box-sizing:border-box;
+  border:2px solid transparent;
+  transition:transform .15s,border-color .15s,box-shadow .15s;
+}
+.swatch:hover{transform:scale(1.12)}
+.swatch.active{border-color:var(--chalk);box-shadow:0 0 0 3px rgba(169,245,216,.30)}
+.swatch-white{border-color:var(--border-hi)}
+.swatch-white.active{border-color:#0C1512;outline:1px dashed var(--chalk)}
 
 .demo-hint{
   font-family:var(--mono);font-size:12.5px;color:var(--muted);
@@ -419,6 +444,9 @@ html[dir="rtl"] kbd,html[dir="rtl"] .req-code,html[dir="rtl"] .calib-note{direct
 html[dir="rtl"] .step-num{font-size:15px}
 
 /* ------------------------------- motion ------------------------------- */
+html[data-motion="off"]{scroll-behavior:auto}
+html[data-motion="off"] .screen-cursor{animation:none}
+html[data-motion="off"] *,html[data-motion="off"] *::before,html[data-motion="off"] *::after{transition-duration:.01ms !important;animation-duration:.01ms !important}
 @media (prefers-reduced-motion: reduce){
   html{scroll-behavior:auto}
   .screen-cursor{animation:none}

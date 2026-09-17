@@ -230,6 +230,15 @@
     "demo.gestureTest": "Gesture test: pinch + hold in the stage triggers a click",
     "demo.calibTip":
       "In the classroom you calibrate once: camera → projection area → corners → alignment → gesture test. Here the board simply follows your pointer.",
+    "demo.focus": "Focus",
+    "demo.focusExit": "Exit focus (F)",
+    "demo.motionOn": "Animations on",
+    "demo.motionOff": "Animations off",
+    "demo.colCyan": "Cyan",
+    "demo.colAmber": "Amber",
+    "demo.colBlue": "Blue",
+    "demo.colMagenta": "Magenta",
+    "demo.colWhite": "White",
     "setup.label": "Setup",
     "setup.title": "Three honest pieces of hardware",
     "setup.lead":
@@ -258,7 +267,7 @@
     "setup.calib4": "Alignment check",
     "setup.calib5": "Gesture test",
     "setup.kbHint":
-      "Keyboard fallback: F5 start · ESC stop · →/← slides · B pause · Ctrl+/Ctrl- zoom · PgUp/PgDn scroll · Del clear",
+      "Keyboard fallback: F5 start · ESC stop · →/← slides · B pause · Ctrl+/Ctrl- zoom · PgUp/PgDn scroll · Del clear · F focus",
     "safety.label": "Safety",
     "safety.title": "Deny by default, refuse nothing important",
     "safety.lead":
@@ -520,6 +529,15 @@
     "demo.gestureTest": "Test de gestes : pincer + maintenir dans la scène déclenche un clic",
     "demo.calibTip":
       "En classe vous calibrez une fois : caméra → zone de projection → coins → alignement → test de gestes. Ici, le tableau suit simplement votre pointeur.",
+    "demo.focus": "Focus",
+    "demo.focusExit": "Quitter le focus (F)",
+    "demo.motionOn": "Animations activées",
+    "demo.motionOff": "Animations désactivées",
+    "demo.colCyan": "Cyan",
+    "demo.colAmber": "Ambre",
+    "demo.colBlue": "Bleu",
+    "demo.colMagenta": "Magenta",
+    "demo.colWhite": "Blanc",
     "setup.label": "Installation",
     "setup.title": "Trois vraies pièces de matériel",
     "setup.lead":
@@ -548,7 +566,7 @@
     "setup.calib4": "Vérification de l'alignement",
     "setup.calib5": "Test de gestes",
     "setup.kbHint":
-      "Raccourcis clavier : F5 démarrer · ÉCHAP arrêter · →/← diapos · B pause · Ctrl+/Ctrl- zoom · PgPréc/PgSuiv défilement · Suppr effacer",
+      "Raccourcis clavier : F5 démarrer · ÉCHAP arrêter · →/← diapos · B pause · Ctrl+/Ctrl- zoom · PgPréc/PgSuiv défilement · Suppr effacer · F focus",
     "safety.label": "Sécurité",
     "safety.title": "Refus par défaut, aucun geste vital bloqué",
     "safety.lead":
@@ -810,6 +828,15 @@
     "demo.gestureTest": "اختبار الإيماءات: قرص + ضغطة داخل المنصة يُطلق نقرة",
     "demo.calibTip":
       "في الصف تُعاير مرة واحدة: كاميرا → منطقة العرض → الزوايا → المحاذاة → اختبار الإيماءات. هنا اللوحة تتبع مؤشرك ببساطة.",
+    "demo.focus": "تركيز",
+    "demo.focusExit": "الخروج من التركيز (F)",
+    "demo.motionOn": "التحريك مفعّل",
+    "demo.motionOff": "التحريك متوقف",
+    "demo.colCyan": "سماوي",
+    "demo.colAmber": "كهرماني",
+    "demo.colBlue": "أزرق",
+    "demo.colMagenta": "أرجواني",
+    "demo.colWhite": "أبيض",
     "setup.label": "الإعداد",
     "setup.title": "ثلاث قطع أجهزة حقيقية",
     "setup.lead":
@@ -838,7 +865,7 @@
     "setup.calib4": "فحص المحاذاة",
     "setup.calib5": "اختبار الإيماءات",
     "setup.kbHint":
-      "بدائل لوحة المفاتيح: F5 بدء · ESC إيقاف · →/← الشرائح · B إيقاف مؤقت · Ctrl+/Ctrl- تكبير · PgUp/PgDn تمرير · Del مسح",
+      "بدائل لوحة المفاتيح: F5 بدء · ESC إيقاف · →/← الشرائح · B إيقاف مؤقت · Ctrl+/Ctrl- تكبير · PgUp/PgDn تمرير · Del مسح · F تركيز",
     "safety.label": "الأمان",
     "safety.title": "رفض افتراضي، دون حجب أي شيء مهم",
     "safety.lead":
@@ -1100,6 +1127,15 @@
     "demo.gestureTest": "Gebarentest: knijp + houd vast in het podium geeft een klik",
     "demo.calibTip":
       "In de klas kalibreer je één keer: camera → projectiegebied → hoeken → uitlijning → gebarentest. Hier volgt het bord gewoon je aanwijzer.",
+    "demo.focus": "Focus",
+    "demo.focusExit": "Focus verlaten (F)",
+    "demo.motionOn": "Animaties aan",
+    "demo.motionOff": "Animaties uit",
+    "demo.colCyan": "Cyaan",
+    "demo.colAmber": "Amber",
+    "demo.colBlue": "Blauw",
+    "demo.colMagenta": "Magenta",
+    "demo.colWhite": "Wit",
     "setup.label": "Installatie",
     "setup.title": "Drie eerlijke stukken hardware",
     "setup.lead":
@@ -1128,7 +1164,7 @@
     "setup.calib4": "Uitlijningscontrole",
     "setup.calib5": "Gebarentest",
     "setup.kbHint":
-      "Toetsenbord: F5 start · ESC stop · →/← dia's · B pauze · Ctrl+/Ctrl- zoom · PgUp/PgDn scrollen · Del wissen",
+      "Toetsenbord: F5 start · ESC stop · →/← dia's · B pauze · Ctrl+/Ctrl- zoom · PgUp/PgDn scrollen · Del wissen · F focus",
     "safety.label": "Veiligheid",
     "safety.title": "Weigeren bij twijfel, niets belangrijks blokkeren",
     "safety.lead":
