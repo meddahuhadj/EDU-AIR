@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#12241f"/>
+      <stop offset="1" stop-color="#0a120f"/>
+    </linearGradient>
+    <linearGradient id="sheet" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f6faf7"/>
+      <stop offset="1" stop-color="#e0e9e2"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="512" height="512" rx="112" fill="url(#bg)"/>
+  <path d="M120 96h272a36 36 0 0 1 36 36v176a36 36 0 0 1-36 36H120a36 36 0 0 1-36-36V132a36 36 0 0 1 36-36z"
+        fill="url(#sheet)" stroke="#1b3a31" stroke-width="4"/>
+  <rect x="156" y="168" width="200" height="26" rx="13" fill="#1b3a31"/>
+  <rect x="156" y="248" width="200" height="20" rx="10" fill="#2aa48a" opacity="0.45"/>
+  <rect x="156" y="292" width="160" height="20" rx="10" fill="#2aa48a" opacity="0.45"/>
+  <rect x="156" y="336" width="176" height="20" rx="10" fill="#2aa48a" opacity="0.45"/>
+  <path d="M352 200 L396 292 L308 292 Z" fill="none" stroke="#2aa48a" stroke-width="12" stroke-linejoin="round"/>
+  <path d="M352 200 v-52 h-76" fill="none" stroke="#2aa48a" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="396" cy="332" r="18" fill="#ffd166"/>
+</svg>

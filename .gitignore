@@ -7,7 +7,7 @@ __pycache__/
 .venv/
 venv/
 
-# Local user data (created at runtime under %LOCALAPPDATA% too)
+# Local user data
 *.db
 *.db-wal
 *.db-shm
@@ -17,6 +17,7 @@ config.json
 build/
 dist/
 *.egg-info/
+downloads/
 
 # IDE / OS
 .idea/
@@ -24,11 +25,8 @@ dist/
 .DS_Store
 Thumbs.db
 .vercel
+*.log
 
-# Heavy local PWA copy (large installer zip, excluded)
-edu_air_web/downloads/
+# Heavy local download assets
 web/downloads/
-
-
-# PWA copy lives on the main branch, not this desktop branch
 edu_air_web/

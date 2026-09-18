@@ -1,0 +1,2 @@
+# Keep the 300+ MB desktop ZIP out of Vercel static deploys (> Hobby ~100 MB cap).
+downloads/

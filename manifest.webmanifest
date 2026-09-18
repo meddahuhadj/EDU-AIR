@@ -1,0 +1,23 @@
+{
+  "name": "EDU-AIR",
+  "short_name": "EDU-AIR",
+  "description": "EDU-AIR — contactless classroom: pointer, slides, annotation, quiz, timer.",
+  "lang": "en",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0E1B19",
+  "theme_color": "#0E1B19",
+  "categories": ["education", "productivity", "accessibility"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Live demo", "url": "./#demo", "description": "Open the interactive classroom demo." }
+  ],
+  "locales": ["en", "fr", "ar", "nl"]
+}
