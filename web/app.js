@@ -62,6 +62,46 @@
 
   $("#install-btn").addEventListener("click", promptInstall);
 
+  /* ---------- Floating download CTA ---------- */
+
+  const floatCta = $("#float-download");
+  if (floatCta) {
+    const dlSection = $("#download");
+    const updateFloatCta = () => {
+      let inDownload = false;
+      if (dlSection) {
+        const r = dlSection.getBoundingClientRect();
+        inDownload = r.top < window.innerHeight * 0.75 && r.bottom > 0;
+      }
+      const pastHero = window.scrollY > Math.max(window.innerHeight * 0.9, 320);
+      floatCta.classList.toggle("float-visible", pastHero && !inDownload);
+    };
+    window.addEventListener("scroll", updateFloatCta, { passive: true });
+    window.addEventListener("resize", updateFloatCta, { passive: true });
+    updateFloatCta();
+  }
+
+  /* ---------- Classroom video (auto-enable when the mp4 exists) ---------- */
+
+  const classroomPlayer = $("#classroom-player");
+  const classroomFallback = $("#classroom-fallback");
+  if (classroomPlayer && classroomFallback) {
+    const probe = document.createElement("video");
+    probe.preload = "metadata";
+    probe.muted = true;
+    let settled = false;
+    const resolve = (hasVideo) => {
+      if (settled) return;
+      settled = true;
+      classroomPlayer.hidden = !hasVideo;
+      classroomFallback.hidden = hasVideo;
+    };
+    probe.addEventListener("loadedmetadata", () => resolve(true), { once: true });
+    probe.addEventListener("error", () => resolve(false), { once: true });
+    probe.src = "assets/classroom-demo.mp4";
+    window.setTimeout(() => resolve(false), 4000);
+  }
+
   /* ---------- Shared gesture → action bus ---------- */
 
   const clicksEl = $("#hud-clicks");

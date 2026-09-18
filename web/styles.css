@@ -1304,3 +1304,95 @@ html[dir="rtl"] .hud-val.tabnum { direction: ltr; unicode-bidi: isolate; }
   .stop-rings::before, .stop-rings::after { animation: none; opacity: 0; }
   .scroll-cue span { animation: none; }
 }
+
+/* ---------- Floating download CTA ---------- */
+
+.float-cta {
+  position: fixed;
+  right: 1.1rem; bottom: 1.1rem;
+  z-index: 110;
+  display: inline-flex; align-items: center; gap: 0.55rem;
+  min-height: 48px; padding: 0.6rem 1.2rem;
+  border-radius: 999px;
+  border: 1px solid rgba(76, 201, 255, 0.45);
+  background: rgba(6, 15, 26, 0.92);
+  color: #eafaff;
+  text-decoration: none;
+  font-weight: 700; font-size: 0.94rem; letter-spacing: 0.01em;
+  box-shadow: 0 0 0 1px rgba(76, 201, 255, 0.12), 0 14px 40px -14px rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  opacity: 0; transform: translateY(16px);
+  pointer-events: none;
+  transition: opacity 0.3s var(--ease), transform 0.3s var(--ease),
+    border-color 0.2s, box-shadow 0.25s var(--ease);
+}
+.float-cta.float-visible { opacity: 1; transform: none; pointer-events: auto; }
+.float-cta:hover {
+  border-color: var(--cyan);
+  box-shadow: 0 0 22px -6px rgba(76, 201, 255, 0.5), 0 16px 44px -14px rgba(0, 0, 0, 0.8);
+}
+.float-cta .win-ic { color: var(--cyan); }
+
+@media (max-width: 520px) {
+  .float-cta { right: 10px; bottom: 10px; min-height: 44px; padding: 0.55rem 0.95rem; font-size: 0.86rem; }
+}
+
+/* ---------- Classroom video / proof ---------- */
+
+.classroom-player {
+  max-width: 920px; margin-inline: auto;
+  padding: 0.8rem;
+}
+.classroom-player video {
+  width: 100%;
+  border-radius: calc(var(--radius) - 4px);
+  border: 1px solid var(--line);
+  background: #000;
+  display: block;
+}
+.classroom-fallback {
+  max-width: 660px; margin-inline: auto;
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+  display: flex; flex-direction: column; align-items: center; gap: 0.9rem;
+  text-align: center;
+}
+.classroom-fallback h3 { font-size: 1.3rem; font-weight: 700; letter-spacing: -0.01em; }
+.classroom-fallback p { color: var(--muted); font-size: 0.95rem; max-width: 48ch; }
+
+.proof-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+}
+.proof-card {
+  padding: 1.5rem 1.4rem 1.35rem;
+  display: flex; flex-direction: column; gap: 1rem;
+  transition: transform 0.25s var(--ease), border-color 0.25s, background 0.25s;
+}
+.proof-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--line-strong);
+  background: var(--panel2);
+}
+.proof-quote {
+  display: block; height: 0.55em; margin-block-start: -0.3em;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 2.6rem; line-height: 0; color: var(--cyan); opacity: 0.75;
+}
+.proof-card blockquote p { font-size: 0.98rem; color: var(--text); }
+.proof-who {
+  display: flex; flex-direction: column; gap: 0.15rem;
+  border-top: 1px dashed rgba(126, 195, 255, 0.14);
+  padding-top: 0.9rem;
+}
+.proof-who strong { font-size: 0.95rem; font-weight: 700; }
+.proof-role { color: var(--muted); font-size: 0.82rem; }
+.proof-note {
+  margin-block-start: 1.3rem;
+  text-align: center; color: var(--muted); font-size: 0.85rem;
+}
+
+@media (max-width: 620px) {
+  .proof-grid { grid-template-columns: 1fr; }
+}

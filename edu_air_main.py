@@ -89,21 +89,45 @@ def main(argv: list[str] | None = None) -> int:
     window.show()
     window._show_overlay()
 
+    def _set_camera_text(text: str) -> None:
+        try:
+            window.camera_preview.setText(text)
+        except Exception:
+            pass
+
+    if demo_mode:
+        _set_camera_text("Demo mode — no camera preview")
+
+    def _on_camera_state(state: str) -> None:
+        if state == "on":
+            _set_camera_text("")
+        elif state == "demo":
+            _set_camera_text("Demo mode — no camera preview")
+        else:
+            _set_camera_text(
+                "Camera unavailable — close other apps using the webcam "
+                "and restart.")
+
     def _show_preview(frame):
         try:
             from PySide6.QtGui import QImage, QPixmap
             h, w, ch = frame.shape
-            img = QImage(frame.data, w, h, ch * w, QImage.Format.Format_RGB888)
-            window.camera_preview.setPixmap(QPixmap.fromImage(img).scaled(
-                window.camera_preview.width(), window.camera_preview.height(),
-                ignoreAspectRatio=True))
-        except Exception:
-            pass
+            img = QImage(frame.tobytes(), w, h, ch * w, QImage.Format.Format_RGB888).copy()
+            pw = window.camera_preview.width()
+            ph = window.camera_preview.height()
+            if pw <= 1 or ph <= 1:
+                pw, ph = 400, 200
+            pix = QPixmap.fromImage(img).scaled(
+                pw, ph, ignoreAspectRatio=True)
+            window.camera_preview.setPixmap(pix)
+        except Exception as exc:
+            _set_camera_text(f"Preview error: {exc}")
 
     pipeline = ClassroomPipeline(session, parent=window)
     pipeline.voice_ready.connect(session.handle_voice_text)
     pipeline.log_line.connect(lambda msg, _w=window: _w.show_log(msg))
     pipeline.frame_ready.connect(_show_preview)
+    pipeline.camera_state.connect(_on_camera_state)
 
     pipeline.start()
     window._pipeline = pipeline

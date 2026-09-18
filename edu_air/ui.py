@@ -201,6 +201,7 @@ class OverlayWindow(QWidget):
                        i18n.t("quiz.correct",
                               x=labels[q.answer_idx]))
 
+    @staticmethod
     def _tool_key(tool: str) -> str:
         """Map an annotation tool name to its i18n key."""
         return {"point": "tool.point", "draw": "tool.draw",
@@ -228,7 +229,7 @@ class OverlayWindow(QWidget):
                    total=max(1, st.total_slides),
                    state=i18n.t(state_key).upper()),
             i18n.t("hud.cmd", cmd=st.last_command or "—"),
-            i18n.t("hud.tool_clock", tool=i18n.t(_tool_key(st.annotation_tool)),
+            i18n.t("hud.tool_clock", tool=i18n.t(self._tool_key(st.annotation_tool)),
                    secs=st.clock_seconds),
             i18n.t("hud.quiz",
                    state=i18n.t("quiz.on") if st.quiz_active else i18n.t("quiz.off")),
@@ -261,6 +262,11 @@ class ClassroomWindow(QMainWindow):
         self._refresh_timer = QTimer(self)
         self._refresh_timer.timeout.connect(self.refresh)
         self._refresh_timer.start(200)
+
+    @property
+    def camera_preview(self) -> QLabel:
+        """QLabel painted with the webcam feed by the app entry point."""
+        return self._camera_lbl
 
     # ---- UI construction ----------------------------------------------------
     def _build_ui(self) -> None:
@@ -657,6 +663,7 @@ class ClassroomPipeline(QObject):
     frame_ready = Signal(object)
     voice_ready = Signal(str)
     log_line = Signal(str)
+    camera_state = Signal(str)  # "on" | "off" | "demo"
 
     def __init__(self, session: ClassroomSession, parent=None):
         super().__init__(parent)
@@ -754,6 +761,10 @@ class ClassroomPipeline(QObject):
             return
         self._camera_fallback = True
         try:
+            self.camera_state.emit("off")
+        except Exception:
+            pass
+        try:
             self.session.set_environment(hand_visible=False)
         except Exception:
             pass
@@ -775,15 +786,22 @@ class ClassroomPipeline(QObject):
         cam = None
         cap_w, cap_h = self.session.settings.classroom.capture_size()
         if not self._demo_fallback and cv2 is not None:
-            # DirectShow fails fast (and returns "no frame") on a busy/broken
-            # camera, whereas the default MSMF backend can hang forever on
-            # Windows. Whatever happens below, a watchdog falls back to
-            # synthetic pointers so the app never sticks at "starting…".
             try:
-                cam = cv2.VideoCapture(0, _camera_backend(cv2))
-                if cam.isOpened():
-                    cam.set(cv2.CAP_PROP_FRAME_WIDTH, cap_w)
-                    cam.set(cv2.CAP_PROP_FRAME_HEIGHT, cap_h)
+                from hadj_no_touch.camera.camera_config import resolve_camera, apply_exposure
+                cam_idx, backend = resolve_camera(preferred=0, max_index=4)
+                if cam_idx >= 0:
+                    backend_arg = backend if backend is not None else _camera_backend(cv2)
+                    cam = cv2.VideoCapture(cam_idx, backend_arg)
+                    if cam.isOpened():
+                        cam.set(cv2.CAP_PROP_FRAME_WIDTH, cap_w)
+                        cam.set(cv2.CAP_PROP_FRAME_HEIGHT, cap_h)
+                        apply_exposure(cam)
+                        ok_test, test_frame = cam.read()
+                        if not ok_test or test_frame is None or test_frame.size == 0:
+                            # Re-open at native resolution if resolution change broke output
+                            cam.release()
+                            cam = cv2.VideoCapture(cam_idx, backend_arg)
+                            apply_exposure(cam)
             except Exception:
                 try:
                     if cam is not None:
@@ -791,6 +809,26 @@ class ClassroomPipeline(QObject):
                 except Exception:
                     pass
                 cam = None
+
+            if (cam is None or not cam.isOpened()) and cv2 is not None:
+                try:
+                    cam = cv2.VideoCapture(0, _camera_backend(cv2))
+                    if cam.isOpened():
+                        cam.set(cv2.CAP_PROP_FRAME_WIDTH, cap_w)
+                        cam.set(cv2.CAP_PROP_FRAME_HEIGHT, cap_h)
+                except Exception:
+                    try:
+                        if cam is not None:
+                            cam.release()
+                    except Exception:
+                        pass
+                    cam = None
+
+        if self._demo_fallback:
+            self.camera_state.emit("demo")
+        else:
+            self.camera_state.emit(
+                "on" if cam is not None and cam.isOpened() else "off")
 
         self.tracker = HandTracker()
         self.gesture_engine = ge.GestureEngine()

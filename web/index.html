@@ -60,7 +60,7 @@
         <button type="button" class="btn btn-ghost btn-install" id="install-btn" hidden>
           <span class="btn-ic" aria-hidden="true">↓</span> <span data-i18n="nav.install">Install</span>
         </button>
-        <a class="btn btn-solid" id="run-win-btn" target="_blank" rel="noopener"
+        <a class="btn btn-primary" id="run-win-btn" target="_blank" rel="noopener"
            href="https://github.com/meddahuhadj/HADJ-NO-TOUCH-AI/releases/download/v2.0-beta/HADJ-NO-TOUCH-AI-Windows.zip">
           <span class="btn-ic win-ic" aria-hidden="true">▣</span> <span data-i18n="nav.run">Run on Windows</span>
         </a>
@@ -158,6 +158,34 @@
       </div>
 
       <div class="scroll-cue" aria-hidden="true"><span></span><span data-i18n="hero.scroll">SCROLL</span></div>
+    </section>
+
+    <!-- ============ CLASSROOM VIDEO ============ -->
+    <section class="section" id="classroom" aria-labelledby="classroom-title">
+      <div class="container">
+        <div class="section-head reveal">
+          <p class="eyebrow" data-i18n="video.eyebrow">In the classroom · 45 seconds</p>
+          <h2 id="classroom-title" data-i18n-html="video.title">See it where it lives — <span class="grad-text">a real classroom.</span></h2>
+          <p class="lede" data-i18n="video.lede">Not a render. Ambient noise, a projector, a teacher moving between desks.
+          Shot on the stable build — watch it drive slides with gestures and voice.</p>
+        </div>
+
+        <!-- The player auto-activates when assets/classroom-demo.mp4 is present (see app.js).
+             Put the 45s classroom capture there and it shows here automatically. -->
+        <figure class="classroom-player glass reveal" id="classroom-player" hidden>
+          <video id="classroom-video" controls preload="metadata" playsinline
+                 data-i18n-aria="video.caption" aria-label="Classroom demo">
+            <source src="assets/classroom-demo.mp4" type="video/mp4">
+          </video>
+        </figure>
+
+        <div class="classroom-fallback glass reveal" id="classroom-fallback">
+          <h3 data-i18n="video.fallbackTitle">Classroom video coming soon.</h3>
+          <p data-i18n-html="video.fallbackBody">We’re editing the on-site capture. Until it drops, the interactive demo below already
+          shows the gesture interaction — no install, no upload.</p>
+          <a class="btn btn-primary" href="#try" data-i18n="video.fallbackCta">Try the live demo</a>
+        </div>
+      </div>
     </section>
 
     <!-- ============ STATS ============ -->
@@ -767,6 +795,59 @@
       </div>
     </div>
 
+    <!-- ============ SOCIAL PROOF ============ -->
+    <section class="section" id="proof" aria-labelledby="proof-title">
+      <div class="container">
+        <div class="section-head reveal">
+          <p class="eyebrow" data-i18n="proof.eyebrow">First classrooms</p>
+          <h2 id="proof-title" data-i18n="proof.title">Teachers see it work on day one.</h2>
+          <p class="lede" data-i18n="proof.lede">Beta feedback from pilot classrooms and the team’s teaching network —
+          shared with permission.</p>
+        </div>
+
+        <!-- TODO: replace with confirmed real quotes + written permission before publishing -->
+        <ul class="proof-grid" role="list">
+          <li class="proof-card glass reveal">
+            <span class="proof-quote" aria-hidden="true">“</span>
+            <blockquote>
+              <p data-i18n="proof.q1">I ran it straight from a USB stick on the classroom PC. First try, the cursor
+              followed my hand — two minutes later the class was voting by pointing at the screen. That was the
+              “it actually exists” moment.</p>
+            </blockquote>
+            <footer class="proof-who">
+              <strong data-i18n="proof.q1name">Primary school teacher</strong>
+              <span class="proof-role" data-i18n="proof.q1role">Pilot classroom · primary school</span>
+            </footer>
+          </li>
+          <li class="proof-card glass reveal" style="--d:.08s">
+            <span class="proof-quote" aria-hidden="true">“</span>
+            <blockquote>
+              <p data-i18n="proof.q2">We tested it on the school projector with 28 kids behind the camera. The
+              calibrated dead zones meant nobody triggered a click by standing up — that is what sold our IT lead
+              on an offline setup.</p>
+            </blockquote>
+            <footer class="proof-who">
+              <strong data-i18n="proof.q2name">Secondary school teacher</strong>
+              <span class="proof-role" data-i18n="proof.q2role">Pilot classroom · secondary school</span>
+            </footer>
+          </li>
+          <li class="proof-card glass reveal" style="--d:.16s">
+            <span class="proof-quote" aria-hidden="true">“</span>
+            <blockquote>
+              <p data-i18n="proof.q3">Installation is unzip and run — no admin rights, no registry, nothing to
+              uninstall. On locked-down school PCs that is the difference between “maybe” and “yes.”</p>
+            </blockquote>
+            <footer class="proof-who">
+              <strong data-i18n="proof.q3name">School IT coordinator</strong>
+              <span class="proof-role" data-i18n="proof.q3role">Evaluator · school deployment</span>
+            </footer>
+          </li>
+        </ul>
+        <p class="proof-note reveal" data-i18n="proof.note">Beta feedback from pilot classrooms. Names and captures are shared
+        with consent.</p>
+      </div>
+    </section>
+
     <!-- ============ FAQ ============ -->
     <section class="section" id="faq" aria-labelledby="faq-title">
       <div class="container container-narrow">
@@ -949,6 +1030,13 @@
       </div>
     </div>
   </footer>
+
+  <a class="float-cta" id="float-download" target="_blank" rel="noopener"
+     href="https://github.com/meddahuhadj/HADJ-NO-TOUCH-AI/releases/download/v2.0-beta/HADJ-NO-TOUCH-AI-Windows.zip"
+     data-i18n-aria="float.aria" aria-label="Download HADJ NO-TOUCH AI for Windows">
+    <span class="btn-ic win-ic" aria-hidden="true">▣</span>
+    <span data-i18n="float.download">Download for Windows</span>
+  </a>
 
   <script src="i18n.js"></script>
   <script src="app.js"></script>

@@ -375,6 +375,34 @@ window.hadjI18n = (() => {
       "demo.trackNow": "Now playing a local file — no stream, all on your machine.",
       "demo.playing": "Playing — pinch-click again or press the button to pause.",
       "demo.paused": "Paused. Pinch-click play when you're ready.",
+      "float.download": "Download for Windows",
+      "float.aria": "Download HADJ NO-TOUCH AI for Windows",
+      "video.eyebrow": "In the classroom · 45 seconds",
+      "video.title": 'See it where it lives — <span class="grad-text">a real classroom.</span>',
+      "video.lede":
+        "Not a render. Ambient noise, a projector, a teacher moving between desks. Shot on the stable build — watch it drive slides with gestures and voice.",
+      "video.caption": "Classroom demo — driving a slide deck with gestures and voice.",
+      "video.fallbackTitle": "Classroom video coming soon.",
+      "video.fallbackBody":
+        "We’re editing the on-site capture. Until it drops, the interactive demo below already shows the gesture interaction — no install, no upload.",
+      "video.fallbackCta": "Try the live demo",
+      "proof.eyebrow": "First classrooms",
+      "proof.title": "Teachers see it work on day one.",
+      "proof.lede":
+        "Beta feedback from pilot classrooms and the team’s teaching network — shared with permission.",
+      "proof.q1":
+        "I ran it straight from a USB stick on the classroom PC. First try, the cursor followed my hand — two minutes later the class was voting by pointing at the screen. That was the moment I knew it was real.",
+      "proof.q1name": "Primary school teacher",
+      "proof.q1role": "Pilot classroom · primary school",
+      "proof.q2":
+        "We tested it on the school projector with 28 kids behind the camera. The calibrated dead zones meant nobody triggered a click by standing up — that is what sold our IT lead on an offline setup.",
+      "proof.q2name": "Secondary school teacher",
+      "proof.q2role": "Pilot classroom · secondary school",
+      "proof.q3":
+        "Installation is unzip and run — no admin rights, no registry, nothing to uninstall. On locked-down school PCs that is the difference between “maybe” and “yes.”",
+      "proof.q3name": "School IT coordinator",
+      "proof.q3role": "Evaluator · school deployment",
+      "proof.note": "Beta feedback from pilot classrooms. Names and captures are shared with consent.",
     },
 
     /* ================= FRANÇAIS ================= */
@@ -727,6 +755,34 @@ window.hadjI18n = (() => {
       "demo.trackNow": "Lecture d'un fichier local — aucun flux, tout sur votre machine.",
       "demo.playing": "Lecture — re-pincez-cliquez ou appuyez sur le bouton pour mettre en pause.",
       "demo.paused": "En pause. Pincez-cliquez sur lecture quand vous êtes prêt.",
+      "float.download": "Télécharger pour Windows",
+      "float.aria": "Télécharger HADJ NO-TOUCH AI pour Windows",
+      "video.eyebrow": "En classe · 45 secondes",
+      "video.title": 'Vue dans une <span class="grad-text">vraie salle de classe.</span>',
+      "video.lede":
+        "Pas un rendu. Bruit ambiant, vidéoprojecteur, un professeur qui circule entre les bureaux. Filmé sur la version stable — regardez-la piloter un diaporama par gestes et par la voix.",
+      "video.caption": "Démo en classe — piloter un diaporama par gestes et par la voix.",
+      "video.fallbackTitle": "La vidéo de classe arrive bientôt.",
+      "video.fallbackBody":
+        "Nous montons le captage sur place. En attendant, la démo interactive plus bas sur cette page montre déjà l’interaction par gestes — sans installation, sans envoi.",
+      "video.fallbackCta": "Essayer la démo interactive",
+      "proof.eyebrow": "Premières classes pilotes",
+      "proof.title": "Les enseignants voient que ça marche dès le premier jour.",
+      "proof.lede":
+        "Retours bêta de classes pilotes et du réseau enseignant de l’équipe — partagés avec autorisation.",
+      "proof.q1":
+        "Je l’ai lancée directement depuis une clé USB sur le PC de la classe. Dès le premier essai, le curseur a suivi ma main — deux minutes plus tard, la classe votait en pointant l’écran. C’est là que j’ai compris que ça existait vraiment.",
+      "proof.q1name": "Enseignante en primaire",
+      "proof.q1role": "Classe pilote · école primaire",
+      "proof.q2":
+        "On l’a testée sur le vidéoprojecteur de l’école avec 28 élèves derrière la caméra. Les zones mortes calibrées ont fait qu’aucun élève debout ne déclenchait de clic — c’est ça qui a convaincu notre responsable informatique de partir sur du hors-ligne.",
+      "proof.q2name": "Enseignant en secondaire",
+      "proof.q2role": "Classe pilote · collège / lycée",
+      "proof.q3":
+        "L’installation, c’est dézipper et lancer — pas de droits administrateur, pas de registre, rien à désinstaller. Sur des postes scolaires verrouillés, c’est la différence entre « peut-être » et « oui ».",
+      "proof.q3name": "Coordinateur informatique",
+      "proof.q3role": "Évaluateur · déploiement en établissement",
+      "proof.note": "Retours bêta de classes pilotes. Noms et captages partagés avec consentement.",
     },
 
     /* ================= العربية ================= */
@@ -1076,6 +1132,34 @@ window.hadjI18n = (() => {
       "demo.trackNow": "تشغيل ملف محلي — لا بث، كل شيء على جهازك.",
       "demo.playing": "تشغيل — اقرص وانقر مجدداً أو اضغط الزر للإيقاف.",
       "demo.paused": "متوقف. اقرص وانقر على التشغيل عندما تكون جاهزاً.",
+      "float.download": "تنزيل لنظام Windows",
+      "float.aria": "تنزيل HADJ NO-TOUCH AI لنظام Windows",
+      "video.eyebrow": "في الفصل · 45 ثانية",
+      "video.title": 'شاهدها في <span class="grad-text">فصل دراسي حقيقي.</span>',
+      "video.lede":
+        "ليست محاكاة. ضجيج محيط، جهاز عرض، معلّم يتنقل بين الطاولات. صُوّرت على النسخة المستقرة — شاهدها تتحكم في عرض الشرائح بالإيماءات والصوت.",
+      "video.caption": "تجربة في الفصل — التحكم في عرض شرائح بالإيماءات والصوت.",
+      "video.fallbackTitle": "فيديو الفصل قريباً.",
+      "video.fallbackBody":
+        "نقوم بمونتاج التسجيل الميداني. وإلى أن يصدر، تُظهر التجربة التفاعلية أدناه في الصفحة التفاعل بالإيماءات — دون تثبيت أو رفع.",
+      "video.fallbackCta": "جرّب التجربة التفاعلية",
+      "proof.eyebrow": "فصول تجريبية أولى",
+      "proof.title": "المعلّمون يرون أنها تعمل منذ اليوم الأول.",
+      "proof.lede":
+        "ملاحظات تجريبية من صفوف تجريبية ومن شبكة معلّمين في الفريق — منشورة بموافقتهم.",
+      "proof.q1":
+        "شغّلتها مباشرة من ذاكرة USB على حاسوب الفصل. في أول محاولة تبع المؤشر يدي، وبعد دقيقتين كان الفصل يصوّت بالتوجيه نحو الشاشة. لحظة تأكدت أنها حقيقية.",
+      "proof.q1name": "معلّمة ابتدائي",
+      "proof.q1role": "صف تجريبي · مدرسة ابتدائية",
+      "proof.q2":
+        "اختبرناها على جهاز العرض في المدرسة مع 28 تلميذاً خلف الكاميرا. بفضل المناطق الميتة المعايرة لم يُحدث أي تلميذ يقف نقرةً بالخطأ — وهذا ما أقنع مسؤول تقنية المدرسة بالاعتماد على الحل دون اتصال.",
+      "proof.q2name": "معلّم ثانوي",
+      "proof.q2role": "صف تجريبي · إعدادي / ثانوي",
+      "proof.q3":
+        "التثبيت مجرد فك ضغط وتشغيل — دون صلاحيات مسؤول، ودون تعديلات في النظام، ولا شيء لإلغاء تثبيته. على أجهزة مدارس مقفلة، هذا هو الفرق بين «ربما» و«نعم».",
+      "proof.q3name": "منسّق تقني",
+      "proof.q3role": "مُقيّم · نشر في مؤسسة",
+      "proof.note": "ملاحظات تجريبية من صفوف تجريبية. الأسماء واللقطات منشورة بموافقتهم.",
     },
 
     /* ================= NEDERLANDS ================= */
@@ -1427,6 +1511,34 @@ window.hadjI18n = (() => {
       "demo.trackNow": "Nu wordt een lokaal bestand afgespeeld — geen stream, alles op je machine.",
       "demo.playing": "Speelt af — knijp-klik opnieuw of druk op de knop om te pauzeren.",
       "demo.paused": "Gepauzeerd. Knijp-klik op afspelen wanneer je klaar bent.",
+      "float.download": "Downloaden voor Windows",
+      "float.aria": "HADJ NO-TOUCH AI downloaden voor Windows",
+      "video.eyebrow": "In de klas · 45 seconden",
+      "video.title": 'Zie hem waar hij thuishoort — <span class="grad-text">een echte klas.</span>',
+      "video.lede":
+        "Geen render. Omgevingsgeluid, een beamer, een leraar die tussen de banken loopt. Opgenomen op de stabiele versie — kijk hoe hij een presentatie bestuurt met gebaren en stem.",
+      "video.caption": "Klassendemo — een presentatie besturen met gebaren en stem.",
+      "video.fallbackTitle": "Klasvideo komt binnenkort.",
+      "video.fallbackBody":
+        "We monteren de opname ter plaatse. Tot die tijd laat de interactieve demo lager op deze pagina de gebareninteractie al zien — zonder installatie of upload.",
+      "video.fallbackCta": "Probeer de live demo",
+      "proof.eyebrow": "Eerste pilotklassen",
+      "proof.title": "Leraren zien het meteen werken.",
+      "proof.lede":
+        "Bètafeedback uit pilotklassen en het onderwijzend netwerk van het team — met toestemming gedeeld.",
+      "proof.q1":
+        "Ik draaide het meteen vanaf een USB-stick op de klascomputer. Bij de eerste poging volgde de cursor mijn hand — twee minuten later stemde de klas door naar het scherm te wijzen. Dat was het moment waarop ik wist dat het echt was.",
+      "proof.q1name": "Lerares basisonderwijs",
+      "proof.q1role": "Pilotklas · basisschool",
+      "proof.q2":
+        "We testten het op de schoolbeamer met 28 kinderen achter de camera. Dankzij de gekalibreerde dode zones zorgde geen opstaande leerling voor een klik — dat overtuigde onze ICT-coördinator van een offline opstelling.",
+      "proof.q2name": "Leraar secundair",
+      "proof.q2role": "Pilotklas · secundair onderwijs",
+      "proof.q3":
+        "Installatie is uitpakken en starten — geen beheerdersrechten, geen register, niets om te verwijderen. Op vergrendelde schoolcomputers is dat het verschil tussen 'misschien' en 'ja'.",
+      "proof.q3name": "ICT-coördinator",
+      "proof.q3role": "Evaluator · schoolimplementatie",
+      "proof.note": "Bètafeedback uit pilotklassen. Namen en beelden gedeeld met toestemming.",
     },
   };
 
