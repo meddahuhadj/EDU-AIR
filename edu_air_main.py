@@ -110,6 +110,7 @@ def main(argv: list[str] | None = None) -> int:
 
     def _show_preview(frame):
         try:
+            from PySide6.QtCore import Qt
             from PySide6.QtGui import QImage, QPixmap
             h, w, ch = frame.shape
             img = QImage(frame.tobytes(), w, h, ch * w, QImage.Format.Format_RGB888).copy()
@@ -118,7 +119,10 @@ def main(argv: list[str] | None = None) -> int:
             if pw <= 1 or ph <= 1:
                 pw, ph = 400, 200
             pix = QPixmap.fromImage(img).scaled(
-                pw, ph, ignoreAspectRatio=True)
+                pw, ph,
+                Qt.AspectRatioMode.IgnoreAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
             window.camera_preview.setPixmap(pix)
         except Exception as exc:
             _set_camera_text(f"Preview error: {exc}")
