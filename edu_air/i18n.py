@@ -121,6 +121,8 @@ STRINGS: dict[str, dict[str, str]] = {
     "btn.calibration": {"en": "Calibration", "fr": "Calibrage",
                         "ar": "المعايرة", "nl": "Calibratie"},
     "btn.clear": {"en": "Clear", "fr": "Effacer", "ar": "مسح", "nl": "Wissen"},
+    "btn.next_slide": {"en": "Next ▶", "fr": "Suivante ▶", "ar": "التالية ▶", "nl": "Volgende ▶"},
+    "btn.prev_slide": {"en": "◀ Prev", "fr": "◀ Précédente", "ar": "◀ السابقة", "nl": "◀ Vorige"},
     "btn.window": {"en": "Window", "fr": "Fenêtre", "ar": "النافذة",
                    "nl": "Venster"},
     "btn.help": {"en": "Help", "fr": "Aide", "ar": "مساعدة", "nl": "Help"},

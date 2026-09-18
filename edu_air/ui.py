@@ -330,6 +330,8 @@ class ClassroomWindow(QMainWindow):
         self._export_btn.clicked.connect(self._export_board)
         self._clear_btn = self._add_button(ctrl1, i18n.t("btn.clear"), None)
         self._clear_btn.clicked.connect(self._clear_board)
+        self._prev_btn = self._add_button(ctrl1, i18n.t("btn.prev_slide"), self._prev_slide)
+        self._next_btn = self._add_button(ctrl1, i18n.t("btn.next_slide"), self._next_slide)
         lay.addLayout(ctrl1)
 
         # controls - row 2: tools
@@ -606,11 +608,43 @@ class ClassroomWindow(QMainWindow):
         self._calibration_btn.setText(i18n.t("btn.calibration"))
         self._export_btn.setText(i18n.t("btn.export"))
         self._clear_btn.setText(i18n.t("btn.clear"))
+        self._prev_btn.setText(i18n.t("btn.prev_slide"))
+        self._next_btn.setText(i18n.t("btn.next_slide"))
         self._cam_lbl.setText(i18n.t("label.camera"))
         for tool, btn in self._tool_buttons.items():
             btn.setText(i18n.t(f"tool.{tool}"))
         # status labels refresh themselves on next refresh() call
         self.refresh()
+
+    def _next_slide(self) -> None:
+        self.session.execute(ci.ClassroomIntent(ci.NEXT_SLIDE, source="ui"))
+        self.refresh()
+
+    def _prev_slide(self) -> None:
+        self.session.execute(ci.ClassroomIntent(ci.PREV_SLIDE, source="ui"))
+        self.refresh()
+
+    def keyPressEvent(self, event) -> None:
+        key = event.key()
+        if key in (Qt.Key.Key_Right, Qt.Key.Key_PageDown, Qt.Key.Key_Space):
+            self._next_slide()
+            event.accept()
+            return
+        elif key in (Qt.Key.Key_Left, Qt.Key.Key_PageUp):
+            self._prev_slide()
+            event.accept()
+            return
+        elif key == Qt.Key.Key_F5:
+            self.session.execute(ci.ClassroomIntent(ci.PRESENTATION_START, source="ui"))
+            self.refresh()
+            event.accept()
+            return
+        elif key == Qt.Key.Key_Escape:
+            self.session.execute(ci.ClassroomIntent(ci.PRESENTATION_STOP, source="ui"))
+            self.refresh()
+            event.accept()
+            return
+        super().keyPressEvent(event)
 
     def _run_calibration(self) -> None:
         from .calibration import ProjectorCalibration, STAGE_ORDER

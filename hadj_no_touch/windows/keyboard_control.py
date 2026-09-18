@@ -74,15 +74,57 @@ class _KEYBDINPUT(ctypes.Structure):
         ("wScan", wt.WORD),
         ("dwFlags", wt.DWORD),
         ("time", wt.DWORD),
-        ("dwExtraInfo", ctypes.POINTER(ctypes.c_ulong)),
+        ("dwExtraInfo", ctypes.c_size_t),
     ]
+
+class _MOUSEINPUT(ctypes.Structure):
+    _fields_ = [
+        ("dx", wt.LONG),
+        ("dy", wt.LONG),
+        ("mouseData", wt.DWORD),
+        ("dwFlags", wt.DWORD),
+        ("time", wt.DWORD),
+        ("dwExtraInfo", ctypes.c_size_t),
+    ]
+
+class _HARDWAREINPUT(ctypes.Structure):
+    _fields_ = [
+        ("uMsg", wt.DWORD),
+        ("wParamL", wt.WORD),
+        ("wParamH", wt.WORD),
+    ]
+
+class _INPUT_UNION(ctypes.Union):
+    _fields_ = [
+        ("ki", _KEYBDINPUT),
+        ("mi", _MOUSEINPUT),
+        ("hi", _HARDWAREINPUT),
+    ]
+
+class _INPUT(ctypes.Structure):
+    _fields_ = [
+        ("type", wt.DWORD),
+        ("ii", _INPUT_UNION),
+    ]
+
+try:
+    user32.keybd_event.argtypes = [wt.BYTE, wt.BYTE, wt.DWORD, ctypes.c_size_t]
+    user32.keybd_event.restype = None
+    user32.MapVirtualKeyW.argtypes = [wt.UINT, wt.UINT]
+    user32.MapVirtualKeyW.restype = wt.UINT
+    user32.SendInput.argtypes = [wt.UINT, ctypes.POINTER(_INPUT), ctypes.c_int]
+    user32.SendInput.restype = wt.UINT
+except Exception:
+    pass
 
 
 def _send_key(vk: int, up: bool, scan: int = 0, is_unicode: bool = False, extended: bool = False) -> None:
-    extra = wt.ULONG(0)
-    ki = _KEYBDINPUT()
-    ki.wVk = vk & 0xFFFF
-    ki.wScan = scan
+    if scan == 0 and not is_unicode and vk:
+        try:
+            scan = user32.MapVirtualKeyW(vk & 0xFFFF, 0)
+        except Exception:
+            scan = 0
+
     flags = 0
     if up:
         flags |= KEYEVENTF_KEYUP
@@ -91,22 +133,23 @@ def _send_key(vk: int, up: bool, scan: int = 0, is_unicode: bool = False, extend
     # Extended keys: arrows, page up/down, home, end, insert, delete, windows key
     if extended or vk in (0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x2D, 0x2E, 0x5B, 0x5C):
         flags |= KEYEVENTF_EXTENDEDKEY
-    ki.dwFlags = flags
-    ki.time = 0
-    ki.dwExtraInfo = ctypes.cast(ctypes.byref(extra), ctypes.POINTER(ctypes.c_ulong))
 
-    class _INPT(ctypes.Structure):
-        _fields_ = [("type", wt.DWORD), ("ki", _KEYBDINPUT)]
-
-    inp = _INPT()
-    inp.type = 1
-    inp.ki = ki
+    # 1. Try SendInput with full 64-bit union structure
     try:
-        user32.SendInput(1, ctypes.byref(inp), ctypes.sizeof(_INPT))
+        inp = _INPUT()
+        inp.type = 1
+        inp.ii.ki.wVk = vk & 0xFFFF
+        inp.ii.ki.wScan = scan & 0xFFFF
+        inp.ii.ki.dwFlags = flags
+        inp.ii.ki.time = 0
+        inp.ii.ki.dwExtraInfo = 0
+        user32.SendInput(1, ctypes.byref(inp), ctypes.sizeof(_INPUT))
     except Exception:
         pass
+
+    # 2. Universal keybd_event fallback with hardware scan code
     try:
-        user32.keybd_event(vk & 0xFFFF, scan & 0xFFFF, flags, 0)
+        user32.keybd_event(vk & 0xFF, scan & 0xFF, flags, 0)
     except Exception:
         pass
 
@@ -123,13 +166,11 @@ def tap(name: str, modifiers: list[str] | None = None, repeat: int = 1) -> None:
         if mvk:
             _send_key(mvk, False, extended=(m == "WIN"))
             mod_vks.append((m, mvk))
-    single = len(name) == 1
-    scan = ord(name) if single else 0
     for _ in range(max(1, repeat)):
-        _send_key(vk, False, scan=scan)
-        time.sleep(0.015)
-        _send_key(vk, True, scan=scan)
-        time.sleep(0.015)
+        _send_key(vk, False)
+        time.sleep(0.035)
+        _send_key(vk, True)
+        time.sleep(0.020)
     for m, mvk in reversed(mod_vks):
         _send_key(mvk, True, extended=(m == "WIN"))
 

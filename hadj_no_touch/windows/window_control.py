@@ -66,7 +66,50 @@ def active_window_title() -> str:
 
 def set_foreground(hwnd: int) -> None:
     if HAVE_PYWIN32:
-        win32gui.SetForegroundWindow(hwnd)
+        try:
+            win32gui.SetForegroundWindow(hwnd)
+        except Exception:
+            pass
+
+
+def ensure_presentation_focus() -> bool:
+    """If the current foreground window is EDU-AIR itself or no presentation window,
+    switch focus to the presentation (PowerPoint Slide Show, browser, PDF) so keystrokes reach it."""
+    if not HAVE_PYWIN32:
+        return False
+    try:
+        cur_hwnd = win32gui.GetForegroundWindow()
+        cur_title = (win32gui.GetWindowText(cur_hwnd) or "").lower()
+        # If foreground is already a presentation or browser, keep it
+        cls_cur = win32gui.GetClassName(cur_hwnd) if cur_hwnd else ""
+        if cls_cur in ("screenClass", "PPTFrameClass") or any(k in cur_title for k in ("diaporama", "slide", "powerpoint", "canva", "pdf", "acrobat")):
+            return True
+
+        found_hwnd = None
+        def _enum_win(hwnd, _):
+            nonlocal found_hwnd
+            if found_hwnd is not None:
+                return
+            if not win32gui.IsWindowVisible(hwnd) or win32gui.IsIconic(hwnd):
+                return
+            title = (win32gui.GetWindowText(hwnd) or "").lower()
+            cls_name = win32gui.GetClassName(hwnd)
+            if hwnd == cur_hwnd or "edu-air" in title:
+                return
+            if cls_name in ("screenClass", "PPTFrameClass") or "powerpoint" in title or "diaporama" in title:
+                found_hwnd = hwnd
+                return
+            if any(b in title for b in ("google slides", "canva", "pdf", "acrobat", "chrome", "edge", "firefox", "presentation")):
+                found_hwnd = hwnd
+                return
+
+        win32gui.EnumWindows(_enum_win, None)
+        if found_hwnd:
+            win32gui.SetForegroundWindow(found_hwnd)
+            return True
+    except Exception:
+        pass
+    return False
 
 
 def close_active_window() -> None:
