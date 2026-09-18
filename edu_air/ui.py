@@ -304,26 +304,29 @@ class ClassroomWindow(QMainWindow):
             self._status_labels[key] = lab
         lay.addLayout(grid)
 
-        # controls
-        ctrl = QHBoxLayout()
-        self._mode_btn = self._add_button(ctrl, i18n.t("btn.demo_real"),
+        # controls - row 1: actions
+        ctrl1 = QHBoxLayout()
+        self._mode_btn = self._add_button(ctrl1, i18n.t("btn.demo_real"),
                                           self._toggle_mode)
-        self._overlay_btn = self._add_button(ctrl, i18n.t("btn.overlay"),
+        self._overlay_btn = self._add_button(ctrl1, i18n.t("btn.overlay"),
                                              self._toggle_overlay)
-        self._calibration_btn = self._add_button(ctrl, i18n.t("btn.calibration"),
+        self._calibration_btn = self._add_button(ctrl1, i18n.t("btn.calibration"),
                                                  self._run_calibration)
+        self._export_btn = self._add_button(ctrl1, i18n.t("btn.export"), None)
+        self._export_btn.clicked.connect(self._export_board)
+        self._clear_btn = self._add_button(ctrl1, i18n.t("btn.clear"), None)
+        self._clear_btn.clicked.connect(self._clear_board)
+        lay.addLayout(ctrl1)
 
+        # controls - row 2: tools
+        ctrl2 = QHBoxLayout()
         self._tool_buttons: dict[str, QPushButton] = {}
         for tool in [TOOL_POINT, TOOL_DRAW, TOOL_HIGHLIGHT, TOOL_ERASE]:
             self._tool_buttons[tool] = self._add_button(
-                ctrl, i18n.t(f"tool.{tool}"), None)
+                ctrl2, i18n.t(f"tool.{tool}"), None)
             self._tool_buttons[tool].clicked.connect(
                 lambda _=False, t=tool: self._select_tool(t))
-        self._clear_btn = self._add_button(ctrl, i18n.t("btn.clear"), None)
-        self._clear_btn.clicked.connect(self._clear_board)
-        self._export_btn = self._add_button(ctrl, i18n.t("btn.export"), None)
-        self._export_btn.clicked.connect(self._export_board)
-        lay.addLayout(ctrl)
+        lay.addLayout(ctrl2)
 
         row2 = QHBoxLayout()
         self._cam_lbl = QLabel(i18n.t("label.camera"))
@@ -577,7 +580,9 @@ class ClassroomWindow(QMainWindow):
         self._mode_btn.setText(i18n.t("btn.demo_real"))
         self._overlay_btn.setText(i18n.t("btn.overlay"))
         self._calibration_btn.setText(i18n.t("btn.calibration"))
+        self._export_btn.setText(i18n.t("btn.export"))
         self._clear_btn.setText(i18n.t("btn.clear"))
+        self._cam_lbl.setText(i18n.t("label.camera"))
         for tool, btn in self._tool_buttons.items():
             btn.setText(i18n.t(f"tool.{tool}"))
         # status labels refresh themselves on next refresh() call

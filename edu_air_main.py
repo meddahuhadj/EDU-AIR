@@ -120,7 +120,7 @@ def main(argv: list[str] | None = None) -> int:
                 pw, ph = 400, 200
             pix = QPixmap.fromImage(img).scaled(
                 pw, ph,
-                Qt.AspectRatioMode.IgnoreAspectRatio,
+                Qt.AspectRatioMode.KeepAspectRatio,
                 Qt.TransformationMode.SmoothTransformation,
             )
             window.camera_preview.setPixmap(pix)
