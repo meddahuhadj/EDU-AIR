@@ -321,9 +321,20 @@ class ClassroomWindow(QMainWindow):
                 lambda _=False, t=tool: self._select_tool(t))
         self._clear_btn = self._add_button(ctrl, i18n.t("btn.clear"), None)
         self._clear_btn.clicked.connect(self._clear_board)
+        self._export_btn = self._add_button(ctrl, i18n.t("btn.export"), None)
+        self._export_btn.clicked.connect(self._export_board)
         lay.addLayout(ctrl)
 
         row2 = QHBoxLayout()
+        self._cam_lbl = QLabel(i18n.t("label.camera"))
+        self.camera_combo = QComboBox()
+        self.camera_combo.addItems(["Camera 0", "Camera 1", "Camera 2", "Camera 3"])
+        cur_cam_idx = SETTINGS.camera.index if hasattr(SETTINGS, "camera") else 0
+        self.camera_combo.setCurrentIndex(min(3, max(0, cur_cam_idx)))
+        self.camera_combo.currentIndexChanged.connect(self._change_camera_index)
+        row2.addWidget(self._cam_lbl)
+        row2.addWidget(self.camera_combo)
+
         self._sens_lbl = QLabel(i18n.t("label.sensitivity"))
         self.sensitivity_combo = QComboBox()
         self.sensitivity_combo.addItems([
@@ -452,6 +463,55 @@ class ClassroomWindow(QMainWindow):
             return
         self.session.execute(ci.ClassroomIntent(ci.ANNOTATION_CLEAR, source="ui"))
         self.refresh()
+
+    def _export_board(self) -> None:
+        """Export current whiteboard annotations/canvas to PNG image."""
+        try:
+            from PySide6.QtWidgets import QFileDialog
+            from PySide6.QtGui import QImage, QPainter, QPen, QColor
+            from PySide6.QtCore import Qt
+            import os, time
+            default_name = f"EDU_AIR_Notes_{time.strftime('%Y%m%d_%H%M%S')}.png"
+            path, _ = QFileDialog.getSaveFileName(
+                self, i18n.t("btn.export"), default_name,
+                "Images (*.png *.jpg);;All Files (*.*)")
+            if not path:
+                return
+            w, h = 1280, 720
+            img = QImage(w, h, QImage.Format.Format_RGB32)
+            img.fill(QColor(255, 255, 255))
+            painter = QPainter(img)
+            geom = self.session.annotation.geometry(w, h)
+            for item in geom:
+                pts = item["points"]
+                col = item["color"]
+                width = item["width"]
+                hl = item["highlight"]
+                if not pts:
+                    continue
+                pen = QPen(QColor(col), max(1.0, width))
+                if hl:
+                    pen.setWidthF(pen.widthF() * 2)
+                pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+                pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+                painter.setPen(pen)
+                if len(pts) == 1:
+                    r = max(2.0, pen.widthF() / 2)
+                    painter.drawEllipse(pts[0][0] - r, pts[0][1] - r, r * 2, r * 2)
+                else:
+                    for i in range(len(pts) - 1):
+                        painter.drawLine(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1])
+            painter.end()
+            img.save(path)
+            self.show_log(i18n.t("export.success", path=os.path.basename(path)))
+        except Exception as exc:
+            self.show_log(f"Export error: {exc}")
+
+    def _change_camera_index(self, index: int) -> None:
+        SETTINGS.camera.index = max(0, index)
+        if hasattr(self, "_pipeline") and self._pipeline:
+            self._pipeline.request_camera_index(max(0, index))
+        SETTINGS.save()
 
     def _change_sensitivity(self, value: str) -> None:
         reverse = {i18n.t(f"sens.{k}"): k for k in ("low", "medium", "high")}
@@ -680,6 +740,10 @@ class ClassroomPipeline(QObject):
         self._last_frame = None
         self._demo_fallback = session.mode == "demo"
         self._camera_fallback = False   # webcam unusable -> synthetic pointer
+        self._requested_camera_index: int | None = None
+
+    def request_camera_index(self, index: int) -> None:
+        self._requested_camera_index = index
 
     # ---- lifecycle ------------------------------------------------------------
     def start(self) -> None:

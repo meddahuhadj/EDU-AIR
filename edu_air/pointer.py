@@ -39,6 +39,60 @@ class PointerMetrics:
     last_update: float = field(default=0.0)
 
 
+class OneEuroFilter:
+    """1€ Filter (Casiez et al., CHI 2012) for adaptive human hand tracking.
+
+    Applies heavy smoothing at low speeds (eradicating hand tremor), while
+    dynamically increasing responsiveness at high speeds (zero perceived lag).
+    """
+    def __init__(self, min_cutoff: float = 1.0, beta: float = 0.05, d_cutoff: float = 1.0):
+        self.min_cutoff = min_cutoff
+        self.beta = beta
+        self.d_cutoff = d_cutoff
+        self.x_prev: tuple[float, float] | None = None
+        self.dx_prev: tuple[float, float] = (0.0, 0.0)
+        self.t_prev: float | None = None
+
+    def _alpha(self, cutoff: float, dt: float) -> float:
+        import math
+        tau = 1.0 / (2.0 * math.pi * cutoff)
+        return 1.0 / (1.0 + tau / dt) if dt > 0 else 1.0
+
+    def filter(self, x: tuple[float, float], t: float) -> tuple[float, float]:
+        if self.t_prev is None or self.x_prev is None:
+            self.t_prev = t
+            self.x_prev = x
+            self.dx_prev = (0.0, 0.0)
+            return x
+
+        dt = max(0.001, t - self.t_prev)
+        self.t_prev = t
+
+        dx = ((x[0] - self.x_prev[0]) / dt, (x[1] - self.x_prev[1]) / dt)
+        a_d = self._alpha(self.d_cutoff, dt)
+        edx = (
+            self.dx_prev[0] + a_d * (dx[0] - self.dx_prev[0]),
+            self.dx_prev[1] + a_d * (dx[1] - self.dx_prev[1]),
+        )
+        self.dx_prev = edx
+
+        speed = (edx[0] ** 2 + edx[1] ** 2) ** 0.5
+        cutoff = self.min_cutoff + self.beta * speed
+        a = self._alpha(cutoff, dt)
+
+        filtered = (
+            self.x_prev[0] + a * (x[0] - self.x_prev[0]),
+            self.x_prev[1] + a * (x[1] - self.x_prev[1]),
+        )
+        self.x_prev = filtered
+        return filtered
+
+    def reset(self) -> None:
+        self.x_prev = None
+        self.dx_prev = (0.0, 0.0)
+        self.t_prev = None
+
+
 class InteractivePointer:
     def __init__(self, screen_w: int = 1280, screen_h: int = 720,
                  settings: PointerSettings | None = None):
@@ -54,6 +108,7 @@ class InteractivePointer:
         self.metrics = PointerMetrics()
         self.mapping: Optional[Mapping] = None
         self.on_moved: Optional[Callable[[tuple[float, float]], None]] = None
+        self._one_euro = OneEuroFilter(min_cutoff=1.2, beta=0.04)
 
     @property
     def _diag_px(self) -> float:
@@ -118,9 +173,9 @@ class InteractivePointer:
                 self._feed_tremor(delta)
                 return self._pos
 
-        # jitter suppression: for tiny motions (in the tremor band between the
-        # dead zone and the jitter floor) the smoothing weight is scaled down
-        # so the pointer barely tracks high-frequency micro-movement.
+        # Adaptive 1€ Filter + EMA combination
+        target = self._one_euro.filter(target, now)
+
         if self._pos is not None and s.jitter_suppression > 0:
             jitter_bool = delta < s.jitter_floor * self._diag_px
         else:

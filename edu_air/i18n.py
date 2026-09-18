@@ -134,6 +134,12 @@ STRINGS: dict[str, dict[str, str]] = {
                    "nl": "Wissen"},
 
     # ---- controls ---------------------------------------------------------
+    "btn.export": {"en": "Export PDF/Image", "fr": "Exporter PDF/Image",
+                   "ar": "تصدير PDF/صورة", "nl": "Exporteer PDF/Image"},
+    "label.camera": {"en": "Webcam:", "fr": "Caméra :", "ar": "الكاميرا :",
+                     "nl": "Webcam:"},
+    "export.success": {"en": "Board exported to {path}", "fr": "Tableau exporté sous {path}",
+                       "ar": "تم تصدير اللوحة إلى {path}", "nl": "Bord geëxporteerd naar {path}"},
     "label.sensitivity": {
         "en": "Pointer sensitivity:", "fr": "Sensibilité du pointeur :",
         "ar": "حساسية المؤشر:", "nl": "Gevoeligheid aanwijzer:"},
