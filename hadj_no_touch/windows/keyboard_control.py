@@ -83,11 +83,15 @@ def _send_key(vk: int, up: bool, scan: int = 0, is_unicode: bool = False, extend
     ki = _KEYBDINPUT()
     ki.wVk = vk & 0xFFFF
     ki.wScan = scan
-    ki.dwFlags = int(up)
+    flags = 0
+    if up:
+        flags |= KEYEVENTF_KEYUP
     if is_unicode:
-        ki.dwFlags |= KEYEVENTF_UNICODE
-    if extended:
-        ki.dwFlags |= KEYEVENTF_EXTENDEDKEY
+        flags |= KEYEVENTF_UNICODE
+    # Extended keys: arrows, page up/down, home, end, insert, delete, windows key
+    if extended or vk in (0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x2D, 0x2E, 0x5B, 0x5C):
+        flags |= KEYEVENTF_EXTENDEDKEY
+    ki.dwFlags = flags
     ki.time = 0
     ki.dwExtraInfo = ctypes.cast(ctypes.byref(extra), ctypes.POINTER(ctypes.c_ulong))
 

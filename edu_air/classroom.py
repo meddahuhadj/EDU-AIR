@@ -420,9 +420,13 @@ class ClassroomSession:
             self.domain = "idle"
             return OUT_EXECUTED if not demo else OUT_SIMULATED
         if action == ci.NEXT_SLIDE:
+            if not self.presentation.active:
+                self.presentation.start(self.settings.presentation.total_slides)
             self.presentation.next_slide()
             return OUT_EXECUTED if not demo else OUT_SIMULATED
         if action == ci.PREV_SLIDE:
+            if not self.presentation.active:
+                self.presentation.start(self.settings.presentation.total_slides)
             self.presentation.prev_slide()
             return OUT_EXECUTED if not demo else OUT_SIMULATED
         if action == ci.PAUSE_PRESENTATION:
