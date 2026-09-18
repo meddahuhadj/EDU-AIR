@@ -101,7 +101,14 @@ def _send_key(vk: int, up: bool, scan: int = 0, is_unicode: bool = False, extend
     inp = _INPT()
     inp.type = 1
     inp.ki = ki
-    user32.SendInput(1, ctypes.byref(inp), ctypes.sizeof(_INPT))
+    try:
+        user32.SendInput(1, ctypes.byref(inp), ctypes.sizeof(_INPT))
+    except Exception:
+        pass
+    try:
+        user32.keybd_event(vk & 0xFFFF, scan & 0xFFFF, flags, 0)
+    except Exception:
+        pass
 
 
 def tap(name: str, modifiers: list[str] | None = None, repeat: int = 1) -> None:
@@ -120,7 +127,9 @@ def tap(name: str, modifiers: list[str] | None = None, repeat: int = 1) -> None:
     scan = ord(name) if single else 0
     for _ in range(max(1, repeat)):
         _send_key(vk, False, scan=scan)
+        time.sleep(0.015)
         _send_key(vk, True, scan=scan)
+        time.sleep(0.015)
     for m, mvk in reversed(mod_vks):
         _send_key(mvk, True, extended=(m == "WIN"))
 

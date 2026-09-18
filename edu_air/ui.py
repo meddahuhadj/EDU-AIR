@@ -64,11 +64,25 @@ class OverlayWindow(QWidget):
         self.settings = settings or SETTINGS
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint
                             | Qt.WindowType.WindowStaysOnTopHint
+                            | Qt.WindowType.WindowDoesNotAcceptFocus
+                            | Qt.WindowType.WindowTransparentForInput
                             | Qt.WindowType.Tool)
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, True)
         self._last_paint = 0.0
         self._target_screen = screen_index
+        if os.name == "nt":
+            try:
+                import ctypes
+                hwnd = int(self.winId())
+                GWL_EXSTYLE = -20
+                WS_EX_NOACTIVATE = 0x08000000
+                WS_EX_TRANSPARENT = 0x00000020
+                old_style = ctypes.windll.user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
+                ctypes.windll.user32.SetWindowLongW(hwnd, GWL_EXSTYLE, old_style | WS_EX_NOACTIVATE | WS_EX_TRANSPARENT)
+            except Exception:
+                pass
 
     def place_on_screen(self, index: int) -> None:
         screen = _pick_screen(index)
@@ -448,8 +462,18 @@ class ClassroomWindow(QMainWindow):
 
     def _show_overlay(self) -> None:
         self._overlay.place_on_screen(SETTINGS.classroom.projector_screen)
-        self._overlay.showFullScreen()
-        self._overlay.raise_()
+        self._overlay.show()
+        if os.name == "nt":
+            try:
+                import ctypes
+                hwnd = int(self._overlay.winId())
+                GWL_EXSTYLE = -20
+                WS_EX_NOACTIVATE = 0x08000000
+                WS_EX_TRANSPARENT = 0x00000020
+                old_style = ctypes.windll.user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
+                ctypes.windll.user32.SetWindowLongW(hwnd, GWL_EXSTYLE, old_style | WS_EX_NOACTIVATE | WS_EX_TRANSPARENT)
+            except Exception:
+                pass
 
     def _select_tool(self, tool: str) -> None:
         self.session.annotation.set_tool(tool)
