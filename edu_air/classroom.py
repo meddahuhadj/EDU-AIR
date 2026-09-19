@@ -404,6 +404,19 @@ class ClassroomSession:
         self._snapshot()
         return decision
 
+    def _ensure_presentation_active(self) -> None:
+        """Slide nav / zoom / scroll all imply an in-progress presentation.
+
+        Without this, sending scroll or zoom straight through (bypassing
+        ``start()``) moved the real deck but left ``presentation.state`` at
+        IDLE forever — the HUD badge stayed stuck on INACTIF even while
+        gesture/voice scroll commands were visibly working.
+        """
+        if not self.presentation.active:
+            self.presentation.start(self.settings.presentation.total_slides)
+        elif self.presentation.state == self.presentation.PAUSED:
+            self.presentation.resume()
+
     def _apply(self, intent: ci.ClassroomIntent) -> str:
         """Run an approved classroom action on the right subsystem."""
         action = intent.action
@@ -419,17 +432,11 @@ class ClassroomSession:
             self.domain = "idle"
             return OUT_EXECUTED if not demo else OUT_SIMULATED
         if action == ci.NEXT_SLIDE:
-            if not self.presentation.active:
-                self.presentation.start(self.settings.presentation.total_slides)
-            elif self.presentation.state == self.presentation.PAUSED:
-                self.presentation.resume()
+            self._ensure_presentation_active()
             self.presentation.next_slide()
             return OUT_EXECUTED if not demo else OUT_SIMULATED
         if action == ci.PREV_SLIDE:
-            if not self.presentation.active:
-                self.presentation.start(self.settings.presentation.total_slides)
-            elif self.presentation.state == self.presentation.PAUSED:
-                self.presentation.resume()
+            self._ensure_presentation_active()
             self.presentation.prev_slide()
             return OUT_EXECUTED if not demo else OUT_SIMULATED
         if action == ci.PAUSE_PRESENTATION:
@@ -439,15 +446,19 @@ class ClassroomSession:
             self.presentation.resume()
             return OUT_EXECUTED if not demo else OUT_SIMULATED
         if action == ci.ZOOM_IN:
+            self._ensure_presentation_active()
             self.presentation.zoom_in()
             return OUT_EXECUTED if not demo else OUT_SIMULATED
         if action == ci.ZOOM_OUT:
+            self._ensure_presentation_active()
             self.presentation.zoom_out()
             return OUT_EXECUTED if not demo else OUT_SIMULATED
         if action == ci.SCROLL_UP:
+            self._ensure_presentation_active()
             self.presentation.scroll_up()
             return OUT_EXECUTED if not demo else OUT_SIMULATED
         if action == ci.SCROLL_DOWN:
+            self._ensure_presentation_active()
             self.presentation.scroll_down()
             return OUT_EXECUTED if not demo else OUT_SIMULATED
 

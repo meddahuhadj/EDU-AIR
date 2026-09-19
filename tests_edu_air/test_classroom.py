@@ -177,6 +177,16 @@ def test_recording_backend_captures_clicks():
     assert backend.left_clicks[0] == (50, 50)
 
 
+def test_scroll_activates_presentation():
+    """Regression: scroll/zoom used to move the real deck via SCROLL_DOWN
+    without ever flipping ``presentation.state`` out of IDLE, so the HUD kept
+    showing INACTIF even though the command visibly worked."""
+    sess, _ = make_session("demo")
+    assert sess.status.presentation_state == "idle"
+    sess.handle_voice_text("scroll down", "en")
+    assert sess.status.presentation_state == "active"
+
+
 def test_pause_and_resume_presentation():
     sess, _ = make_session("demo")
     sess.handle_voice_text("start presentation", "en")
