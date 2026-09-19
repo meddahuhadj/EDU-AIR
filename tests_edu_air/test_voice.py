@@ -8,7 +8,7 @@ from edu_air.voice import (
     parse, ANSWER_LETTER, START_QUIZ, STOP_QUIZ, NEXT_QUESTION,
     PREV_QUESTION, REVEAL_ANSWER, POINTER_ON, POINTER_OFF,
     DRAW, HIGHLIGHT, ERASE_ANNOTATION, CLEAR_ANNOTATIONS,
-    START_TIMER, STOP_TIMER, PAUSE_PRESENTATION, register_classroom_commands,
+    START_TIMER, STOP_TIMER, PAUSE_PRESENTATION, RESUME_PRESENTATION, register_classroom_commands,
 )
 
 
@@ -92,6 +92,10 @@ def test_timer_and_pause():
     assert parse("stop the timer", "en").intent == STOP_TIMER
     assert parse("lance le chrono", "fr").intent == START_TIMER
     assert parse("pause the presentation", "en").intent == PAUSE_PRESENTATION
+    assert parse("continuer", "fr").intent == RESUME_PRESENTATION
+    assert parse("reprendre", "fr").intent == RESUME_PRESENTATION
+    assert parse("continuer la présentation", "fr").intent == RESUME_PRESENTATION
+    assert parse("resume", "en").intent == RESUME_PRESENTATION
 
 
 def test_unknown_text_gives_none():

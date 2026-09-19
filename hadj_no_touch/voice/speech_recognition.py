@@ -192,13 +192,32 @@ class GoogleSpeechEngine(SpeechEngine):
     def available(self) -> bool:
         return HAVE_SPEECH_RECOGNITION and HAVE_SOUNDDEVICE
 
+    def _calibrate(self, source: sr.AudioSource, duration: float = 0.8) -> None:
+        """Reset the energy threshold to the *current* ambient noise.
+
+        A fixed hard-coded threshold either swallows short quiet words in a
+        silent room ("suivant") or trips on noise in a loud classroom. The
+        recognizer's own ``listen`` keeps adapting during recording; this just
+        gives it a sane anchor at the start of a session and every 30 s.
+        """
+        try:
+            self._recognizer.adjust_for_ambient_noise(source, duration=duration)
+        except Exception as e:  # pragma: no cover - stream edge cases
+            log.info("Ambient calibration skipped: %s", e)
+            if self._recognizer.energy_threshold <= 0:
+                self._recognizer.energy_threshold = 300
+
     def _loop(self) -> None:
+        last_calib = 0.0
+        service_errors = 0
         while self._running.is_set():
             try:
                 with SoundDeviceMicrophone(sample_rate=16000) as source:
-                    self._recognizer.energy_threshold = 400
                     self.status = "listening"
                     self.error = None
+                    self._calibrate(source)
+                    last_calib = time.monotonic()
+                    service_errors = 0
                     while self._running.is_set():
                         try:
                             audio = self._recognizer.listen(source, phrase_time_limit=8, timeout=6)
@@ -207,11 +226,14 @@ class GoogleSpeechEngine(SpeechEngine):
                             if text and self.on_text:
                                 self.on_text(text.strip())
                         except (sr.WaitTimeoutError, sr.UnknownValueError):
-                            pass
+                            service_errors = 0
                         except sr.RequestError as e:
+                            # Network hiccups: back off briefly (1s->3s) and
+                            # retry instead of dropping into a long dead zone.
+                            service_errors += 1
                             self.error = f"Recognition service error: {e}"
                             self.status = "error"
-                            time.sleep(2.0)
+                            time.sleep(min(1.0 * service_errors, 3.0))
                         except Exception as e:
                             self.error = str(e)
                             self.status = "error"
@@ -219,6 +241,10 @@ class GoogleSpeechEngine(SpeechEngine):
                         finally:
                             if self._running.is_set():
                                 self.status = "listening"
+                            now = time.monotonic()
+                            if now - last_calib >= 30.0:
+                                self._calibrate(source, duration=0.5)
+                                last_calib = now
             except Exception as e:
                 self.error = str(e)
                 self.status = "error"

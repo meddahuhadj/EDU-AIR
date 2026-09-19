@@ -30,10 +30,139 @@ from PySide6.QtCore import QObject, Qt, Signal, QTimer
 from PySide6.QtGui import QColor, QFont, QGuiApplication, QKeyEvent, QPainter, QPen
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QFrame, QHBoxLayout, QLabel, QMainWindow, QPushButton,
-    QVBoxLayout, QWidget, QGridLayout, QMessageBox,
+    QVBoxLayout, QWidget, QGridLayout, QMessageBox, QScrollArea,
 )
 
 from . import __version__, i18n
+
+# ---------------------------------------------------------------------------
+# Dark, modern control-dock theme. Palette kept as named constants so status
+# chips / env indicators (styled per-instance in Python, not pure QSS) stay
+# visually consistent with the stylesheet below.
+# ---------------------------------------------------------------------------
+BG = "#12141a"
+SURFACE = "#1b1e27"
+SURFACE_ALT = "#242833"
+BORDER = "#2e3340"
+TEXT = "#eef1f6"
+TEXT_MUTED = "#9aa2b4"
+ACCENT = "#7c6cf0"
+ACCENT_HOVER = "#8f81f5"
+ACCENT_PRESSED = "#6a5ce0"
+OK = "#34d399"
+WARN = "#f5b942"
+BAD = "#ef5b5b"
+
+DARK_QSS = f"""
+QMainWindow, QWidget#central {{
+    background: {BG};
+}}
+QLabel {{
+    color: {TEXT};
+    font-size: 13px;
+}}
+QFrame#card {{
+    background: {SURFACE};
+    border: 1px solid {BORDER};
+    border-radius: 12px;
+}}
+QLabel#cardTitle {{
+    color: {TEXT_MUTED};
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}}
+QPushButton {{
+    background: {SURFACE_ALT};
+    color: {TEXT};
+    border: 1px solid {BORDER};
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+}}
+QPushButton:hover {{
+    background: #2b3040;
+    border-color: {ACCENT};
+}}
+QPushButton:pressed {{
+    background: #171922;
+}}
+QPushButton#primaryBtn {{
+    background: {ACCENT};
+    border: 1px solid {ACCENT};
+    color: #ffffff;
+}}
+QPushButton#primaryBtn:hover {{
+    background: {ACCENT_HOVER};
+    border-color: {ACCENT_HOVER};
+}}
+QPushButton#primaryBtn:pressed {{
+    background: {ACCENT_PRESSED};
+}}
+QComboBox, QCheckBox {{
+    background: {SURFACE_ALT};
+    color: {TEXT};
+    border: 1px solid {BORDER};
+    border-radius: 6px;
+    padding: 4px 8px;
+    min-height: 22px;
+}}
+QComboBox:hover {{
+    border-color: {ACCENT};
+}}
+QComboBox::drop-down {{
+    border: none;
+    width: 20px;
+}}
+QComboBox QAbstractItemView {{
+    background: {SURFACE_ALT};
+    color: {TEXT};
+    selection-background-color: {ACCENT};
+    border: 1px solid {BORDER};
+    outline: none;
+}}
+QCheckBox::indicator {{
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid {BORDER};
+    background: {SURFACE_ALT};
+}}
+QCheckBox::indicator:checked {{
+    background: {ACCENT};
+    border-color: {ACCENT};
+}}
+QStatusBar {{
+    background: {SURFACE};
+    color: {TEXT_MUTED};
+    border-top: 1px solid {BORDER};
+}}
+QScrollArea#scrollArea, QScrollArea#scrollArea > QWidget > QWidget {{
+    background: {BG};
+    border: none;
+}}
+QScrollBar:vertical {{
+    background: {BG};
+    width: 12px;
+    margin: 0;
+}}
+QScrollBar::handle:vertical {{
+    background: {SURFACE_ALT};
+    border-radius: 5px;
+    min-height: 30px;
+}}
+QScrollBar::handle:vertical:hover {{
+    background: {BORDER};
+}}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+    height: 0;
+}}
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
+    background: none;
+}}
+"""
 from .classroom import ClassroomSession, RecordingBackend, DemoBackend
 from .config import SETTINGS
 from .pointer import InteractivePointer
@@ -283,43 +412,98 @@ class ClassroomWindow(QMainWindow):
         return self._camera_lbl
 
     # ---- UI construction ----------------------------------------------------
+    def _card(self, lay: QVBoxLayout, title: str = "") -> QVBoxLayout:
+        """A rounded dark panel added to ``lay``; returns its inner layout."""
+        frame = QFrame()
+        frame.setObjectName("card")
+        inner = QVBoxLayout(frame)
+        inner.setContentsMargins(16, 14, 16, 14)
+        inner.setSpacing(10)
+        if title:
+            t = QLabel(title)
+            t.setObjectName("cardTitle")
+            inner.addWidget(t)
+        lay.addWidget(frame)
+        return inner
+
     def _build_ui(self) -> None:
         self.setWindowTitle(i18n.t("window.title"))
-        self.resize(880, 640)
+        self.resize(1040, 760)
+        self.setStyleSheet(DARK_QSS)
+
         central = QWidget()
+        central.setObjectName("central")
         lay = QVBoxLayout(central)
-        self.setCentralWidget(central)
+        lay.setContentsMargins(20, 20, 20, 20)
+        lay.setSpacing(16)
 
+        # The control dock has more content (status grid + 3 action rows +
+        # settings) than fits on short/low-res displays — scroll instead of
+        # silently clipping controls the teacher needs (e.g. slide nav).
+        scroll = QScrollArea()
+        scroll.setObjectName("scrollArea")
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setWidgetResizable(True)
+        scroll.setWidget(central)
+        self.setCentralWidget(scroll)
+
+        header = QHBoxLayout()
+        header.setSpacing(4)
+        title_box = QVBoxLayout()
+        title_box.setSpacing(2)
         self._title_lbl = QLabel(i18n.t("window.title"))
-        self._title_lbl.setStyleSheet("font-size: 18px; font-weight: 700; color: #0e6bb8;")
-        lay.addWidget(self._title_lbl)
+        self._title_lbl.setStyleSheet(
+            f"font-size: 21px; font-weight: 700; color: {TEXT};")
+        title_box.addWidget(self._title_lbl)
         self._sub_lbl = QLabel(i18n.t("window.subtitle"))
-        self._sub_lbl.setStyleSheet("color: #556;")
-        lay.addWidget(self._sub_lbl)
+        self._sub_lbl.setStyleSheet(f"color: {TEXT_MUTED}; font-size: 12px;")
+        title_box.addWidget(self._sub_lbl)
+        header.addLayout(title_box)
+        header.addStretch(1)
+        lay.addLayout(header)
 
+        # ---- camera card --------------------------------------------------
+        cam_box = self._card(lay)
         self._camera_lbl = QLabel(i18n.t("camera.preview"))
-        self._camera_lbl.setFixedHeight(200)
-        self._camera_lbl.setStyleSheet("background:#000; color:#99c;"
-                                      "border:1px solid #345; border-radius:6px;")
+        self._camera_lbl.setFixedHeight(220)
+        self._camera_lbl.setStyleSheet(
+            f"background:#05060a; color:{TEXT_MUTED};"
+            f"border:1px solid {BORDER}; border-radius:8px; font-size:13px;")
         self._camera_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        lay.addWidget(self._camera_lbl)
+        cam_box.addWidget(self._camera_lbl)
 
-        # status grid
+        # ---- status card ----------------------------------------------------
+        status_box = self._card(lay, "Statut")
         self._status_labels: dict[str, QLabel] = {}
         grid = QGridLayout()
-        grid.setSpacing(6)
+        grid.setSpacing(8)
         for i, key in enumerate(["mode", "presentation", "pointer", "command",
                                  "interaction", "gesture", "timer", "quiz",
                                  "tool", "strokes", "safety", "fps",
                                  "lighting", "noise", "hand"]):
             lab = QLabel(self._status_text(key, ""))
-            lab.setStyleSheet("background:#f2f6fb; padding:4px 8px; border-radius:4px;")
+            lab.setStyleSheet(
+                f"background:{SURFACE_ALT}; color:{TEXT}; padding:6px 10px;"
+                f"border-radius:6px; border:1px solid {BORDER};")
             grid.addWidget(lab, i // 2, i % 2)
             self._status_labels[key] = lab
-        lay.addLayout(grid)
+        status_box.addLayout(grid)
 
-        # controls - row 1: actions
+        # ---- actions card (row 1: slide navigation, kept on its own line so
+        # it never gets pushed off-screen by the secondary actions below) ----
+        actions_box = self._card(lay, "Actions")
+        nav_row = QHBoxLayout()
+        nav_row.setSpacing(8)
+        self._prev_btn = self._add_button(nav_row, i18n.t("btn.prev_slide"), self._prev_slide)
+        self._prev_btn.setObjectName("primaryBtn")
+        self._next_btn = self._add_button(nav_row, i18n.t("btn.next_slide"), self._next_slide)
+        self._next_btn.setObjectName("primaryBtn")
+        nav_row.addStretch(1)
+        actions_box.addLayout(nav_row)
+
+        # ---- actions row 2: secondary actions ---------------------------------
         ctrl1 = QHBoxLayout()
+        ctrl1.setSpacing(8)
         self._mode_btn = self._add_button(ctrl1, i18n.t("btn.demo_real"),
                                           self._toggle_mode)
         self._overlay_btn = self._add_button(ctrl1, i18n.t("btn.overlay"),
@@ -330,21 +514,25 @@ class ClassroomWindow(QMainWindow):
         self._export_btn.clicked.connect(self._export_board)
         self._clear_btn = self._add_button(ctrl1, i18n.t("btn.clear"), None)
         self._clear_btn.clicked.connect(self._clear_board)
-        self._prev_btn = self._add_button(ctrl1, i18n.t("btn.prev_slide"), self._prev_slide)
-        self._next_btn = self._add_button(ctrl1, i18n.t("btn.next_slide"), self._next_slide)
-        lay.addLayout(ctrl1)
+        ctrl1.addStretch(1)
+        actions_box.addLayout(ctrl1)
 
-        # controls - row 2: tools
+        # ---- tools card (row 2) ----------------------------------------------
         ctrl2 = QHBoxLayout()
+        ctrl2.setSpacing(8)
         self._tool_buttons: dict[str, QPushButton] = {}
         for tool in [TOOL_POINT, TOOL_DRAW, TOOL_HIGHLIGHT, TOOL_ERASE]:
             self._tool_buttons[tool] = self._add_button(
                 ctrl2, i18n.t(f"tool.{tool}"), None)
             self._tool_buttons[tool].clicked.connect(
                 lambda _=False, t=tool: self._select_tool(t))
-        lay.addLayout(ctrl2)
+        ctrl2.addStretch(1)
+        actions_box.addLayout(ctrl2)
 
+        # ---- settings card ----------------------------------------------------
+        settings_box = self._card(lay, "Réglages")
         row2 = QHBoxLayout()
+        row2.setSpacing(8)
         self._cam_lbl = QLabel(i18n.t("label.camera"))
         self.camera_combo = QComboBox()
         self.camera_combo.addItems(["Camera 0", "Camera 1", "Camera 2", "Camera 3"])
@@ -371,9 +559,10 @@ class ClassroomWindow(QMainWindow):
         row2.addWidget(self._voice_lbl)
         row2.addWidget(self.lang_combo)
         row2.addStretch(1)
-        lay.addLayout(row2)
+        settings_box.addLayout(row2)
 
         row3 = QHBoxLayout()
+        row3.setSpacing(8)
         self._perf_lbl = QLabel(i18n.t("label.performance"))
         self._perf_check = QCheckBox()
         self._perf_check.setChecked(SETTINGS.classroom.performance_mode)
@@ -390,14 +579,15 @@ class ClassroomWindow(QMainWindow):
         row3.addWidget(self._extapp_lbl)
         row3.addWidget(self._extapp_combo)
         row3.addStretch(1)
-        lay.addLayout(row3)
+        settings_box.addLayout(row3)
 
         self._hint_lbl = QLabel(i18n.t("hint.keyboard"))
-        self._hint_lbl.setStyleSheet("color:#677; font-size:11px;")
+        self._hint_lbl.setStyleSheet(f"color:{TEXT_MUTED}; font-size:11px;")
         lay.addWidget(self._hint_lbl)
 
         self._hint_label = QLabel("")
         lay.addWidget(self._hint_label)
+        lay.addStretch(1)
 
     def _add_button(self, layout, text, onclick):
         key = text
@@ -437,11 +627,11 @@ class ClassroomWindow(QMainWindow):
     @staticmethod
     def _env_style(state: str) -> str:
         """Traffic-light chip style for classroom-environment indicators."""
-        ok = "background:#e4f7e6; color:#14532d;"
-        warn = "background:#fdf3d8; color:#7c4a03;"
-        bad = "background:#fde8e8; color:#7f1d1d;"
-        dim = "background:#eef1f4; color:#3b4a5a;"
-        base = "padding:2px 8px; border-radius:4px; font-weight:600;"
+        ok = f"background:#173226; color:{OK};"
+        warn = f"background:#332a12; color:{WARN};"
+        bad = f"background:#331a1a; color:{BAD};"
+        dim = f"background:{SURFACE_ALT}; color:{TEXT_MUTED};"
+        base = f"padding:6px 10px; border-radius:6px; font-weight:600; border:1px solid {BORDER};"
         if state in ("good", "ok"):
             return ok + base
         if state in ("low", "bright", "loud"):
@@ -566,6 +756,7 @@ class ClassroomWindow(QMainWindow):
         i18n.set_language(value)
         self.session.set_language(value)
         SETTINGS.classroom.language = value
+        SETTINGS.save()
         self._apply_language()
 
     def _apply_language(self) -> None:
@@ -623,28 +814,6 @@ class ClassroomWindow(QMainWindow):
     def _prev_slide(self) -> None:
         self.session.execute(ci.ClassroomIntent(ci.PREV_SLIDE, source="ui"))
         self.refresh()
-
-    def keyPressEvent(self, event) -> None:
-        key = event.key()
-        if key in (Qt.Key.Key_Right, Qt.Key.Key_PageDown, Qt.Key.Key_Space):
-            self._next_slide()
-            event.accept()
-            return
-        elif key in (Qt.Key.Key_Left, Qt.Key.Key_PageUp):
-            self._prev_slide()
-            event.accept()
-            return
-        elif key == Qt.Key.Key_F5:
-            self.session.execute(ci.ClassroomIntent(ci.PRESENTATION_START, source="ui"))
-            self.refresh()
-            event.accept()
-            return
-        elif key == Qt.Key.Key_Escape:
-            self.session.execute(ci.ClassroomIntent(ci.PRESENTATION_STOP, source="ui"))
-            self.refresh()
-            event.accept()
-            return
-        super().keyPressEvent(event)
 
     def _run_calibration(self) -> None:
         from .calibration import ProjectorCalibration, STAGE_ORDER
@@ -737,35 +906,36 @@ class ClassroomWindow(QMainWindow):
 
     # ---- keyboard fallback -----------------------------------------------------
     def keyPressEvent(self, event: QKeyEvent) -> None:  # noqa: N802
+        """Direct action dispatch — never routed through the language-specific
+        voice-text parser, so these shortcuts work regardless of the current
+        voice recognition language."""
         key = event.key()
         mods = event.modifiers()
         ctrl = bool(mods & Qt.KeyboardModifier.ControlModifier)
+
+        def run(action: str, params: dict | None = None) -> None:
+            self.session.execute(ci.ClassroomIntent(action, params or {}, source="ui"))
+
         if key == Qt.Key.Key_F5:
-            self.session.handle_voice_text("start presentation")
+            run(ci.PRESENTATION_START)
         elif key == Qt.Key.Key_Escape:
-            self.session.handle_voice_text("stop presentation")
-        elif key == Qt.Key.Key_Right:
-            self.session.handle_voice_text("next slide")
-        elif key == Qt.Key.Key_Left:
-            self.session.handle_voice_text("previous slide")
+            run(ci.PRESENTATION_STOP)
+        elif key in (Qt.Key.Key_Right, Qt.Key.Key_PageDown, Qt.Key.Key_Space):
+            run(ci.NEXT_SLIDE)
+        elif key in (Qt.Key.Key_Left, Qt.Key.Key_PageUp):
+            run(ci.PREV_SLIDE)
         elif key == Qt.Key.Key_B:
-            self.session.handle_voice_text("pause presentation")
+            run(ci.PAUSE_PRESENTATION)
         elif ctrl and key == Qt.Key.Key_Plus:
-            self.session.handle_voice_text("zoom in")
+            run(ci.ZOOM_IN)
         elif ctrl and key == Qt.Key.Key_Minus:
-            self.session.handle_voice_text("zoom out")
-        elif key == Qt.Key.Key_PageDown:
-            self.session.handle_voice_text("scroll down")
-        elif key == Qt.Key.Key_PageUp:
-            self.session.handle_voice_text("scroll up")
+            run(ci.ZOOM_OUT)
         elif key == Qt.Key.Key_Delete:
-            self.session.execute(ci.ClassroomIntent(ci.ANNOTATION_CLEAR, source="ui"))
-        elif key in (Qt.Key.Key_A, Qt.Key.Key_B, Qt.Key.Key_C, Qt.Key.Key_D):
+            run(ci.ANNOTATION_CLEAR)
+        elif key in (Qt.Key.Key_A, Qt.Key.Key_C, Qt.Key.Key_D):
             letter = chr(key)
-            idx = {"A": 0, "B": 1, "C": 2, "D": 3}[letter]
-            self.session.execute(ci.ClassroomIntent(
-                ci.QUIZ_ANSWER, {"letter": letter.lower(), "answer_index": idx},
-                source="ui"))
+            idx = {"A": 0, "C": 2, "D": 3}[letter]
+            run(ci.QUIZ_ANSWER, {"letter": letter.lower(), "answer_index": idx})
         else:
             super().keyPressEvent(event)
         self.refresh()

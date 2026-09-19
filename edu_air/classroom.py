@@ -367,7 +367,6 @@ class ClassroomSession:
         lang = language or self.settings.classroom.language
         result = cvoice.parse(text, lang)
         if result.intent == vc.NONE_INTENT or result.intent in (None, "NONE"):
-            self.status.last_command = ""
             return None
         intent = self.intent_engine.from_voice(result, quiz_active=self.quiz.active)
         if intent is None:
@@ -422,15 +421,22 @@ class ClassroomSession:
         if action == ci.NEXT_SLIDE:
             if not self.presentation.active:
                 self.presentation.start(self.settings.presentation.total_slides)
+            elif self.presentation.state == self.presentation.PAUSED:
+                self.presentation.resume()
             self.presentation.next_slide()
             return OUT_EXECUTED if not demo else OUT_SIMULATED
         if action == ci.PREV_SLIDE:
             if not self.presentation.active:
                 self.presentation.start(self.settings.presentation.total_slides)
+            elif self.presentation.state == self.presentation.PAUSED:
+                self.presentation.resume()
             self.presentation.prev_slide()
             return OUT_EXECUTED if not demo else OUT_SIMULATED
         if action == ci.PAUSE_PRESENTATION:
             self.presentation.pause()
+            return OUT_EXECUTED if not demo else OUT_SIMULATED
+        if action == ci.RESUME_PRESENTATION:
+            self.presentation.resume()
             return OUT_EXECUTED if not demo else OUT_SIMULATED
         if action == ci.ZOOM_IN:
             self.presentation.zoom_in()

@@ -128,6 +128,8 @@ def main(argv: list[str] | None = None) -> int:
             _set_camera_text(f"Preview error: {exc}")
 
     pipeline = ClassroomPipeline(session, parent=window)
+    pipeline.voice_ready.connect(
+        lambda t, _w=window: _w.show_log(f"Voix entendue : « {t} »"))
     pipeline.voice_ready.connect(session.handle_voice_text)
     pipeline.log_line.connect(lambda msg, _w=window: _w.show_log(msg))
     pipeline.frame_ready.connect(_show_preview)

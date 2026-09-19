@@ -45,6 +45,7 @@ HIGHLIGHT = "HIGHLIGHT"
 ERASE_ANNOTATION = "ERASE_ANNOTATION"
 CLEAR_ANNOTATIONS = "CLEAR_ANNOTATIONS"
 PAUSE_PRESENTATION = "PAUSE_PRESENTATION"
+RESUME_PRESENTATION = "RESUME_PRESENTATION"
 NEXT_EXERCISE = "NEXT_EXERCISE"
 START_TIMER = "START_TIMER"
 STOP_TIMER = "STOP_TIMER"
@@ -169,6 +170,16 @@ CLASSROOM_COMMANDS: list[dict] = [
                   r"\b[ée]cran\s+noir\b"]},
     {"intent": PAUSE_PRESENTATION, "langs": ["ar"],
      "patterns": [r"ايقاف\s+مؤقت\s+للعرض|شاشه\s+سوداء|تجميد\s+العرض"]},
+
+    {"intent": RESUME_PRESENTATION, "langs": ["en"],
+     "patterns": [r"\b(?:resume|continue|unpause)\s+(?:the\s+)?presentation\b",
+                  r"\b(?:resume|continue|unpause)\b"]},
+    {"intent": RESUME_PRESENTATION, "langs": ["fr"],
+     "patterns": [r"\b(?:reprendre|continuer|unpause)\s+(?:la\s+)?pr[ée]sentation\b",
+                  r"\b(?:reprendre|continuer|unpause)\b",
+                  r"\breprendre\s+(?:le\s+)?cours\b"]},
+    {"intent": RESUME_PRESENTATION, "langs": ["ar"],
+     "patterns": [r"استئناف\s+العرض|متابعة\s+العرض|واصل"]},
 
     {"intent": NEXT_EXERCISE, "langs": ["en"],
      "patterns": [r"\bnext\s+exercise\b", r"\bopen\s+(?:the\s+)?next\s+exercise\b"]},

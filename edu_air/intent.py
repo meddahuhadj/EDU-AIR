@@ -29,6 +29,7 @@ PRESENTATION_STOP = "PRESENTATION_STOP"
 NEXT_SLIDE = "NEXT_SLIDE"
 PREV_SLIDE = "PREV_SLIDE"
 PAUSE_PRESENTATION = "PAUSE_PRESENTATION"
+RESUME_PRESENTATION = "RESUME_PRESENTATION"
 ZOOM_IN = "ZOOM_IN"
 ZOOM_OUT = "ZOOM_OUT"
 SCROLL_UP = "SCROLL_UP"
@@ -71,7 +72,8 @@ class ClassroomIntent:
 ACTION_DOMAIN: dict[str, str] = {
     PRESENTATION_START: "presentation", PRESENTATION_STOP: "presentation",
     NEXT_SLIDE: "presentation", PREV_SLIDE: "presentation",
-    PAUSE_PRESENTATION: "presentation", ZOOM_IN: "presentation",
+    PAUSE_PRESENTATION: "presentation", RESUME_PRESENTATION: "presentation",
+    ZOOM_IN: "presentation",
     ZOOM_OUT: "presentation", SCROLL_UP: "presentation", SCROLL_DOWN: "presentation",
     POINTER_ON: "pointer", POINTER_OFF: "pointer",
     ANNOTATION_DRAW: "annotation", ANNOTATION_HIGHLIGHT: "annotation",
@@ -82,7 +84,7 @@ ACTION_DOMAIN: dict[str, str] = {
     TIMER_START: "timer", TIMER_STOP: "timer",
 }
 
-SAFETY_TOGGLES = {PAUSE_PRESENTATION, POINTER_ON, POINTER_OFF}
+SAFETY_TOGGLES = {PAUSE_PRESENTATION, RESUME_PRESENTATION, POINTER_ON, POINTER_OFF}
 
 
 # ---------------------------------------------------------------------------
@@ -97,6 +99,15 @@ GESTURE_ACTIONS: dict[str, str] = {
     ge.CIRCLE_CCW: ZOOM_OUT,
     ge.PALM_HOLD: PAUSE_PRESENTATION,
 }
+
+
+# Generic next/previous navigation intents from the HADJ catalogue. Bare
+# classroom commands like "suivant" / "suivante" / "avancer" parse to
+# GO_FORWARD/NEXT_PAGE and "précédent" / "précédente" to GO_BACK/PREV_PAGE;
+# in the classroom these advance the slide deck by default, but follow the
+# active question when a quiz is running (see ``route``).
+GENERIC_NEXT: tuple[str, ...] = (vc.GO_FORWARD, vc.NEXT_PAGE)
+GENERIC_PREV: tuple[str, ...] = (vc.GO_BACK, vc.PREV_PAGE)
 
 
 class ClassroomIntentEngine:
@@ -118,6 +129,7 @@ class ClassroomIntentEngine:
         params = dict(result.params)
         params["language"] = result.language
         params["confidence"] = result.confidence
+        params["generic_nav"] = result.intent in (GENERIC_NEXT + GENERIC_PREV)
         self.last = ClassroomIntent(
             action=action,
             params=params,
@@ -151,9 +163,14 @@ class ClassroomIntentEngine:
             cvoice.ERASE_ANNOTATION: ANNOTATION_ERASE,
             cvoice.CLEAR_ANNOTATIONS: ANNOTATION_CLEAR,
             cvoice.PAUSE_PRESENTATION: PAUSE_PRESENTATION,
+            cvoice.RESUME_PRESENTATION: RESUME_PRESENTATION,
             cvoice.NEXT_EXERCISE: NEXT_SLIDE,
             cvoice.START_TIMER: TIMER_START,
             cvoice.STOP_TIMER: TIMER_STOP,
+            vc.GO_FORWARD: NEXT_SLIDE,
+            vc.NEXT_PAGE: NEXT_SLIDE,
+            vc.GO_BACK: PREV_SLIDE,
+            vc.PREV_PAGE: PREV_SLIDE,
         }
         return mapped.get(intent)
 
@@ -187,6 +204,13 @@ class ClassroomIntentEngine:
         """
         if intent.action in SAFETY_TOGGLES:
             return intent
+        # A bare "suivant"/"précédent" (generic navigation) spoken while a
+        # quiz is active targets the live question instead of the deck.
+        if quiz_active and intent.source == "voice" and intent.params.get("generic_nav"):
+            swap = {NEXT_SLIDE: QUIZ_NEXT, PREV_SLIDE: QUIZ_PREV}
+            if intent.action in swap:
+                intent.action = swap[intent.action]
+                return intent
         domain = ACTION_DOMAIN.get(intent.action, "general")
         if quiz_active and domain in ("presentation", "annotation", "timer"):
             return None

@@ -24,7 +24,7 @@ from hadj_no_touch.safety import ActionSpec
 
 from .intent import (
     PRESENTATION_START, PRESENTATION_STOP, NEXT_SLIDE, PREV_SLIDE,
-    PAUSE_PRESENTATION, ZOOM_IN, ZOOM_OUT, SCROLL_UP, SCROLL_DOWN,
+    PAUSE_PRESENTATION, RESUME_PRESENTATION, ZOOM_IN, ZOOM_OUT, SCROLL_UP, SCROLL_DOWN,
     POINTER_ON, POINTER_OFF,
     ANNOTATION_DRAW, ANNOTATION_HIGHLIGHT, ANNOTATION_ERASE, ANNOTATION_CLEAR,
     QUIZ_START, QUIZ_STOP, QUIZ_NEXT, QUIZ_PREV, QUIZ_ANSWER, QUIZ_REVEAL,
@@ -65,6 +65,7 @@ CLASSROOM_ACTIONS: list[ActionSpec] = [
     _safe(NEXT_SLIDE, "Next slide"),
     _safe(PREV_SLIDE, "Previous slide"),
     _safe(PAUSE_PRESENTATION, "Pause presentation (black screen)"),
+    _safe(RESUME_PRESENTATION, "Resume presentation (clear black screen)"),
     _safe(ZOOM_IN, "Zoom in"),
     _safe(ZOOM_OUT, "Zoom out"),
     _safe(SCROLL_UP, "Scroll up"),

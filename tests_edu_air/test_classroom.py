@@ -175,3 +175,18 @@ def test_recording_backend_captures_clicks():
     sess.handle_gesture(ge.GestureEvent(kind=ge.LEFT_CLICK, x=50, y=50))
     assert len(backend.left_clicks) == 1
     assert backend.left_clicks[0] == (50, 50)
+
+
+def test_pause_and_resume_presentation():
+    sess, _ = make_session("demo")
+    sess.handle_voice_text("start presentation", "en")
+    assert sess.status.presentation_state == "active"
+    sess.handle_voice_text("pause the presentation", "en")
+    assert sess.status.presentation_state == "paused"
+    sess.handle_voice_text("continuer", "fr")
+    assert sess.status.presentation_state == "active"
+    sess.handle_voice_text("pause la présentation", "fr")
+    assert sess.status.presentation_state == "paused"
+    # slide navigation auto-resumes
+    sess.handle_voice_text("slide suivante", "fr")
+    assert sess.status.presentation_state == "active"

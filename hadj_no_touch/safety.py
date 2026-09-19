@@ -79,6 +79,7 @@ PREDEFINED_ACTIONS: list[ActionSpec] = [
     _safe(ie.END_PRESENTATION, "End presentation", "presentation"),
     _safe(ie.BLACK_SCREEN, "Black screen", "presentation"),
     _safe("PAUSE_PRESENTATION", "Pause presentation (black screen)", "presentation"),
+    _safe("RESUME_PRESENTATION", "Resume presentation (clear black screen)", "presentation"),
     _safe("LASER_POINTER", "Toggle laser-pointer cursor mode", "presentation"),
     _safe(ie.NEXT_PAGE, "Next page", "document"),
     _safe(ie.PREV_PAGE, "Previous page", "document"),

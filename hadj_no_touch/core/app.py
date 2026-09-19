@@ -660,7 +660,7 @@ class AppCore(QObject):
                 keyboard_control.tap("ESC")
             elif a == "BLACK_SCREEN":
                 keyboard_control.tap("B")
-            elif a == "PAUSE_PRESENTATION":
+            elif a in ("PAUSE_PRESENTATION", "RESUME_PRESENTATION"):
                 keyboard_control.tap("B")
             elif a == "GO_BACK":
                 keyboard_control.tap("LEFT", ["ALT"])
