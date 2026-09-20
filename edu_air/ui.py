@@ -952,6 +952,56 @@ def _camera_backend(cv2_mod) -> int:
     return getattr(cv2_mod, "CAP_ANY", 0)
 
 
+class _CameraReader:
+    """Runs ``cam.read()`` on its own thread.
+
+    DirectShow "fails fast" most of the time, but a contended or flaky
+    webcam driver can still make ``read()`` block indefinitely (no timeout
+    of its own). That used to happen inside the main pipeline loop, so one
+    stuck read froze gesture handling, voice routing and the classroom
+    clock together — the window kept answering Windows' ping (different
+    thread), which made it look "responsive but doing nothing" instead of
+    visibly crashed. Isolating the read here means a hang only ever stales
+    the camera frame; the existing 4s watchdog in the pipeline loop still
+    detects and recovers from that via ``_fallback_from_camera``.
+    """
+
+    def __init__(self, cam) -> None:
+        self._cam = cam
+        self._lock = threading.Lock()
+        self._frame = None
+        self._ts = 0.0
+        self._running = threading.Event()
+        self._running.set()
+        self._thread = threading.Thread(
+            target=self._loop, name="edu_air_camreader", daemon=True)
+        self._thread.start()
+
+    def _loop(self) -> None:
+        while self._running.is_set():
+            try:
+                ok, frame = self._cam.read()
+            except Exception:
+                ok, frame = False, None
+            if ok and frame is not None:
+                with self._lock:
+                    self._frame = frame
+                    self._ts = time.monotonic()
+            else:
+                time.sleep(0.01)
+
+    def latest(self):
+        """Returns ``(frame_or_None, age_seconds)``."""
+        with self._lock:
+            frame, ts = self._frame, self._ts
+        age = (time.monotonic() - ts) if ts else float("inf")
+        return frame, age
+
+    def stop(self) -> None:
+        self._running.clear()
+        self._thread.join(timeout=1.0)
+
+
 class ClassroomPipeline(QObject):
     frame_ready = Signal(object)
     voice_ready = Signal(str)
@@ -1130,6 +1180,13 @@ class ClassroomPipeline(QObject):
         self.tracker = HandTracker()
         self.gesture_engine = ge.GestureEngine()
 
+        # cam.read() itself has no timeout, and some Windows camera drivers
+        # (DirectShow included, under contention) can stall on it forever.
+        # Isolate the read on its own thread so a stuck driver only ever
+        # stales the frame instead of freezing gestures/voice/the classroom
+        # clock — see _CameraReader.
+        reader = _CameraReader(cam) if cam is not None else None
+
         cursor_fps = 0.0
         t0 = time.monotonic()
         frame_idx = 0
@@ -1145,9 +1202,9 @@ class ClassroomPipeline(QObject):
             every = self.session.settings.classroom.tracking_interval()
 
             real_hands: list = []
-            if cam is not None:
-                ok, frame = cam.read()
-                if ok:
+            if reader is not None:
+                frame, age = reader.latest()
+                if frame is not None and age < 4.0:
                     camera_dead_at = None
                     self._last_frame = frame
                     if frame_idx % every == 0:
@@ -1162,6 +1219,8 @@ class ClassroomPipeline(QObject):
                         camera_dead_at = now
                     elif now - camera_dead_at >= 4.0:
                         self._fallback_from_camera()
+                        reader.stop()
+                        reader = None
                         if cam is not None:
                             cam.release()
                         cam = None
@@ -1196,6 +1255,8 @@ class ClassroomPipeline(QObject):
             # keep the loop gentle on CPU: ~30 fps (or ~15 in performance mode)
             time.sleep(0.033 if every == 1 else 0.066)
 
+        if reader is not None:
+            reader.stop()
         if cam is not None:
             cam.release()
         self.tracker.close()

@@ -201,6 +201,58 @@ def test_camera_fallback_marks_honest_env_and_logs_once():
                        "Close other apps using the webcam and restart."]
 
 
+def test_camera_reader_survives_a_hung_read():
+    """Regression: cam.read() has no timeout, and some Windows camera
+    drivers can block on it forever under contention. That used to run
+    straight in the pipeline's main loop, so one stuck read silently froze
+    gesture handling, voice routing and the classroom clock together while
+    the window kept answering Windows' ping from its own thread — looking
+    "responsive" while doing nothing. _CameraReader isolates the blocking
+    call so ``latest()`` can report staleness instead of hanging."""
+    import threading
+    import time
+    from edu_air.ui import _CameraReader
+
+    hang = threading.Event()  # never set -> read() blocks like a stuck driver
+
+    class HangingCam:
+        def read(self):
+            hang.wait()
+            return True, "frame-after-hang"
+
+    reader = _CameraReader(HangingCam())
+    try:
+        # The reader thread is stuck inside read(); no frame has landed yet.
+        frame, age = reader.latest()
+        assert frame is None
+        assert age == float("inf")
+        time.sleep(0.1)
+        frame, age = reader.latest()
+        assert frame is None, "a hung driver must not fabricate a frame"
+    finally:
+        hang.set()
+        reader.stop()
+
+
+def test_camera_reader_reports_fresh_frames():
+    from edu_air.ui import _CameraReader
+
+    class FakeCam:
+        def read(self):
+            return True, "frame"
+
+    reader = _CameraReader(FakeCam())
+    try:
+        for _ in range(50):
+            frame, age = reader.latest()
+            if frame is not None:
+                break
+        assert frame == "frame"
+        assert age < 1.0
+    finally:
+        reader.stop()
+
+
 def test_camera_backend_prefers_directshow_on_windows():
     from edu_air.ui import _camera_backend
 
