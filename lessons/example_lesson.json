@@ -1,0 +1,10 @@
+{
+ "steps": [
+  {"kind": "slide", "label": "Welcome & objectives", "duration_s": 0.0},
+  {"kind": "slide", "label": "Main lesson content", "duration_s": 0.0},
+  {"kind": "quiz", "label": "Quick comprehension check", "duration_s": 0.0},
+  {"kind": "timer", "label": "Group work", "duration_s": 300.0},
+  {"kind": "board", "label": "Recap on the whiteboard", "duration_s": 0.0},
+  {"kind": "slide", "label": "Wrap-up & homework", "duration_s": 0.0}
+ ]
+}

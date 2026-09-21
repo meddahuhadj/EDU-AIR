@@ -10,6 +10,7 @@ question bank can be loaded from a JSON file or built from the built-in set.
 
 from __future__ import annotations
 
+import csv
 import json
 import time
 from dataclasses import dataclass, field
@@ -44,6 +45,22 @@ class QuizStats:
     wrong: int = 0
     answered: int = 0
     skipped: int = 0
+
+
+@dataclass
+class QuizAnswerRecord:
+    """One row of the class's answer history -- what CSV export reads from.
+    ``VoiceQuiz`` only ever kept the *last* answer before this; recording
+    each one as it happens is what turns "export results" from a single
+    current-question snapshot into an actual session record for the
+    teacher's cahier de classe."""
+    question_number: int
+    question_text: str
+    given_label: str          # "A".."D", or "" when skipped/never answered
+    correct_label: str        # "A".."D"
+    is_correct: bool
+    was_skipped: bool
+    elapsed_s: float
 
 
 DEFAULT_QUESTIONS: list[Question] = [
@@ -127,6 +144,7 @@ class VoiceQuiz:
         self.total_elapsed_s: float = 0.0
         self._started_at: Optional[float] = None
         self._active = False
+        self.history: list[QuizAnswerRecord] = []
 
     # ---- lifecycle ---------------------------------------------------------
     def start(self) -> None:
@@ -137,6 +155,7 @@ class VoiceQuiz:
         self.last_answer_idx = None
         self.last_answer_correct = None
         self.stats = QuizStats()
+        self.history = []
         self._started_at = time.monotonic()
         self.question_started = self._started_at
         self._active = True
@@ -187,6 +206,10 @@ class VoiceQuiz:
         self.start()
 
     # ---- answering ---------------------------------------------------------
+    def _label_for(self, index: int) -> str:
+        labels = self.labels
+        return labels[index] if 0 <= index < len(labels) else ""
+
     def answer(self, index: int) -> bool:
         """Submit an option index (0..3). Returns True when correct."""
         if not self.active or self.state == STATE_ANSWERED:
@@ -208,12 +231,34 @@ class VoiceQuiz:
             self.question_elapsed_s = time.monotonic() - self.question_started
         if self.settings.reveal_on_answer:
             self.revealed = True
+        self.history.append(QuizAnswerRecord(
+            question_number=self.current_question_idx + 1,
+            question_text=q.text,
+            given_label=self._label_for(index),
+            correct_label=self._label_for(q.answer_idx),
+            is_correct=correct,
+            was_skipped=False,
+            elapsed_s=round(self.question_elapsed_s, 1),
+        ))
         return correct
 
     def reveal(self) -> None:
         if self.state == STATE_ANSWERED or self.state == STATE_QUESTION:
             if self.state == STATE_QUESTION:
                 self.stats.skipped += 1
+                q = self.bank.current
+                if self.question_started is not None:
+                    self.question_elapsed_s = time.monotonic() - self.question_started
+                if q is not None:
+                    self.history.append(QuizAnswerRecord(
+                        question_number=self.current_question_idx + 1,
+                        question_text=q.text,
+                        given_label="",
+                        correct_label=self._label_for(q.answer_idx),
+                        is_correct=False,
+                        was_skipped=True,
+                        elapsed_s=round(self.question_elapsed_s, 1),
+                    ))
             self.revealed = True
             if self.state == STATE_QUESTION:
                 self.state = STATE_ANSWERED
@@ -242,3 +287,39 @@ class VoiceQuiz:
             else round(time.monotonic() - self._started_at, 1) if self._started_at else 0.0,
             "question": self.current_question_idx + 1,
         }
+
+    # ---- export --------------------------------------------------------------
+    def to_csv_rows(self) -> list[list[str]]:
+        """Header + one row per answered/skipped question -- what "Export
+        quiz results" writes to disk. Kept as plain data (no file I/O) so
+        it is testable without touching a real file."""
+        rows = [["#", "Question", "Given answer", "Correct answer", "Result", "Time (s)"]]
+        for rec in self.history:
+            if rec.was_skipped:
+                result = "Skipped"
+            elif rec.is_correct:
+                result = "Correct"
+            else:
+                result = "Wrong"
+            rows.append([
+                str(rec.question_number), rec.question_text,
+                rec.given_label or "-", rec.correct_label, result,
+                f"{rec.elapsed_s:.1f}",
+            ])
+        rows.append([])
+        s = self.summary()
+        rows.append(["Total questions", str(s["total"])])
+        rows.append(["Correct", str(s["correct"])])
+        rows.append(["Wrong", str(s["wrong"])])
+        rows.append(["Skipped", str(s["skipped"])])
+        rows.append(["Duration (s)", str(s["elapsed_s"])])
+        return rows
+
+    def export_csv(self, path: str | Path) -> Path:
+        """Write the quiz session's answer history to a CSV file (UTF-8
+        with BOM, so accented question text opens correctly in Excel).
+        Returns the written path."""
+        p = Path(path)
+        with p.open("w", newline="", encoding="utf-8-sig") as f:
+            csv.writer(f).writerows(self.to_csv_rows())
+        return p

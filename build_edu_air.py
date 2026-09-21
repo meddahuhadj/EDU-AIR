@@ -1,4 +1,11 @@
-"""EDU-AIR — Windows desktop build (PyInstaller), build/work dirs on D: to spare C:."""
+"""EDU-AIR — Windows desktop build (PyInstaller), build/work dirs on D: to spare C:.
+
+Offline voice (Vosk): no model is bundled here on purpose (they run 40 MB to
+1+ GB per language) -- resolve_vosk_model_path() in edu_air/config.py looks
+for a models/vosk-<lang>/ folder next to the built .exe at runtime, so one
+can be dropped into dist/EDU-AIR/models/vosk-<lang>/ after this build
+finishes (or updated later) without ever needing a rebuild.
+"""
 import os
 import subprocess
 import shutil

@@ -16,7 +16,17 @@ sounddevice>=0.4
 comtypes>=1.2
 pycaw>=20240210
 
-# Offline speech recognition (optional, fully local)
+# Offline speech recognition (optional, fully local): uncomment vosk, then
+# download a model per language from https://alphacephei.com/vosk/models
+# and unzip it into models/vosk-<lang>/ next to edu_air_main.py, e.g.
+# models/vosk-en/, models/vosk-fr/ (<lang> = en|fr|ar|nl, matching
+# ClassroomSettings.language). Tick "Offline voice (Vosk)" in the app once
+# a model is in place, or set ClassroomSettings.offline_voice = True /
+# vosk_model_path to a custom location. No model ships by default (they run
+# 40 MB-1+ GB depending on language/quality) -- voice stays on Google
+# (online) until one is added, and never falls back to Google silently once
+# offline is requested (see SpeechManager.create() in
+# hadj_no_touch/voice/speech_recognition.py).
 # vosk>=0.3.45
 
 # Development / testing

@@ -98,9 +98,23 @@ class AnnotationModel:
         s = self.active_stroke
         self.active_stroke = None
         if s is not None and len(s.points) > 0:
+            if s.tool == TOOL_DRAW and self.settings.shape_correction:
+                self._try_clean_shape(s)
             self._append_stroke(s)
         self.dirty = True
         return s
+
+    def _try_clean_shape(self, s: Stroke) -> None:
+        """"Ink to shape": a just-finished draw stroke that clearly traces
+        a closed circle or rectangle is replaced with a clean redraw
+        in place (same stroke object, color/width untouched) -- see
+        ``edu_air.shape_recognition`` for the conservative geometry
+        tests. Anything that doesn't clearly match either shape is left
+        completely alone."""
+        from .shape_recognition import recognize_and_clean
+        cleaned = recognize_and_clean(s.points)
+        if cleaned is not None:
+            s.points = cleaned
 
     def dot(self, pos_norm: tuple[float, float]) -> Stroke | None:
         """Click-release while the dot marker is selected."""

@@ -109,3 +109,60 @@ def test_move_in_point_tool_is_noop():
     assert s is None
     assert not m.drawing
     assert m.count == 0
+
+
+# ---- shape correction ("ink to shape", see edu_air.shape_recognition) -----
+def _draw_noisy_circle(m, cx=0.5, cy=0.5, r=0.15, n=60):
+    """Draws with whatever tool is already selected on ``m`` -- callers
+    that want to test a specific tool set it themselves first."""
+    import math
+    import random
+    rng = random.Random(7)
+    m.begin((cx + r, cy))
+    for i in range(1, n + 1):
+        a = 2 * math.pi * i / n
+        m.move((cx + r * math.cos(a) + rng.uniform(-0.01, 0.01),
+               cy + r * math.sin(a) + rng.uniform(-0.01, 0.01)))
+    m.finish()
+
+
+def test_a_hand_drawn_circle_is_cleaned_up_on_finish():
+    m = make_model(default_tool=TOOL_DRAW, shape_correction=True)
+    _draw_noisy_circle(m)
+    assert m.count == 1
+    assert len(m.strokes[0].points) > 10  # replaced by a redrawn circle polygon
+
+
+def test_shape_correction_can_be_turned_off():
+    m = make_model(default_tool=TOOL_DRAW, shape_correction=False)
+    _draw_noisy_circle(m)
+    assert m.count == 1
+    assert len(m.strokes[0].points) == 61  # left exactly as drawn (60 moves + begin)
+
+
+def test_shape_correction_never_touches_the_highlighter():
+    """The highlighter is meant to underline/emphasize existing content,
+    not become a shape -- only the draw tool gets "ink to shape"."""
+    m = make_model(default_tool=TOOL_HIGHLIGHT, shape_correction=True)
+    m.set_tool(TOOL_HIGHLIGHT)
+    _draw_noisy_circle(m)
+    assert m.count == 1
+    assert len(m.strokes[0].points) == 61
+
+
+def test_a_genuine_freeform_stroke_keeps_its_original_points():
+    m = make_model(default_tool=TOOL_DRAW, shape_correction=True)
+    m.set_tool(TOOL_DRAW)
+    m.begin((0.1, 0.1))
+    m.move((0.15, 0.4))
+    m.move((0.4, 0.2))
+    m.move((0.6, 0.6))
+    m.finish()
+    assert m.strokes[0].points == [(0.1, 0.1), (0.15, 0.4), (0.4, 0.2), (0.6, 0.6)]
+
+
+def test_cleaned_shape_keeps_the_strokes_color_and_width():
+    m = make_model(default_tool=TOOL_DRAW, shape_correction=True, draw_color="#00ff00", draw_width=5)
+    _draw_noisy_circle(m)
+    assert m.strokes[0].color == "#00ff00"
+    assert m.strokes[0].width == 5

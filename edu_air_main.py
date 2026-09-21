@@ -59,6 +59,7 @@ def main(argv: list[str] | None = None) -> int:
     _check_python()
     argv = list(argv if argv is not None else sys.argv[1:])
     demo_mode = "--demo" in argv
+    board_demo = "--demo-board" in argv
 
     if not _claim_single_instance():
         from PySide6.QtCore import QTimer
@@ -139,7 +140,43 @@ def main(argv: list[str] | None = None) -> int:
     window._pipeline = pipeline
     window._session = session
 
+    if demo_mode:
+        _start_board_demo(window, session)
+
     return app.exec()
+
+
+def _start_board_demo(window, session) -> None:
+    """Animated interactive-whiteboard demo: replay :func:`board_script` on a
+    timer so pages, strokes, backgrounds and undo are visible live in the
+    window (dock, status grid and mural overlay all stay in sync)."""
+    if not getattr(session, "board", None):
+        return
+    from PySide6.QtCore import QTimer
+    from edu_air.demo import DemoSession, board_script
+    from edu_air.config import SETTINGS
+
+    lang = getattr(SETTINGS.classroom, "language", "en") or "en"
+    demo = DemoSession(session, board_script(lang), lang)
+    tick = QTimer()
+    tick.setInterval(1000)
+
+    def _tick() -> None:
+        try:
+            line = demo.step()
+            if line:
+                window.show_log(f"TNI demo · {line}")
+                window._overlay.update()
+            if demo.done:
+                tick.stop()
+                window.show_log("TNI demo terminée.")
+        except Exception as exc:
+            tick.stop()
+            window.show_log(f"TNI demo interrompue: {exc}")
+
+    tick.timeout.connect(_tick)
+    tick.start()
+    window._board_demo_timer = tick
 
 
 if __name__ == "__main__":

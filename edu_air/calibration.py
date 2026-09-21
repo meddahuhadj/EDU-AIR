@@ -1,19 +1,26 @@
 """Projector calibration procedure.
 
-A 5-step wizard that maps webcam space onto the projected display:
+A 6-step wizard that maps webcam space onto the projected display:
 
   1. Camera          — check that the webcam sees the teacher (tracking OK);
   2. Projection area — confirm the projected rectangle is framed;
   3. Screen corners  — collect the 4 projected corners in camera space and
                        build the homography (webcam -> projector);
-  4. Pointer alignment — teacher points at 5 on-screen targets; measure the
+  4. Touch plane     — teacher touches those same 4 corners for real so the
+                       active wall-mode backend can learn its contact
+                       baseline (shadow-gap offset / IR threshold) per zone;
+                       skipped automatically when wall mode is not enabled;
+  5. Pointer alignment — teacher points at 5 on-screen targets; measure the
                        mapping error so drift is reported honestly;
-  5. Gesture test    — confirm the classifier sees the gestures the classroom
+  6. Gesture test    — confirm the classifier sees the gestures the classroom
                        relies on (point, pinch, swipe, palm).
 
 When calibration succeeds it produces a ``mapping`` callable that the
-interactive pointer attaches as its homography. Steps that must be skipped
-are flagged as *estimated* — the resulting mapping is clearly reported as
+interactive pointer *and* the wall-mode touch detector attach as their
+homography (see ``edu_air.pointer.InteractivePointer.set_calibration`` and
+``edu_air.touch.SurfaceTouchDetector.set_calibration`` — both reuse this one
+mapping, it is never recomputed per mode). Steps that must be skipped are
+flagged as *estimated* — the resulting mapping is clearly reported as
 approximate, never silently precise.
 """
 
@@ -30,10 +37,11 @@ Mapping = Callable[[tuple[float, float]], tuple[float, float]]
 STAGE_CAMERA = "camera"
 STAGE_PROJECTION = "projection_area"
 STAGE_CORNERS = "corners"
+STAGE_TOUCH_PLANE = "touch_plane"
 STAGE_ALIGNMENT = "alignment"
 STAGE_GESTURES = "gesture_test"
 
-STAGE_ORDER = [STAGE_CAMERA, STAGE_PROJECTION, STAGE_CORNERS,
+STAGE_ORDER = [STAGE_CAMERA, STAGE_PROJECTION, STAGE_CORNERS, STAGE_TOUCH_PLANE,
                STAGE_ALIGNMENT, STAGE_GESTURES]
 
 STATUS_PENDING = "pending"
@@ -45,6 +53,12 @@ STATUS_PARTIAL = "partial"
 # On-screen alignment targets (normalized, slightly inset so the crosshair is
 # within the projector frame even on odd-behaviour webcams).
 ALIGN_TARGETS = [(0.15, 0.20), (0.85, 0.20), (0.85, 0.80), (0.15, 0.80), (0.5, 0.5)]
+
+# Quick pointer calibration (see quick_calibrate()): 3 points spanning a
+# wide triangle so a 3-correspondence affine fit is well-conditioned (not
+# collinear, not clustered) -- one message box + one tap per point, versus
+# the full wizard's 4 corners + optional touch plane + 5 alignment checks.
+QUICK_CALIB_TARGETS = [(0.12, 0.15), (0.88, 0.15), (0.5, 0.85)]
 
 # The gestures the classroom relies on (for the final test).
 REQUIRED_GESTURES = ["point", "pinch", "swipe_left", "palm"]
@@ -76,7 +90,13 @@ def fit_homography(src: list[tuple[float, float]],
                    dst: list[tuple[float, float]]) -> Optional[Mapping]:
     """Perspective transform from at least 4 point pairs, or a best-effort
     affine/linear mapping when the homography solver is unavailable. Returns
-    a callable(norm)->norm or None when fewer than 4 points are known."""
+    a callable(norm)->norm or None when fewer than 4 points are known.
+
+    The returned mapping is deliberately *not* clamped to [0, 1] -- how far
+    a point lands outside that range is itself useful information (e.g.
+    ``HomographyDriftMonitor`` uses it to notice the calibration no longer
+    fits the room). Callers that need an on-screen position clamp it
+    themselves (``InteractivePointer.raw_to_screen`` already does)."""
     if len(src) < 4 or len(dst) < 4:
         return None
     try:
@@ -92,8 +112,7 @@ def fit_homography(src: list[tuple[float, float]],
         def map_fn(p: tuple[float, float]) -> tuple[float, float]:
             pt = np.float32([[p[0], p[1]]]).reshape(-1, 1, 2)
             out = cv2.perspectiveTransform(pt, hmat)
-            x, y = float(out[0][0][0]), float(out[0][0][1])
-            return (max(0.0, min(1.0, x)), max(0.0, min(1.0, y)))
+            return (float(out[0][0][0]), float(out[0][0][1]))
         return map_fn
     except Exception:
         return None
@@ -102,7 +121,8 @@ def fit_homography(src: list[tuple[float, float]],
 def linear_mapping(src: list[tuple[float, float]],
                    dst: list[tuple[float, float]]) -> Optional[Mapping]:
     """Minimal linear fallback: map camera->screen with an 8-parameter least
-    squares fit (affine-ish). Used only when the homography solver is absent."""
+    squares fit (affine-ish). Used only when the homography solver is
+    absent. Not clamped to [0, 1] -- see ``fit_homography``."""
     try:
         import numpy as np
         if len(src) < 3:
@@ -119,10 +139,24 @@ def linear_mapping(src: list[tuple[float, float]],
             v = np.array([p[0], p[1], 1.0])
             x = float(np.dot(mx, v))
             y = float(np.dot(my, v))
-            return (max(0.0, min(1.0, x)), max(0.0, min(1.0, y)))
+            return (x, y)
         return map_fn
     except Exception:
         return None
+
+
+def quick_calibrate(camera_points: list[tuple[float, float]]) -> Optional[Mapping]:
+    """3-tap pointer calibration: pair ``camera_points`` (exactly 3, in the
+    order of ``QUICK_CALIB_TARGETS``) with those targets and fit an affine
+    mapping. A lightweight alternative to the full corner/touch-plane/
+    alignment wizard for a mid-class "pointer feels off, fix it fast"
+    moment -- one tap per target, no touch-plane or alignment-error step.
+    Returns ``None`` when fewer than 3 points were captured (never raises;
+    the caller keeps whatever mapping -- possibly none -- was already
+    active, exactly like the full wizard's own incomplete-corners path)."""
+    if len(camera_points) < 3:
+        return None
+    return linear_mapping(camera_points[:3], QUICK_CALIB_TARGETS)
 
 
 class ProjectorCalibration:
@@ -135,6 +169,8 @@ class ProjectorCalibration:
         self.alignment = []   # (screen_target_norm, measured_camera_norm)
         self.gestures_seen: set[str] = set()
         self.last_error: Optional[float] = None
+        self.touch_samples: dict[int, list] = {}   # corner_index -> list[TouchSample]
+        self.touch_plane: dict = {}                # learned baseline, see finish_touch_plane()
 
     # ---- navigation --------------------------------------------------------
     @property
@@ -157,6 +193,8 @@ class ProjectorCalibration:
         self.corners_camera.clear()
         self.alignment.clear()
         self.gestures_seen.clear()
+        self.touch_samples.clear()
+        self.touch_plane = {}
         self.report = CalibrationReport(stages={s: StageStatus(s)
                                                 for s in STAGE_ORDER})
 
@@ -198,6 +236,34 @@ class ProjectorCalibration:
         else:
             st.status = STATUS_SKIPPED
             st.detail = "corners unavailable — estimated mapping"
+        return st
+
+    # ---- step 4: touch plane (wall mode contact baseline) -------------------------
+    def add_touch_sample(self, corner_index: int, sample) -> None:
+        """Feed one raw ``TouchSample`` observed while the teacher touches
+        projected corner ``corner_index`` for real (approach + contact
+        frames both help — see ``edu_air.touch.plane_calibration``)."""
+        self.touch_samples.setdefault(corner_index, []).append(sample)
+
+    def finish_touch_plane(self, backend=None) -> StageStatus:
+        """Learn the active wall-mode backend's contact baseline from the 4
+        corner touches. Safe to skip entirely — wall mode stays off by
+        default and falls back to un-calibrated thresholds otherwise."""
+        st = self.report.stages[STAGE_TOUCH_PLANE]
+        flat = [s for samples in self.touch_samples.values() for s in samples]
+        if backend is None or not flat:
+            st.status = STATUS_SKIPPED
+            st.detail = "touch plane not calibrated — wall mode uses default thresholds"
+            self.report.estimated.add(STAGE_TOUCH_PLANE)
+            return st
+        self.touch_plane = backend.calibrate_plane(flat)
+        st.status = STATUS_DONE if self.touch_plane.get("zones") else STATUS_PARTIAL
+        st.detail = (f"touch baseline learned from {len(flat)} samples "
+                    f"across {len(self.touch_samples)} corners")
+        self.settings.calibration = {
+            **(self.settings.calibration or {}),
+            "touch_plane": self.touch_plane,
+        }
         return st
 
     # ---- step 3b: estimation -----------------------------------------------
@@ -302,6 +368,11 @@ class ProjectorCalibration:
         if not self.done:
             # finish the remaining cheap stages so the report is coherent.
             pass
+        # Wall mode is opt-in: a caller that never touched the touch-plane
+        # step (every existing pre-wall-mode caller) should still get a
+        # coherent, completable report instead of hanging on STATUS_PENDING.
+        if self.report.stages[STAGE_TOUCH_PLANE].status == STATUS_PENDING:
+            self.finish_touch_plane(backend=None)
         self.report.completed = all(
             self.report.stages[s].status in (STATUS_DONE, STATUS_SKIPPED)
             for s in STAGE_ORDER)
