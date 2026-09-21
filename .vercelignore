@@ -1,2 +1,18 @@
 # Keep the 300+ MB desktop ZIP out of Vercel static deploys (> Hobby ~100 MB cap).
 downloads/
+
+# Local scratch/working files — never part of the published PWA.
+.src/
+.v1/
+media/
+tests/
+__pycache__/
+*.pyc
+
+# Repo/tooling noise.
+.git/
+.gitignore
+.vercelignore
+render.yaml
+netlify.toml
+_headers

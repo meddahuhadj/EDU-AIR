@@ -44,6 +44,7 @@
     <span class="clock" id="clock">--:--</span>
     <button class="iconbtn hidden" id="btnInstall" title="Install app" aria-label="Install app">&#8681;</button>
     <button class="iconbtn" id="btnFullscreen" title="Fullscreen" aria-label="Fullscreen">&#9962;</button>
+    <button class="iconbtn" id="btnCam" data-state="off" title="Camera" aria-label="Camera">&#128247;</button>
     <button class="iconbtn" id="btnMic" data-state="off" title="Voice" aria-label="Voice">&#127908;</button>
     <div class="langsw">
       <button class="langbtn" data-lang="en" data-state="active">EN</button>
@@ -53,6 +54,31 @@
     </div>
   </div>
 </header>
+
+<!-- ============ CAMERA: live preview + full-screen hand overlay ============ -->
+<div class="cam-pip hidden" id="camPreview" aria-hidden="true">
+  <video id="camVideo" playsinline muted></video>
+  <span class="cam-pip-tag" id="camPipTag">&#9678;</span>
+</div>
+<canvas id="camOverlay" class="cam-overlay hidden" aria-hidden="true"></canvas>
+<button id="btnModelRetry" class="btn btn-primary cam-retry hidden" data-i18n-html="cam.retry">RETRY CAMERA MODEL</button>
+
+<!-- ============ GESTURE TUTORIAL (first camera launch) ============ -->
+<div class="tut-overlay hidden" id="tutOverlay" role="dialog" aria-label="Gesture tutorial">
+  <div class="tut-card">
+    <h4 data-i18n-html="tut.title">LEARN THE GESTURES</h4>
+    <div class="tut-steps">
+      <div class="tut-step" data-key="tut.step1"><span class="tut-dot">1</span><span class="tut-txt">Place your hand about 50 cm from the camera and wave</span></div>
+      <div class="tut-step" data-key="tut.step2"><span class="tut-dot">2</span><span class="tut-txt">Pinch thumb and index together to click</span></div>
+      <div class="tut-step" data-key="tut.step3"><span class="tut-dot">3</span><span class="tut-txt">Swipe left or right to change slides</span></div>
+    </div>
+    <div class="row row-center">
+      <button class="btn" id="btnTutSkip" data-i18n-html="tut.skip">SKIP</button>
+      <button class="btn btn-primary" id="btnTutNext">NEXT</button>
+    </div>
+  </div>
+</div>
+
 <div class="layout">
   <!-- ============ SIDEBAR ============ -->
   <nav id="sidebar" aria-label="Navigation">
@@ -270,6 +296,10 @@
       <div class="panel">
         <h2 data-i18n-html="dash.title">DASHBOARD</h2>
         <div class="stat-grid" id="dashStats"></div>
+        <div class="dash-actions">
+          <button class="btn" id="btnExportCsv" data-i18n-html="dash.exportCSV">EXPORT QUIZ RESULTS (CSV)</button>
+        </div>
+        <div class="dash-badges" id="dashBadges"></div>
         <div class="dash-grid" id="dashQuick"></div>
       </div>
     </section>
@@ -318,11 +348,12 @@
 
 <div class="modal-backdrop hidden" id="modalDemo" role="dialog" aria-modal="true" aria-labelledby="demoTitle">
   <div class="modal modal-demo">
-    <h3 id="demoTitle" data-i18n-html="demo.title">SIMULATION MODE</h3>
-    <p class="lede" data-i18n-html="demo.body">No camera hardware detected — running the <b>synthetic hand engine</b>. This is a faithful simulation so you can explore every feature.</p>
+    <h3 id="demoTitle" data-i18n-html="demo.title">HOW TO INTERACT</h3>
+    <p class="lede" data-i18n-html="demo.body">Two ways to interact: <b>real gestures</b> using your webcam (processed locally in your browser, nothing is uploaded) or the <b>synthetic hand engine</b> with keyboard/mouse.</p>
     <label class="row row-center" for="chkDemoInput"><input type="checkbox" id="chkDemoInput" checked /> <span data-i18n-html="demo.kb">Enable keyboard/mouse as hand input</span></label>
     <div class="row row-center">
-      <button class="btn btn-primary" id="btnDemoGo" data-i18n-html="demo.go">ENTER SMART SURFACE</button>
+      <button class="btn btn-primary" id="btnDemoCam" data-i18n-html="demo.cam">USE MY CAMERA (REAL GESTURES)</button>
+      <button class="btn" id="btnDemoGo" data-i18n-html="demo.go">SIMULATE (KEYBOARD/MOUSE)</button>
     </div>
   </div>
 </div>

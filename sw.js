@@ -2,7 +2,7 @@
    Network-first for navigations (fresh HTML), cache-first for static assets.
    Offline fallback: any navigation that misses the network is served from
    the precached app shell, so the PWA launches with no connection. */
-const CACHE_NAME = "edu-air-static-v2";
+const CACHE_NAME = "edu-air-static-v7";
 const SHELL = [
   "./",
   "./index.html",
@@ -10,6 +10,8 @@ const SHELL = [
   "./app.js",
   "./i18n.js",
   "./manifest.webmanifest",
+  "./vendor/vision_bundle.js",
+  "./models/hand_landmarker.task",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./icons/icon-maskable-512.png",

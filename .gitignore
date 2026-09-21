@@ -4,3 +4,10 @@
 __pycache__/
 *.pyc
 
+
+.env*
+
+# Local scratch/working files
+.src/
+.v1/
+media/
