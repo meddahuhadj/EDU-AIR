@@ -40,6 +40,7 @@ var S = window.EDUAIR = {
   sound: getLS("sound", true),
   conf: getLS("conf", 0.5),
   primHand: getLS("primHand", "auto"),
+  stab: getLS("stab", 4),
   theme: getLS("theme", "dark"),
   tutorialSeen: getLS("tutorialSeen", false),
   quizResults: getLS("quizResults", []),
@@ -816,6 +817,11 @@ function lerpColor(a,b,f){ f=clamp(f,0,1); return [Math.round(a[0]+(b[0]-a[0])*f
 function wireAirQuiz(){
   on($("btnQuizNew"),"click", function(){ openQuizEditor(); });
   on($("btnQuizAddQ"),"click", function(){ addQuizQuestionRow(); });
+  on($("btnQuizImport"),"click", function(){ var fi = $("fileQuizImport"); if(fi) fi.click(); });
+  on($("fileQuizImport"),"change", function(e){
+    if(e.target.files && e.target.files[0]) importQuizFile(e.target.files[0]);
+    e.target.value = "";
+  });
   on($("btnQuizSave"),"click", function(){ saveQuizFromEditor(); });
   on($("btnQuizEditClose"),"click", function(){ hideModal("modalQuizEdit"); });
 }
@@ -824,22 +830,92 @@ function openQuizEditor(){
   addQuizQuestionRow();
   showModal("modalQuizEdit");
 }
-function addQuizQuestionRow(){
+function addQuizQuestionRow(qin, correct){
   var host = $("qeditor");
   var idx = host.children.length;
   var row = document.createElement("div"); row.className = "qrow";
   var q = document.createElement("input"); q.type="text"; q.placeholder = t("quiz.question")+" "+(idx+1); q.className="q-text";
+  if(qin && qin.q) q.value = qin.q;
   row.appendChild(q);
   var opts = document.createElement("div"); opts.className="row row-wrap";
-  ["A","B","C","D"].forEach(function(letter,i){
+  var arr = (qin && qin.opts) ? qin.opts.slice(0,4) : ["","","",""];
+  while(arr.length < 2 && !(qin && qin.opts)) arr.push("");
+  arr.forEach(function(otxt,i){
     var wrap = document.createElement("label"); wrap.className="btbtn sml qopt";
-    var radio = document.createElement("input"); radio.type="radio"; radio.name="correct-"+idx; radio.value=i; if(i===0) radio.checked=true;
-    var input = document.createElement("input"); input.type="text"; input.placeholder=letter; input.className="q-opt";
+    var radio = document.createElement("input"); radio.type="radio"; radio.name="correct-"+idx; radio.value=i;
+    if(qin ? i === correct : i===0) radio.checked=true;
+    var input = document.createElement("input"); input.type="text"; input.placeholder=EUDAIR_ALPHA[i]; input.className="q-opt";
+    if(otxt) input.value = otxt;
     wrap.appendChild(radio); wrap.appendChild(input);
     opts.appendChild(wrap);
   });
   row.appendChild(opts);
   host.appendChild(row);
+}
+var EUDAIR_ALPHA = ["A","B","C","D"];
+function parseCSVLine(line){
+  var res=[], cur="", inq=false;
+  for(var i=0;i<line.length;i++){
+    var ch=line[i];
+    if(inq){
+      if(ch==='"'){ if(line[i+1]==='"'){ cur+='"'; i++; } else inq=false; }
+      else cur+=ch;
+    } else if(ch==='"') inq=true;
+    else if(ch===','){ res.push(cur); cur=""; }
+    else cur+=ch;
+  }
+  res.push(cur);
+  return res;
+}
+function parseQuizQuestions(text){
+  var out = [];
+  try{
+    var json = JSON.parse(text);
+    var arr = Array.isArray(json) ? json : (json.questions || []);
+    arr.forEach(function(item){
+      var q = item && (item.q != null ? String(item.q) : (item.question || "")).trim();
+      var opts = (item && item.opts || []).map(function(o){ return String(o).trim(); }).filter(function(o){ return o; }).slice(0,4);
+      var correct = item != null ? item.correct : 0;
+      if(typeof correct === "string"){
+        var up = correct.trim().toUpperCase();
+        if(/^\d+$/.test(correct.trim())) correct = parseInt(correct.trim(),10);
+        else if(/^[A-D]$/.test(up)) correct = up.charCodeAt(0)-65;
+        else { var fo = opts.indexOf(correct); correct = fo >= 0 ? fo : 0; }
+      }
+      correct = isFinite(correct) ? parseInt(correct,10) : 0;
+      if(q && opts.length >= 2 && correct >= 0 && correct < opts.length) out.push({ q:q, opts:opts, correct:correct });
+    });
+    if(out.length) return out;
+  }catch(e){ /* not JSON — fall through to CSV */ }
+  var lines = text.split(/\r?\n/).map(function(l){ return l.trim(); }).filter(function(l){ return l; });
+  for(var li=0; li<lines.length; li++){
+    var cols = parseCSVLine(lines[li]);
+    if(li===0 && ["question","q","text"].indexOf(cols[0].toLowerCase()) >= 0) continue;
+    if(cols.length >= 3){
+      var qq = cols[0].replace(/"([^"]*)"/g, "$1").trim();
+      if(!qq) continue;
+      var optsv = [], used = 0;
+      for(var oi=1; oi < cols.length-1 && used < 4; oi++){ if(cols[oi]){ optsv.push(cols[oi].replace(/"([^"]*)"/g, "$1").trim()); used++; } }
+      var last = (cols[cols.length-1]||"").replace(/"([^"]*)"/g, "$1").trim();
+      var cc = 0;
+      if(/^[A-D]$/i.test(last)) cc = last.toUpperCase().charCodeAt(0)-65;
+      else if(/^\d+$/.test(last)) cc = parseInt(last,10);
+      else { var fr = optsv.indexOf(last); cc = fr >= 0 ? fr : 0; }
+      if(optsv.length >= 2 && cc >= 0 && cc < optsv.length) out.push({ q:qq, opts:optsv, correct:cc });
+    }
+  }
+  return out;
+}
+function importQuizFile(file){
+  var fr = new FileReader();
+  fr.onload = function(){
+    var questions = parseQuizQuestions(fr.result || "");
+    if(!questions.length){ toast("quiz.importBad","warn"); return; }
+    questions.forEach(function(qu){ addQuizQuestionRow(qu, qu.correct); });
+    toast("quiz.importOk","ok");
+    logEv("quiz.import", {n:questions.length});
+  };
+  fr.readAsText(file);
 }
 function saveQuizFromEditor(){
   var host = $("qeditor");
@@ -941,7 +1017,7 @@ function wireAirPresentation(){
 var HA = { state:"off", stream:null, landmarker:null, running:false, starting:false,
            loaded:false, loading:false, hand:null, handEver:false, gestureText:"", ripples:[], light:1,
            quality:"wait", qualityT:0, result:null, lastDet:0, modelErr:false, watchTimer:null,
-           fps:0, _fr:0, _ft:0, lastHandT:0 };
+           fps:0, _fr:0, _ft:0, lastHandT:0, smx:null, smy:null };
 var MP_CDN  = "./vendor/vision_bundle.js";
 var MP_WASM = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm";
 var MP_MODEL = "./models/hand_landmarker.task";
@@ -1124,6 +1200,7 @@ function stopCamera(){
   HA.running = false;
   if(HA.stream){ HA.stream.getTracks().forEach(function(tr){ tr.stop(); }); HA.stream = null; }
   HA.state="off"; HA.hand = null; HA.handEver = false; HA.gestureText="";
+  HA.smx = null; HA.smy = null;
   HA.result = null; HA.lastDet = 0;
   HA.lastHandT = 0;
   if(HA.watchTimer){ clearTimeout(HA.watchTimer); HA.watchTimer = null; }
@@ -1412,8 +1489,18 @@ function camLoop(){
   if(hands && hands.length){
     HA.lastHandT = performance.now();
     var p1 = hands[prim];
-    var sx = clamp((1 - p1[8].x) * W, 0, W);
-    var sy = clamp(p1[8].y * H, 0, H);
+    var rx = clamp((1 - p1[8].x) * W, 0, W);
+    var ry = clamp(p1[8].y * H, 0, H);
+    var sx = rx, sy = ry;
+    if(S.stab){
+      if(HA.smx === null || Math.abs(rx - HA.smx) > W * 0.35 || Math.abs(ry - HA.smy) > H * 0.35){ HA.smx = rx; HA.smy = ry; }
+      else {
+        var alpha = Math.max(0.12, 1 - (S.stab / 10) * 0.78);
+        HA.smx += (rx - HA.smx) * alpha;
+        HA.smy += (ry - HA.smy) * alpha;
+        sx = HA.smx; sy = HA.smy;
+      }
+    }
     HA.hand = { x:sx, y:sy };
     if(!HA.handEver){ HA.handEver = true; tutTrigger("hand"); }
     setChip("stHand","on");
@@ -1635,6 +1722,12 @@ function drawCalib(canvas, collected, active){
   var w = canvas.width, h = canvas.height;
   ctx.clearRect(0,0,w,h);
   if(!w||!h) return;
+  ctx.setLineDash([6,5]);
+  ctx.strokeStyle = "#4a5a7d"; ctx.lineWidth = 1;
+  ctx.strokeRect(w*0.14, h*0.30, w*0.72, h*0.56);
+  ctx.setLineDash([]);
+  ctx.fillStyle = "rgba(124,247,255,.5)"; ctx.font = "11px 'Segoe UI', system-ui, sans-serif";
+  ctx.fillText(t("calib.sweetSpot"), w*0.15, h*0.33);
   var targets = calibTargets(w,h);
   targets.forEach(function(pt,i){
     var done = i < collected;
@@ -1774,6 +1867,19 @@ function renderSettings(){
   sensInput.addEventListener("input", function(){ S.sensitivity = parseFloat(sensInput.value); document.documentElement.style.setProperty("--ptr-speed", (0.25/S.sensitivity)+"s"); });
   sensWrap.appendChild(sensLabel); sensWrap.appendChild(sensInput);
   host.appendChild(sensWrap);
+
+  var stabWrap = document.createElement("div"); stabWrap.className="field";
+  var stabLabel = document.createElement("label"); stabLabel.textContent = t("settings.stability");
+  var stabVal = document.createElement("span"); stabVal.className="field-val"; stabVal.textContent = (S.stab||0);
+  var stabInput = document.createElement("input"); stabInput.type="range"; stabInput.min="0"; stabInput.max="10"; stabInput.step="1"; stabInput.value = S.stab||0;
+  stabInput.addEventListener("input", function(){ stabVal.textContent = parseInt(stabInput.value,10); });
+  stabInput.addEventListener("change", function(){
+    S.stab = parseInt(stabInput.value,10);
+    setLS("stab", S.stab);
+    logEv("stab", {v:S.stab});
+  });
+  stabWrap.appendChild(stabLabel); stabWrap.appendChild(stabVal); stabWrap.appendChild(stabInput);
+  host.appendChild(stabWrap);
 
   var confWrap = document.createElement("div"); confWrap.className="field";
   var confLabel = document.createElement("label"); confLabel.textContent = t("settings.confidence");
