@@ -428,6 +428,13 @@ body.large-cursor .air-cursor{width:34px; height:34px; margin:-17px 0 0 -17px}
 .cam-retry.hidden{display:none !important}
 .cam-retry:hover{transform:translateX(-50%) translateY(-1px)}
 
+.calib-guide{text-align:center; min-height:24px; margin:8px 0 2px; font-size:14px; font-weight:600; color:var(--ink)}
+.calib-guide .dim{color:var(--ink-faint); font-weight:400; font-size:12px}
+.calib-guide .ok{color:var(--green, #39ff88)}
+.field .sel{width:100%; margin-top:4px}
+.sel{background:var(--bg2); color:var(--ink); border:1px solid var(--line-strong); border-radius:8px; padding:8px 10px; font-size:13px}
+.sel:focus{outline:none; border-color:var(--cy)}
+
 .dash-actions{margin:10px 0 2px}
 .dash-badges{display:flex; flex-wrap:wrap; gap:8px; align-items:center; min-height:30px; margin:6px 0 14px}
 .gam-stars{color:var(--amber); font-size:15px; letter-spacing:2px}

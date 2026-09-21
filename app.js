@@ -39,6 +39,7 @@ var S = window.EDUAIR = {
   threed: { model:"cube", rotX:-0.5, rotY:0.6, auto:false, explode:false, wire:false },
   sound: getLS("sound", true),
   conf: getLS("conf", 0.5),
+  primHand: getLS("primHand", "auto"),
   theme: getLS("theme", "dark"),
   tutorialSeen: getLS("tutorialSeen", false),
   quizResults: getLS("quizResults", []),
@@ -940,7 +941,7 @@ function wireAirPresentation(){
 var HA = { state:"off", stream:null, landmarker:null, running:false, starting:false,
            loaded:false, loading:false, hand:null, handEver:false, gestureText:"", ripples:[], light:1,
            quality:"wait", qualityT:0, result:null, lastDet:0, modelErr:false, watchTimer:null,
-           fps:0, _fr:0, _ft:0 };
+           fps:0, _fr:0, _ft:0, lastHandT:0 };
 var MP_CDN  = "./vendor/vision_bundle.js";
 var MP_WASM = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm";
 var MP_MODEL = "./models/hand_landmarker.task";
@@ -1124,6 +1125,7 @@ function stopCamera(){
   if(HA.stream){ HA.stream.getTracks().forEach(function(tr){ tr.stop(); }); HA.stream = null; }
   HA.state="off"; HA.hand = null; HA.handEver = false; HA.gestureText="";
   HA.result = null; HA.lastDet = 0;
+  HA.lastHandT = 0;
   if(HA.watchTimer){ clearTimeout(HA.watchTimer); HA.watchTimer = null; }
   HA.modelErr = false; hideModelRetry();
   HS.pinch = false; HS2.pinch = false; HS.samples=[];
@@ -1387,28 +1389,36 @@ function camLoop(){
   var ready = !!(HA.landmarker && v && v.readyState >= 2 && !v.paused);
   if(ready){
     var t = performance.now();
-    if(t - HA.lastDet > 33){
+    var idle = !!(HA.lastHandT && (t - HA.lastHandT > 6000));
+    if(t - HA.lastDet > (idle ? 250 : 33)){
       HA.lastDet = t;
       var res = null;
       try { res = HA.landmarker.detectForVideo(v, t); }
       catch(e){ /* transient "too dense" frame — keep the last known hand instead of dropping it */ }
       if(res){
         var lm = res.landmarks || [];
-        HA.result = lm.length ? { landmarks: lm } : null;
+        HA.result = lm.length ? { landmarks: lm, handedness: res.handedness || null } : null;
       }
     }
   }
   var hands = ready && HA.result ? HA.result.landmarks : null;
+  var hnd = ready && HA.result ? HA.result.handedness : null;
+  var prim = 0;
+  if(hands && hands.length > 1 && hnd && (S.primHand === "left" || S.primHand === "right")){
+    var want = S.primHand === "left" ? "Left" : "Right";
+    for(var hi=0; hi<hnd.length; hi++){ if(hnd[hi] && hnd[hi][0] && hnd[hi][0].label === want){ prim = hi; break; } }
+  }
   var W = window.innerWidth, H = window.innerHeight;
   if(hands && hands.length){
-    var p1 = hands[0];
+    HA.lastHandT = performance.now();
+    var p1 = hands[prim];
     var sx = clamp((1 - p1[8].x) * W, 0, W);
     var sy = clamp(p1[8].y * H, 0, H);
     HA.hand = { x:sx, y:sy };
     if(!HA.handEver){ HA.handEver = true; tutTrigger("hand"); }
     setChip("stHand","on");
     handleHand(p1, sx, sy, W);
-    var p2 = hands[1];
+    var p2 = hands.length > 1 ? hands[1-prim] : null;
     if(p2){
       var s2x = clamp((1 - p2[8].x) * W, 0, W);
       var s2y = clamp(p2[8].y * H, 0, H);
@@ -1619,6 +1629,7 @@ function wireAiTeacher(){
 function calibTargets(w,h){
   return [ [w*0.08,h*0.12],[w*0.92,h*0.12],[w*0.5,h*0.5],[w*0.08,h*0.88],[w*0.92,h*0.88] ];
 }
+var CAL_PHASE = 0;
 function drawCalib(canvas, collected, active){
   var ctx = canvas.getContext("2d");
   var w = canvas.width, h = canvas.height;
@@ -1632,55 +1643,99 @@ function drawCalib(canvas, collected, active){
     ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(pt[0]-10,pt[1]); ctx.lineTo(pt[0]+10,pt[1]); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(pt[0],pt[1]-10); ctx.lineTo(pt[0],pt[1]+10); ctx.stroke();
-    ctx.beginPath(); ctx.arc(pt[0],pt[1],isActive?14:8,0,Math.PI*2); ctx.stroke();
+    var r = isActive ? 14 + Math.round(Math.sin(CAL_PHASE)*5) : 8;
+    if(isActive){
+      ctx.fillStyle = "rgba(255,194,75,.14)";
+      ctx.beginPath(); ctx.arc(pt[0],pt[1], r+10, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.beginPath(); ctx.arc(pt[0],pt[1],r,0,Math.PI*2); ctx.stroke();
   });
 }
 function wireCalibration(){
   var canvasInline = $("canvasCalib"), canvasModal = $("canvasCalibModal");
   function refreshInline(){ resizeCanvas(canvasInline, $("calibWrap")); drawCalib(canvasInline, S.calib.pts.length, false); }
-  on($("btnCalibStart"),"click", function(){ showModal("modalCalib"); startCalibWizard(); });
   on($("btnCalibReset"),"click", function(){ S.calib.pts=[]; S.calib.score=0; var s=$("calibScore"); if(s) s.textContent="0%"; refreshInline(); toast("calibration.reset","info"); });
   window.addEventListener("resize", refreshInline);
   refreshInline();
 
-  var wizardActive = false;
+  var wizardActive = false, wizardTimer = null, dwell = 0;
+
+  function targetsNow(){ return calibTargets(canvasModal.width, canvasModal.height); }
+  function setGuide(html){
+    var g = $("calibGuide"); if(g) g.innerHTML = html;
+  }
+  function finishCalib(byAuto){
+    wizardActive = false;
+    if(wizardTimer){ clearInterval(wizardTimer); wizardTimer = null; }
+    S.calib.score = 100;
+    drawCalib(canvasModal, S.calib.pts.length, false);
+    var sc = $("calibScoreModal"); if(sc) sc.textContent = "100%";
+    var s = $("calibScore"); if(s) s.textContent = "100%";
+    setGuide(t("calib.doneText"));
+    toast("calib.done","ok");
+    logEv(byAuto ? "calib.auto" : "calib.done", {});
+  }
+  function afterPoint(x, y){
+    S.calib.pts.push({x:x,y:y});
+    dwell = 0;
+    drawCalib(canvasModal, S.calib.pts.length, true);
+    var pct = Math.round(S.calib.pts.length/targetsNow().length*100);
+    var sc = $("calibScoreModal"); if(sc) sc.textContent = pct+"%";
+    if(S.calib.pts.length >= targetsNow().length){ finishCalib(false); }
+  }
   function startCalibWizard(){
-    S.calib.pts = []; wizardActive = true;
+    S.calib.pts = []; dwell = 0;
     resizeCanvas(canvasModal, $("calibStage"));
     drawCalib(canvasModal, 0, true);
     var sc = $("calibScoreModal"); if(sc) sc.textContent = "0%";
+    setGuide(t("calib.guidePlace"));
+    wizardActive = true;
+    if(wizardTimer) clearInterval(wizardTimer);
+    wizardTimer = setInterval(function(){
+      if(!wizardActive){ clearInterval(wizardTimer); wizardTimer = null; return; }
+      CAL_PHASE += 0.2;
+      var tgs = targetsNow();
+      var idx = S.calib.pts.length;
+      drawCalib(canvasModal, idx, true);
+      if(idx >= tgs.length) return;
+      var r = canvasModal.getBoundingClientRect();
+      var handX = (HA.state==="on" && HA.hand) ? HA.hand.x - r.left : null;
+      var handY = (HA.state==="on" && HA.hand) ? HA.hand.y - r.top : null;
+      if(handX == null){
+        dwell = 0;
+        setGuide(t("calib.guideHand") + " <span class='dim'>" + t("calib.guideOrClick") + "</span>");
+        return;
+      }
+      var tgt = tgs[idx];
+      var d = Math.hypot(handX - tgt[0], handY - tgt[1]);
+      setGuide(t("calib.guideTap").replace("{n}", idx+1) + (d < 60 ? " <span class='ok'>✓</span>" : ""));
+      if(d < 60){
+        dwell++;
+        if(dwell >= 8){ afterPoint(handX, handY); }
+      } else { dwell = 0; }
+    }, 80);
   }
+  on($("btnCalibStart"),"click", function(){ showModal("modalCalib"); startCalibWizard(); });
   on($("btnCalibBegin"),"click", startCalibWizard);
   on(canvasModal,"click", function(e){
     if(!wizardActive) return;
     var r = canvasModal.getBoundingClientRect();
     var x = e.clientX-r.left, y = e.clientY-r.top;
-    var targets = calibTargets(canvasModal.width, canvasModal.height);
+    var tgs = targetsNow();
     var idx = S.calib.pts.length;
-    if(idx >= targets.length) return;
-    var tgt = targets[idx];
-    if(Math.hypot(x-tgt[0], y-tgt[1]) < 28){
-      S.calib.pts.push({x:x,y:y});
-      drawCalib(canvasModal, S.calib.pts.length, true);
-      var pct = Math.round(S.calib.pts.length/targets.length*100);
-      var sc = $("calibScoreModal"); if(sc) sc.textContent = pct+"%";
-      if(S.calib.pts.length >= targets.length){
-        wizardActive = false; S.calib.score = 100;
-        toast("calib.done","ok"); logEv("calib.done",{});
-        var s = $("calibScore"); if(s) s.textContent = "100%";
-      }
-    }
+    if(idx >= tgs.length) return;
+    if(Math.hypot(x-tgs[idx][0], y-tgs[idx][1]) < 34){ afterPoint(x, y); }
   });
   on($("btnCalibAuto"),"click", function(){
-    var targets = calibTargets(canvasModal.width, canvasModal.height);
-    S.calib.pts = targets.map(function(p){ return {x:p[0],y:p[1]}; });
-    wizardActive = false; S.calib.score = 100;
-    drawCalib(canvasModal, targets.length, false);
-    var sc = $("calibScoreModal"); if(sc) sc.textContent = "100%";
-    var s = $("calibScore"); if(s) s.textContent = "100%";
-    toast("calib.done","ok"); logEv("calib.auto",{});
+    var tgs = targetsNow();
+    S.calib.pts = tgs.map(function(p){ return {x:p[0],y:p[1]}; });
+    finishCalib(true);
   });
-  on($("btnCalibClose"),"click", function(){ hideModal("modalCalib"); refreshInline(); });
+  on($("btnCalibClose"),"click", function(){
+    wizardActive = false;
+    if(wizardTimer){ clearInterval(wizardTimer); wizardTimer = null; }
+    hideModal("modalCalib"); refreshInline();
+  });
 }
 
 /* ---------------------------------------------------------------- */
@@ -1737,6 +1792,22 @@ function renderSettings(){
   });
   confWrap.appendChild(confLabel); confWrap.appendChild(confVal); confWrap.appendChild(confInput);
   host.appendChild(confWrap);
+
+  var handWrap = document.createElement("div"); handWrap.className="field";
+  var handLabel = document.createElement("label"); handLabel.textContent = t("settings.primHand");
+  var handSel = document.createElement("select"); handSel.className="sel";
+  ["auto","left","right"].forEach(function(v){
+    var o = document.createElement("option"); o.value=v; o.textContent = t("prim."+v);
+    if((S.primHand||"auto")===v) o.selected = true;
+    handSel.appendChild(o);
+  });
+  handSel.addEventListener("change", function(){
+    S.primHand = handSel.value;
+    setLS("primHand", S.primHand);
+    logEv("primHand", {v:S.primHand});
+  });
+  handWrap.appendChild(handLabel); handWrap.appendChild(handSel);
+  host.appendChild(handWrap);
 
   host.appendChild(fieldRow("settings.a11yMotion", S.a11y.motion, function(v){ S.a11y.motion=v; document.body.classList.toggle("reduce-motion", v); }));
   host.appendChild(fieldRow("settings.a11yContrast", S.a11y.contrast, function(v){ S.a11y.contrast=v; document.body.classList.toggle("high-contrast", v); }));
