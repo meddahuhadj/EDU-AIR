@@ -1,560 +1,325 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html lang="en" data-i18n-lang="en" dir="ltr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>EDU-AIR — Contactless Interactive Classroom</title>
-<meta name="description" content="Teach from anywhere in the room: hand gestures + voice steer slides, an on-air pointer, live annotation and quizzes on the projector. Computer + webcam + projector. No touchscreen.">
-<meta name="theme-color" content="#0E1B19">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" type="image/svg+xml" href="icons/icon.svg">
-<link rel="apple-touch-icon" href="icons/icon-192.png">
-<meta property="og:title" content="EDU-AIR — Contactless Interactive Classroom">
-<meta property="og:description" content="Teach without touching anything. Voice + gestures drive slides, pointer, annotation and quizzes on the projector.">
-<link rel="stylesheet" href="styles.css">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#06080f" />
+<meta name="description" content="EDU-AIR SMART SURFACE - contactless AI-powered interactive whiteboard" />
+<title>EDU-AIR SMART SURFACE</title>
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Rajdhani:wght@500;600;700&family=Fira+Code:wght@400;500&display=swap" />
+<link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+<a class="skip-link" href="#main" data-i18n-html="a11y.skip">Skip to content</a>
 
-<div class="bg-fx" aria-hidden="true"></div>
-<div class="bg-grid" aria-hidden="true"></div>
-
-<header class="topbar" id="topbar">
-  <div class="topbar-inner">
-    <a class="brand" href="#top" aria-label="EDU-AIR">
-      <span class="brand-mark" aria-hidden="true">
-        <svg viewBox="0 0 40 40" role="img">
-          <rect x="2" y="2" width="36" height="36" rx="10" fill="rgba(52,211,153,.12)" stroke="rgba(52,211,153,.45)" stroke-width="1.5"/>
-          <path d="M12 9v16M12 17h10M22 9v16M28 9v16" fill="none" stroke="#A9F5D8" stroke-width="3" stroke-linecap="round"/>
-          <path d="M9 26.5 L 31 26.5" stroke="#FFD166" stroke-width="2.5" stroke-linecap="round"/>
-        </svg>
-      </span>
-      <span class="brand-text">
-        <span class="brand-name">EDU-AIR</span>
-        <span class="brand-sub" data-i18n="footer.tag">EDU-AIR — contactless interactive classroom</span>
-      </span>
-    </a>
-
-    <nav class="nav-links" aria-label="Primary">
-      <a href="#features" data-i18n="nav.features">Features</a>
-      <a href="#voice" data-i18n="nav.voice">Voice</a>
-      <a href="#demo" data-i18n="nav.demo">Live demo</a>
-      <a href="#setup" data-i18n="nav.setup">Setup</a>
-      <a href="#safety" data-i18n="nav.safety">Safety</a>
-      <a href="#faq" data-i18n="nav.faq">FAQ</a>
-    </nav>
-
-    <div class="nav-actions">
-      <div class="lang-switcher" id="lang-switcher">
-        <div class="lang-select-wrap">
-          <div class="lang-current" id="lang-current">EN</div>
-          <select class="lang-select" id="lang-select" data-i18n-aria="lang.label" aria-label="Language" title="Language">
-            <option value="en">English</option>
-            <option value="fr">Français</option>
-            <option value="ar">العربية</option>
-            <option value="nl">Nederlands</option>
-          </select>
-        </div>
-      </div>
-      <a class="btn btn-ghost btn-download" href="https://github.com/meddahuhadj/EDU-AIR/releases/download/v1.0-beta/EDU-AIR-Windows.zip" target="_blank" rel="noopener" id="nav-download" data-i18n="nav.download">Run on Windows</a>
+<!-- ============ TOP STATUS BAR ============ -->
+<header id="statusbar" aria-label="System status">
+  <div class="sb-group">
+    <span class="sb-logo" aria-hidden="true">&#9726;</span>
+    <span class="sb-title" id="sbBrand">EDU-AIR <b>SMART&nbsp;SURFACE</b></span>
+    <span class="badge badge-demo hidden" id="demoBadge" data-i18n-html="demo.badge">DEMO</span>
+  </div>
+  <div class="sb-group chips" id="sbStatus">
+    <span class="chip" id="stCam" data-state="off"><span class="dot"></span><span class="lbl" data-i18n-html="status.camera">CAMERA</span></span>
+    <span class="chip" id="stHand" data-state="off"><span class="dot"></span><span class="lbl" data-i18n-html="status.hand">HAND</span></span>
+    <span class="chip" id="stVoice" data-state="off"><span class="dot"></span><span class="lbl" data-i18n-html="status.voice">VOICE</span></span>
+    <span class="chip" id="stAI" data-state="off"><span class="dot"></span><span class="lbl" data-i18n-html="status.ai">AI</span></span>
+    <span class="chip" id="stCalib" data-state="off"><span class="dot"></span><span class="lbl" data-i18n-html="status.calibration">CALIBRATION</span></span>
+    <span class="chip" id="stSurface" data-state="off"><span class="dot"></span><span class="lbl" data-i18n-html="status.surface">SURFACE</span></span>
+  </div>
+  <div class="sb-group sb-meta">
+    <span class="chip mode" id="modeChip" data-state="safe"><span class="dot"></span><span class="lbl"><b id="modeLabel" data-i18n-html="mode.safe">SAFE MODE</b></span></span>
+    <span class="clock" id="clock">--:--</span>
+    <button class="iconbtn" id="btnFullscreen" title="Fullscreen" aria-label="Fullscreen">&#9962;</button>
+    <button class="iconbtn" id="btnMic" data-state="off" title="Voice" aria-label="Voice">&#127908;</button>
+    <div class="langsw">
+      <button class="langbtn" data-lang="en" data-state="active">EN</button>
+      <button class="langbtn" data-lang="fr">FR</button>
+      <button class="langbtn" data-lang="nl">NL</button>
+      <button class="langbtn" data-lang="ar">&#1593;</button>
     </div>
   </div>
 </header>
+<div class="layout">
+  <!-- ============ SIDEBAR ============ -->
+  <nav id="sidebar" aria-label="Navigation">
+    <button class="navitem" data-view="dashboard"><span class="nav-ico" aria-hidden="true">&#9670;</span><span class="nav-lbl" data-i18n-html="nav.dashboard">DASHBOARD</span></button>
+    <button class="navitem active" data-view="smart-surface"><span class="nav-ico" aria-hidden="true">&#9642;</span><span class="nav-lbl" data-i18n-html="nav.surface">SMART SURFACE</span></button>
+    <button class="navitem" data-view="air-pointer"><span class="nav-ico" aria-hidden="true">&#8600;</span><span class="nav-lbl" data-i18n-html="nav.pointer">AIR POINTER</span></button>
+    <button class="navitem" data-view="air-draw"><span class="nav-ico" aria-hidden="true">&#9998;</span><span class="nav-lbl" data-i18n-html="nav.draw">AIR DRAW</span></button>
+    <button class="navitem" data-view="air-3d"><span class="nav-ico" aria-hidden="true">&#9696;</span><span class="nav-lbl" data-i18n-html="nav.threed">AIR 3D</span></button>
+    <button class="navitem" data-view="air-vision"><span class="nav-ico" aria-hidden="true">&#9678;</span><span class="nav-lbl" data-i18n-html="nav.vision">AIR VISION</span></button>
+    <button class="navitem" data-view="air-lab"><span class="nav-ico" aria-hidden="true">&#9879;</span><span class="nav-lbl" data-i18n-html="nav.lab">AIR LAB</span></button>
+    <button class="navitem" data-view="air-quiz"><span class="nav-ico" aria-hidden="true">&#10031;</span><span class="nav-lbl" data-i18n-html="nav.quiz">AIR QUIZ</span></button>
+    <button class="navitem" data-view="air-presentation"><span class="nav-ico" aria-hidden="true">&#9654;</span><span class="nav-lbl" data-i18n-html="nav.presentation">AIR PRESENTATION</span></button>
+    <button class="navitem" data-view="ai-teacher"><span class="nav-ico" aria-hidden="true">&#10022;</span><span class="nav-lbl" data-i18n-html="nav.teacher">AI TEACHER</span></button>
+    <button class="navitem" data-view="calibration"><span class="nav-ico" aria-hidden="true">&#8574;</span><span class="nav-lbl" data-i18n-html="nav.calibration">CALIBRATION</span></button>
+    <button class="navitem" data-view="history"><span class="nav-ico" aria-hidden="true">&#8634;</span><span class="nav-lbl" data-i18n-html="nav.history">HISTORY</span></button>
+    <button class="navitem" data-view="settings"><span class="nav-ico" aria-hidden="true">&#9881;</span><span class="nav-lbl" data-i18n-html="nav.settings">SETTINGS</span></button>
+    <button class="navitem" data-view="privacy"><span class="nav-ico" aria-hidden="true">&#9887;</span><span class="nav-lbl" data-i18n-html="nav.privacy">PRIVACY</span></button>
+    <button class="navitem" data-view="security"><span class="nav-ico" aria-hidden="true">&#9763;</span><span class="nav-lbl" data-i18n-html="nav.security">SECURITY</span></button>
+  </nav>
 
-<main id="top">
-
-  <!-- ============================= HERO ============================= -->
-  <section class="hero">
-    <div class="hero-inner">
-      <div class="hero-copy">
-        <p class="eyebrow" data-i18n="hero.chip">EDU-AIR v1.0 · contactless classroom</p>
-        <h1 class="hero-title" id="hero-title" data-i18n-html="hero.title">Teach without touching <span class="accent">anything.</span></h1>
-        <p class="hero-sub" data-i18n="hero.sub">Your hands and voice become the interface. Stand anywhere in the room and drive the projector — pointer, slides, live annotations and quizzes — using nothing but a computer, a webcam and a projector. No touchscreen, no sensor.</p>
-
-        <div class="hero-ctas">
-          <a class="btn btn-primary" href="#demo" id="demo-btn" data-i18n="hero.demo">Try the live demo</a>
-          <a class="btn btn-outline" href="https://github.com/meddahuhadj/EDU-AIR/releases/download/v1.0-beta/EDU-AIR-Windows.zip" target="_blank" rel="noopener" id="win-btn" data-i18n="hero.win">Download for Windows</a>
+  <!-- ============ MAIN ============ -->
+  <main id="main">
+<!-- ============ VIEW: SMART SURFACE ============ -->
+    <section class="view active" id="view-smart-surface">
+      <div class="board-wrap">
+        <div class="board-stage" id="boardStage">
+          <svg id="boardSvg" class="board-svg" role="img" aria-label="Smart surface board"></svg>
+          <div class="board-overlay" id="boardOverlay" aria-hidden="true"></div>
         </div>
-
-        <div class="chips">
-          <span class="chip" data-i18n-html="hero.chipVoice"><span class="chip-dot" aria-hidden="true"></span>Voice EN / FR / AR / NL</span>
-          <span class="chip" data-i18n-html="hero.chipTouch"><span class="chip-sq chip-sq-green" aria-hidden="true"></span>0 touchscreen</span>
-          <span class="chip" data-i18n-html="hero.chipLocal"><span class="chip-sq chip-sq-amber" aria-hidden="true"></span>100% local</span>
-        </div>
-      </div>
-
-      <div class="hero-stage" aria-hidden="true">
-        <div class="hero-screen">
-          <div class="beam" aria-hidden="true"></div>
-          <div class="screen-in">
-            <div class="screen-mark"><svg viewBox="0 0 24 24"><path d="M5 5h14v10H5z" fill="none" stroke="#A9F5D8" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 8h8M8 11h5" stroke="#A9F5D8" stroke-width="1.6" stroke-linecap="round"/><path d="M5 18h14" stroke="#8896A8" stroke-width="1.6" stroke-linecap="round"/></svg></div>
-            <span class="screen-cursor"></span>
+        <div class="board-toolbar" id="boardToolbar">
+          <div class="bt-group">
+            <button class="btbtn tool" data-tool="pen" data-state="active" title="Pen" aria-label="Pen"><span class="ico">&#9998;</span></button>
+            <button class="btbtn tool" data-tool="highlighter" title="Highlighter" aria-label="Highlighter"><span class="ico">&#9997;</span></button>
+            <button class="btbtn tool" data-tool="eraser" title="Eraser" aria-label="Eraser"><span class="ico">&#10060;</span></button>
+            <button class="btbtn" id="btnClearBoard" title="Clear" aria-label="Clear"><span class="ico">&#9003;</span></button>
+            <button class="btbtn" id="btnUndo" title="Undo" aria-label="Undo"><span class="ico">&#8617;</span></button>
+            <button class="btbtn" id="btnRedo" title="Redo" aria-label="Redo"><span class="ico">&#8618;</span></button>
+          </div>
+          <div class="bt-group">
+            <input type="color" id="inkColor" value="#00e5ff" title="Color" aria-label="Color" />
+            <label class="btbtn sml"><input type="checkbox" id="chkShapes" checked /> <span data-i18n-html="smart.shapes">SHAPES</span></label>
+            <label class="btbtn sml"><input type="checkbox" id="chkHaptics" checked /> <span data-i18n-html="smart.haptics">HAPTICS</span></label>
+            <button class="btbtn sml" id="btnSaveBoard" title="Save" aria-label="Save"><span class="ico">&#9947;</span><span class="lbl" data-i18n-html="smart.save">SAVE</span></button>
+            <span class="bt-note" id="boardHint"></span>
           </div>
         </div>
-        <div class="hero-dl-card">
-          <span class="dl-kicker" data-i18n="hero.dlNote">Free · no account · ZIP portable</span>
-          <span class="dl-os" data-i18n="hero.noteTitle">Windows 10 / 11 (x64)</span>
+      </div>
+      <div class="hud hidden" id="hudPointer" aria-hidden="true"><span id="hudIco">&#9998;</span><span id="hudLabel">PEN</span></div>
+    </section>
+
+    <section class="view" id="view-air-pointer">
+      <div class="panel">
+        <h2 data-i18n-html="pointer.title">AIR POINTER</h2>
+        <p class="lede" data-i18n-html="pointer.lede">Move your index finger through the air to control the cursor without ever touching the screen.</p>
+        <div class="pointer-stage" id="ptrStage"></div>
+        <div class="row row-center">
+          <button class="btn btn-primary" id="btnPtrEnable" data-i18n-html="pointer.enable">ENABLE AIR POINTER</button>
+          <button class="btn" id="btnPtrClick" data-i18n-html="pointer.click">SIMULATE CLICK</button>
         </div>
       </div>
-    </div>
+    </section>
 
-    <div class="stat-row">
-      <div class="stat"><span class="stat-num" data-i18n="stat.voice">VOICE</span><span class="stat-label" data-i18n="stat.voiceLabel">languages, UI + spoken commands</span></div>
-      <div class="stat"><span class="stat-num" data-i18n="stat.hw">3</span><span class="stat-label" data-i18n="stat.hwLabel">real pieces of hardware</span></div>
-      <div class="stat"><span class="stat-num" data-i18n="stat.local">0</span><span class="stat-label" data-i18n="stat.localLabel">frames ever uploaded</span></div>
-      <div class="stat"><span class="stat-num" data-i18n="stat.os">WIN</span><span class="stat-label" data-i18n="stat.osLabel">10 / 11 desktop app</span></div>
-    </div>
-
-    <details class="hero-note" id="hero-note">
-      <summary><span data-i18n="hero.noteTitle">Windows 10 / 11 (x64)</span><span class="note-caret" aria-hidden="true"></span></summary>
-      <p data-i18n="hero.noteBody">Shipped as a native desktop app, downloaded as a ZIP from GitHub Releases. MediaPipe hand tracking + OpenCV run locally on the classroom PC. Just a webcam and (optional) microphone needed.</p>
-      <p class="note-meta" data-i18n="hero.noteMeta">No account, no telemetry, and the app downloads nothing while teaching. Note: voice recognition uses Google's cloud API by default — choose Vosk or SAPI for fully offline recognition. Only the spoken phrase leaves the machine when the online engine is selected.</p>
-    </details>
-  </section>
-
-  <!-- ============================= HOW ============================= -->
-  <section class="section" id="how">
-    <div class="section-inner">
-      <p class="section-kicker" data-i18n="how.label">How it works</p>
-      <h2 class="section-title" data-i18n="how.title">A classroom that answers to you</h2>
-      <p class="section-lead" data-i18n="how.lead">There is no magic: hand tracking and voice recognition run on the classroom PC itself. The projector never uploads anything.</p>
-
-      <div class="grid3">
-        <article class="step">
-          <span class="step-num">1</span>
-          <h3 data-i18n="how.s1">See you</h3>
-          <p data-i18n="how.t1">A standard webcam points at the teacher. Fingertip and hand pose are tracked locally with MediaPipe — mirror-corrected and spike-filtered.</p>
-        </article>
-        <article class="step">
-          <span class="step-num">2</span>
-          <h3 data-i18n="how.s2">Understand you</h3>
-          <p data-i18n="how.t2">Gestures and spoken commands (next slide, start quiz, answer B…) become classroom intents. Everything you didn't ask for is refused by a safety gate.</p>
-        </article>
-        <article class="step">
-          <span class="step-num">3</span>
-          <h3 data-i18n="how.s3">Project for you</h3>
-          <p data-i18n="how.t3">The projector becomes the board: a steady on-air pointer, slide control, ink and highlights at distance, and a live scoreboard quiz — all rendered as an overlay.</p>
-        </article>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============================= FEATURES ============================= -->
-  <section class="section alt" id="features">
-    <div class="section-inner">
-      <p class="section-kicker" data-i18n="feats.label">Features</p>
-      <h2 class="section-title" data-i18n="feats.title">Everything a teacher needs, at a distance</h2>
-      <p class="section-lead" data-i18n="feats.lead">Built on the HADJ NO-TOUCH AI engine and re-focused for the classroom, with a deny-by-default safety gate on every action.</p>
-
-      <div class="feat-grid">
-        <article class="feat">
-          <span class="feat-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M6.8 14.2 16 18l5 1M11 6l8-1.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>
-          <div><h3 data-i18n="feats.pointer.t">On-air pointer</h3><p data-i18n="feats.pointer.s">Calibrated fingertip pointer with dead zone, spike rejection and EMA smoothing. Three sensitivity presets (low / medium / high) and tremor metrics on the HUD.</p></div>
-        </article>
-        <article class="feat">
-          <span class="feat-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9 4v13M4 9h5M4 13h16" stroke="currentColor" stroke-width="1.6"/><path d="M8 20h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>
-          <div><h3 data-i18n="feats.slides.t">Slide control</h3><p data-i18n="feats.slides.s">Drive PowerPoint, Impress or PDF: F5 start, arrows, B black/pause, Ctrl± zoom, PgUp/PgDn scroll. Every command writes an audit record.</p></div>
-        </article>
-        <article class="feat">
-          <span class="feat-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 20c4-9 8-13 12-16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M13 5h3v3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-          <div><h3 data-i18n="feats.ink.t">Air annotation</h3><p data-i18n="feats.ink.s">Draw, highlight, dot and erase ink on the projected image — point, stroke, wide translucent glow. Normalized coordinates look identical on any projector. Undo included.</p></div>
-        </article>
-        <article class="feat">
-          <span class="feat-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 4h6M12 4v6M5 15h14M5 19h14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="13" r="1.5" fill="currentColor"/></svg></span>
-          <div><h3 data-i18n="feats.quiz.t">Live voice quiz</h3><p data-i18n="feats.quiz.s">Voice-driven QCM: start/end, next question, show answer, answer A–D (b, ب …). Scoreboard with correct/wrong/skipped and per-question timing.</p></div>
-        </article>
-        <article class="feat">
-          <span class="feat-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 9v4l3 2M12 5v1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>
-          <div><h3 data-i18n="feats.timer.t">Classroom timer</h3><p data-i18n="feats.timer.s">Start, stop and reset a class clock by voice — visible in the overlay HUD next to the tools.</p></div>
-        </article>
-        <article class="feat">
-          <span class="feat-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M12 12l4-4M12 12l4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></span>
-          <div><h3 data-i18n="feats.calib.t">5-step calibration</h3><p data-i18n="feats.calib.s">Camera → projection area → corners → alignment → gesture test. Builds a webcam→projector homography (RANSAC, affine fallback). Skipped corners are honestly flagged as estimated.</p></div>
-        </article>
-        <article class="feat">
-          <span class="feat-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 21s-7-5-7-10a7 7 0 0 1 14 0c0 5-7 10-7 10Z" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="10" r="2.4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></span>
-          <div><h3 data-i18n="feats.a11y.t">Accessibility first</h3><p data-i18n="feats.a11y.s">Large targets, dwell-click presets, one-hand gestures, reduced-motion mode and voice-first hinting — so every teacher can keep working at their own pace.</p></div>
-        </article>
-        <article class="feat">
-          <span class="feat-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 12h16M8 7l-4 5 4 5M16 7l4 5-4 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 5l6 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
-          <div><h3 data-i18n="feats.voice.t">Voice-first</h3><p data-i18n="feats.voice.s">When your hands are busy (gloves, tools, holding papers) voice becomes the main channel — same intent engine, same safety gate.</p></div>
-        </article>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============================= VOICE ============================= -->
-  <section class="section" id="voice">
-    <div class="section-inner">
-      <p class="section-kicker" data-i18n="voice.label">Voice commands</p>
-      <h2 class="section-title" data-i18n="voice.title">EN / FR / AR / NL, on the projector</h2>
-      <p class="section-lead" data-i18n="voice.lead">The exact phrases the classroom recognises — parsed locally and mapped to registered, safe actions. Voice and UI language are independent: teach in Arabic with an English interface.</p>
-
-      <div class="voice-scroll">
-        <table class="voice-table" role="table">
-          <thead>
-            <tr class="vhead">
-              <th class="vcol vh-first" data-i18n="voice.hTask">Task</th>
-              <th class="vcol" data-i18n="voice.hEn">English</th>
-              <th class="vcol" data-i18n="voice.hFr">Français</th>
-              <th class="vcol" data-i18n="voice.hAr">العربية</th>
-              <th class="vcol" data-i18n="voice.hNl">Nederlands</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr class="vrow">
-              <td class="vcol vh-first" data-i18n="voice.nextSlide">Next slide</td>
-              <td class="vcol" data-i18n="voice.nextSlideEn">“next slide”</td>
-              <td class="vcol" data-i18n="voice.nextSlideFr">“diapositive suivante”</td>
-              <td class="vcol" data-i18n="voice.nextSlideAr">«الشريحة التالية»</td>
-              <td class="vcol" data-i18n="voice.nextSlideNl">“volgende dia”</td>
-            </tr>
-            <tr class="vrow">
-              <td class="vcol vh-first" data-i18n="voice.prevSlide">Previous slide</td>
-              <td class="vcol" data-i18n="voice.prevSlideEn">“previous slide”</td>
-              <td class="vcol" data-i18n="voice.prevSlideFr">“diapositive précédente”</td>
-              <td class="vcol" data-i18n="voice.prevSlideAr">«الشريحة السابقة»</td>
-              <td class="vcol" data-i18n="voice.prevSlideNl">“vorige dia”</td>
-            </tr>
-            <tr class="vrow">
-              <td class="vcol vh-first" data-i18n="voice.start">Start a presentation</td>
-              <td class="vcol" data-i18n="voice.startEn">“start”</td>
-              <td class="vcol" data-i18n="voice.startFr">“démarrer”</td>
-              <td class="vcol" data-i18n="voice.startAr">«ابدأ العرض التقديمي»</td>
-              <td class="vcol" data-i18n="voice.startNl">“start presentatie”</td>
-            </tr>
-            <tr class="vrow">
-              <td class="vcol vh-first" data-i18n="voice.pause">Pause / black screen</td>
-              <td class="vcol" data-i18n="voice.pauseEn">“pause, black screen”</td>
-              <td class="vcol" data-i18n="voice.pauseFr">“pause, écran noir”</td>
-              <td class="vcol" data-i18n="voice.pauseAr">«إيقاف مؤقت، شاشة سوداء»</td>
-              <td class="vcol" data-i18n="voice.pauseNl">“pauzeer, zwart scherm”</td>
-            </tr>
-            <tr class="vrow">
-              <td class="vcol vh-first" data-i18n="voice.zoom">Zoom in / out</td>
-              <td class="vcol" data-i18n="voice.zoomEn">“zoom in”</td>
-              <td class="vcol" data-i18n="voice.zoomFr">“zoom avant”</td>
-              <td class="vcol" data-i18n="voice.zoomAr">«كبّر / صغّر»</td>
-              <td class="vcol" data-i18n="voice.zoomNl">“inzoomen”</td>
-            </tr>
-            <tr class="vrow">
-              <td class="vcol vh-first" data-i18n="voice.scroll">Scroll up / down</td>
-              <td class="vcol" data-i18n="voice.scrollEn">“scroll down”</td>
-              <td class="vcol" data-i18n="voice.scrollFr">“fais défiler”</td>
-              <td class="vcol" data-i18n="voice.scrollAr">«مرّر للأسفل / للأعلى»</td>
-              <td class="vcol" data-i18n="voice.scrollNl">“scroll naar beneden”</td>
-            </tr>
-            <tr class="vrow">
-              <td class="vcol vh-first" data-i18n="voice.quizStart">Start a quiz</td>
-              <td class="vcol" data-i18n="voice.quizStartEn">“start a quiz”</td>
-              <td class="vcol" data-i18n="voice.quizStartFr">“commence un quiz”</td>
-              <td class="vcol" data-i18n="voice.quizStartAr">«ابدأ الاختبار»</td>
-              <td class="vcol" data-i18n="voice.quizStartNl">“start de quiz”</td>
-            </tr>
-            <tr class="vrow">
-              <td class="vcol vh-first" data-i18n="voice.quizNext">Next question</td>
-              <td class="vcol" data-i18n="voice.quizNextEn">“next question”</td>
-              <td class="vcol" data-i18n="voice.quizNextFr">“question suivante”</td>
-              <td class="vcol" data-i18n="voice.quizNextAr">«السؤال التالي»</td>
-              <td class="vcol" data-i18n="voice.quizNextNl">“volgende vraag”</td>
-            </tr>
-            <tr class="vrow">
-              <td class="vcol vh-first" data-i18n="voice.quizAnswer">Answer A–D</td>
-              <td class="vcol" data-i18n="voice.quizAnswerEn">“answer B”</td>
-              <td class="vcol" data-i18n="voice.quizAnswerFr">“réponse b”</td>
-              <td class="vcol" data-i18n="voice.quizAnswerAr">«الاجابة ب»</td>
-              <td class="vcol" data-i18n="voice.quizAnswerNl">“antwoord B”</td>
-            </tr>
-            <tr class="vrow">
-              <td class="vcol vh-first" data-i18n="voice.quizReveal">Show the answer</td>
-              <td class="vcol" data-i18n="voice.quizRevealEn">“show the answer”</td>
-              <td class="vcol" data-i18n="voice.quizRevealFr">“affiche la réponse”</td>
-              <td class="vcol" data-i18n="voice.quizRevealAr">«أظهر الاجابة»</td>
-              <td class="vcol" data-i18n="voice.quizRevealNl">“toon het antwoord”</td>
-            </tr>
-            <tr class="vrow">
-              <td class="vcol vh-first" data-i18n="voice.quizEnd">End the quiz</td>
-              <td class="vcol" data-i18n="voice.quizEndEn">“end the quiz”</td>
-              <td class="vcol" data-i18n="voice.quizEndFr">“termine le quiz”</td>
-              <td class="vcol" data-i18n="voice.quizEndAr">«انهِ الاختبار»</td>
-              <td class="vcol" data-i18n="voice.quizEndNl">“stop de quiz”</td>
-            </tr>
-            <tr class="vrow">
-              <td class="vcol vh-first" data-i18n="voice.ink">Draw · Highlight · Erase</td>
-              <td class="vcol" data-i18n="voice.inkEn">“draw mode”</td>
-              <td class="vcol" data-i18n="voice.inkFr">“mode dessin”</td>
-              <td class="vcol" data-i18n="voice.inkAr">«وضع الرسم»</td>
-              <td class="vcol" data-i18n="voice.inkNl">“tekenmodus”</td>
-            </tr>
-            <tr class="vrow">
-              <td class="vcol vh-first" data-i18n="voice.clear">Clear all annotations</td>
-              <td class="vcol" data-i18n="voice.clearEn">“clear the board”</td>
-              <td class="vcol" data-i18n="voice.clearFr">“vide le tableau”</td>
-              <td class="vcol" data-i18n="voice.clearAr">«امسح السبورة»</td>
-              <td class="vcol" data-i18n="voice.clearNl">“wis het bord”</td>
-            </tr>
-            <tr class="vrow">
-              <td class="vcol vh-first" data-i18n="voice.pointer">Show / hide pointer</td>
-              <td class="vcol" data-i18n="voice.pointerEn">“show the pointer”</td>
-              <td class="vcol" data-i18n="voice.pointerFr">“affiche le pointeur”</td>
-              <td class="vcol" data-i18n="voice.pointerAr">«أظهر المؤشر»</td>
-              <td class="vcol" data-i18n="voice.pointerNl">“toon de pointer”</td>
-            </tr>
-            <tr class="vrow">
-              <td class="vcol vh-first" data-i18n="voice.timer">Start / stop timer</td>
-              <td class="vcol" data-i18n="voice.timerEn">“start the timer”</td>
-              <td class="vcol" data-i18n="voice.timerFr">“démarre le chrono”</td>
-              <td class="vcol" data-i18n="voice.timerAr">«شغّل المؤقت»</td>
-              <td class="vcol" data-i18n="voice.timerNl">“start de timer”</td>
-            </tr>
-            <tr class="vrow">
-              <td class="vcol vh-first" data-i18n="voice.exercise">Next exercise</td>
-              <td class="vcol" data-i18n="voice.exerciseEn">“open the next exercise”</td>
-              <td class="vcol" data-i18n="voice.exerciseFr">“ouvre l'exercice suivant”</td>
-              <td class="vcol" data-i18n="voice.exerciseAr">«افتح التمرين التالي»</td>
-              <td class="vcol" data-i18n="voice.exerciseNl">“volgende oefening”</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============================= DEMO ============================= -->
-  <section class="section alt" id="demo">
-    <div class="section-inner">
-      <p class="section-kicker" data-i18n="demo.label">Live demo</p>
-      <h2 class="section-title" data-i18n="demo.title">Stand at the board — on this page</h2>
-      <p class="section-lead" data-i18n="demo.lead">Your mouse is the on-air pointer. Hold to pinch-click, pick a tool and draw on the slide, change slides, start a quiz. Authentic classroom demo: nothing touches your real system.</p>
-
-      <div class="demo-card" id="demo-card">
-        <div class="hud" id="demo-hud" role="status" aria-live="polite">
-          <span class="hud-cell hud-mode" data-i18n="demo.hudMode">DEMO MODE — no real control</span>
-          <span class="hud-cell"><span class="hud-key" data-i18n="demo.hudSlide">Slide</span><b id="hud-slide">1/3</b></span>
-          <span class="hud-cell"><span class="hud-key" data-i18n="demo.hudTool">Tool</span><b id="hud-tool">Point</b></span>
-          <span class="hud-cell"><span class="hud-key" data-i18n="demo.hudClock">Clock</span><b id="hud-clock">00:00</b></span>
-          <span class="hud-cell"><span class="hud-key" data-i18n="demo.hudQuiz">Quiz</span><b id="hud-quiz">Quiz off</b></span>
-          <span class="hud-cell hud-safety" data-i18n="demo.hudSafety">Safety gate: deny-by-default</span>
+    <section class="view" id="view-air-draw">
+      <div class="panel">
+        <h2 data-i18n-html="draw.title">AIR DRAW</h2>
+        <p class="lede" data-i18n-html="draw.lede">Draw in the air — your hand is the pen. Smart ink recognizes shapes automatically.</p>
+        <div class="draw-stage" id="drawStage"></div>
+        <div class="row row-center">
+          <button class="btn btn-primary" id="btnDrawEnable" data-i18n-html="draw.enable">ENABLE AIR DRAW</button>
+          <span class="btbtn sml" id="drawAimDot" data-state="off"><span data-i18n-html="draw.aim">AIM</span></span>
         </div>
+      </div>
+    </section>
 
-        <div class="stage-shell" id="stage-shell">
-          <canvas class="stage" id="stage" width="960" height="540" aria-label="Classroom demo stage"></canvas>
-          <div class="stage-vignette" aria-hidden="true"></div>
-          <button type="button" class="focus-exit" id="focus-exit"><span data-i18n="demo.focusExit">Exit focus (F)</span></button>
+    <section class="view" id="view-air-3d">
+      <div class="panel">
+        <h2 data-i18n-html="threed.title">AIR 3D</h2>
+        <p class="lede" data-i18n-html="threed.lede">Explore 3D models with your hand — rotate, zoom and dissect molecules, geometry and organs in mid-air.</p>
+        <div class="stage3d" id="stage3d">
+          <canvas id="canvas3d" aria-label="3D viewer"></canvas>
+          <div class="hud3d" id="hud3d"></div>
         </div>
+        <div class="mdl-row">
+          <button class="mdlchip active" data-model="cube" aria-pressed="true">CUBE</button>
+          <button class="mdlchip" data-model="pyramid">PYRAMID</button>
+          <button class="mdlchip" data-model="sphere">SPHERE</button>
+          <button class="mdlchip" data-model="torus">TORUS</button>
+          <button class="mdlchip" data-model="dna">DNA</button>
+          <button class="mdlchip" data-model="heart">HEART</button>
+          <button class="mdlchip" data-model="brain">BRAIN</button>
+          <button class="mdlchip" data-model="molecule">MOLECULE</button>
+        </div>
+        <div class="row row-center">
+          <button class="btn" id="btn3dHome" data-i18n-html="threed.home">RESET VIEW</button>
+          <button class="btn" id="btn3dAuto" data-i18n-html="threed.auto">AUTO-ROTATE</button>
+          <label class="btbtn sml"><input type="checkbox" id="chk3dExplode" /><span data-i18n-html="threed.explode">EXPLODE</span></label>
+          <label class="btbtn sml"><input type="checkbox" id="chk3dWire" /><span data-i18n-html="threed.wire">WIREFRAME</span></label>
+        </div>
+      </div>
+    </section>
 
-        <div class="toolbar" id="demo-toolbar">
-          <div class="tool-group" role="group" aria-label="Annotation tools">
-            <button class="tool" data-tool="point" data-i18n="demo.toolPoint">Point</button>
-            <button class="tool" data-tool="draw" data-i18n="demo.toolDraw">Draw</button>
-            <button class="tool" data-tool="highlight" data-i18n="demo.toolHighlight">Highlight</button>
-            <button class="tool" data-tool="erase" data-i18n="demo.toolErase">Erase</button>
-            <button class="tool tool-clear" data-tool="clear" data-i18n="demo.toolClear">Clear</button>
+    <section class="view" id="view-air-vision">
+      <div class="panel">
+        <h2 data-i18n-html="vision.title">AIR VISION</h2>
+        <p class="lede" data-i18n-html="vision.lede">Real-time computer vision. Built-in AI detects objects, poses and gestures entirely on-device.</p>
+        <div class="row row-center">
+          <button class="btn btn-primary" id="btnVisionStart" data-i18n-html="vision.start">START AIR VISION</button>
+          <span class="chip" id="visionFps" data-state="off"><span class="dot"></span><span class="lbl">0 FPS</span></span>
+        </div>
+        <div class="vision-canvas-wrap" id="visionWrap"><canvas id="canvasVision" aria-label="Air vision feed"></canvas></div>
+        <div class="vision-results" id="visionResults"></div>
+      </div>
+    </section>
+
+    <section class="view" id="view-air-lab">
+      <div class="panel">
+        <h2 data-i18n-html="lab.title">AIR LAB</h2>
+        <p class="lede" data-i18n-html="lab.lede">Virtual science lab with zero risk. Perfect for STEM lessons in mid-air.</p>
+        <div class="lab-wrap" id="labWrap">
+          <div class="lab-head">
+            <button class="labtab active" data-lab="circuit" data-i18n-html="lab.circuit">CIRCUITS</button>
+            <button class="labtab" data-lab="beaker" data-i18n-html="lab.beaker">CHEMISTRY</button>
+            <button class="labtab" data-lab="pendulum" data-i18n-html="lab.pendulum">PENDULUM</button>
+            <button class="labtab" data-lab="wave" data-i18n-html="lab.wave">WAVES</button>
+            <button class="labtab" data-lab="optics" data-i18n-html="lab.optics">OPTICS</button>
+            <button class="labtab" data-lab="planet" data-i18n-html="lab.planet">PLANETS</button>
           </div>
-          <div class="tool-group tool-colors" role="group" aria-label="Annotation color">
-            <button type="button" class="swatch swatch-cyan active" data-paint="cyan" data-i18n-aria="demo.colCyan" title="Cyan"></button>
-            <button type="button" class="swatch swatch-amber" data-paint="amber" data-i18n-aria="demo.colAmber" title="Amber"></button>
-            <button type="button" class="swatch swatch-blue" data-paint="blue" data-i18n-aria="demo.colBlue" title="Blue"></button>
-            <button type="button" class="swatch swatch-magenta" data-paint="magenta" data-i18n-aria="demo.colMagenta" title="Magenta"></button>
-            <button type="button" class="swatch swatch-white" data-paint="white" data-i18n-aria="demo.colWhite" title="White"></button>
-          </div>
-          <div class="tool-group" role="group" aria-label="Slides">
-            <button class="tool" id="zoom-out" data-i18n="demo.zoomOut">Zoom out</button>
-            <button class="tool" id="slide-prev" data-i18n="demo.prev">Prev</button>
-            <button class="tool" id="slide-next" data-i18n="demo.next">Next</button>
-            <button class="tool" id="zoom-in" data-i18n="demo.zoomIn">Zoom in</button>
-          </div>
-          <div class="tool-group" role="group" aria-label="Classroom">
-            <button class="tool" id="timer-btn" data-i18n="demo.timerStart">Start timer</button>
-            <button class="tool" id="quiz-btn" data-i18n="demo.quizStart">Start quiz</button>
-          </div>
-          <div class="tool-group" role="group" aria-label="Presentation">
-            <button class="tool" id="motion-btn" aria-pressed="true"><span id="motion-lbl" data-i18n="demo.motionOn">Animations on</span></button>
-            <button class="tool" id="focus-btn" aria-pressed="false"><span id="focus-lbl" data-i18n="demo.focus">Focus</span></button>
-          </div>
-        </div>
-
-        <p class="demo-hint" id="demo-hint" data-i18n="demo.hintMove">move over the stage = air pointer · hold = pinch-click</p>
-        <p class="demo-tip" id="demo-tip" data-i18n="demo.calibTip">In the classroom you calibrate once: camera → projection area → corners → alignment → gesture test. Here the board simply follows your pointer.</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============================= SETUP ============================= -->
-  <section class="section" id="setup">
-    <div class="section-inner">
-      <p class="section-kicker" data-i18n="setup.label">Setup</p>
-      <h2 class="section-title" data-i18n="setup.title">Three honest pieces of hardware</h2>
-      <p class="section-lead" data-i18n="setup.lead">No touchscreen, no sensor, no tablet, no network required. A low-cost desktop setup any classroom already has.</p>
-
-      <div class="req-grid">
-        <article class="req">
-          <span class="req-code">PC</span>
-          <h3 data-i18n="setup.reqC">Classroom PC</h3>
-          <p data-i18n="setup.reqCT">Windows 10 / 11, any office PC. Shipped as a portable ZIP — no installer, no admin rights needed.</p>
-        </article>
-        <article class="req">
-          <span class="req-code">CAM</span>
-          <h3 data-i18n="setup.reqW">Webcam</h3>
-          <p data-i18n="setup.reqWT">640×480 or better, facing the teacher. A built-in laptop camera works.</p>
-        </article>
-        <article class="req">
-          <span class="req-code">PROJ</span>
-          <h3 data-i18n="setup.reqP">Projector</h3>
-          <p data-i18n="setup.reqPT">Any resolution ≥ 800×600. The overlay renders identically at any resolution.</p>
-        </article>
-        <article class="req">
-          <span class="req-code">MIC</span>
-          <h3 data-i18n="setup.reqM">Microphone</h3>
-          <p data-i18n="setup.reqMT">Optional, for the voice layer. A built-in mic is enough.</p>
-        </article>
-      </div>
-
-      <div class="setup-steps">
-        <div class="setup-step">
-          <span class="step-num">1</span>
-          <h3 data-i18n="setup.step1">Download the ZIP</h3>
-          <p data-i18n="setup.step1T">Grab the portable ZIP — no account, no installer.</p>
-          <a class="step-dl" href="https://github.com/meddahuhadj/EDU-AIR/releases/download/v1.0-beta/EDU-AIR-Windows.zip" target="_blank" rel="noopener" data-i18n="setup.step1Dl">Download EDU-AIR-Windows.zip</a>
-        </div>
-        <div class="setup-step">
-          <span class="step-num">2</span>
-          <h3 data-i18n="setup.step2">Unzip + run</h3>
-          <p data-i18n="setup.step2T">Unzip anywhere, double-click EDU-AIR. A single window: status, tools, sensor dial, camera preview.</p>
-        </div>
-        <div class="setup-step">
-          <span class="step-num">3</span>
-          <h3 data-i18n="setup.step3">Calibrate once</h3>
-          <p data-i18n="setup.step3T">Five wizard stages map your webcam onto the projection area. Re-run any time.</p>
-        </div>
-        <div class="setup-step">
-          <span class="step-num">4</span>
-          <h3 data-i18n="setup.step4">Teach</h3>
-          <p data-i18n="setup.step4T">Slide, point, annotate, quiz — voice and gestures, fully local.</p>
+          <div class="lab-stage" id="labStage"><canvas id="canvasLab" aria-label="Lab simulation"></canvas></div>
+          <div class="lab-controls" id="labControls"></div>
+          <div class="lab-readout" id="labReadout"></div>
         </div>
       </div>
+    </section>
 
-      <div class="calib-card">
-        <h3 data-i18n="setup.calibTitle">The 5 calibration stages</h3>
-        <div class="calib-track">
-          <span class="calib-dot"><b>1</b><i data-i18n="setup.calib1">Camera</i></span>
-          <span class="calib-dot"><b>2</b><i data-i18n="setup.calib2">Projection area</i></span>
-          <span class="calib-dot"><b>3</b><i data-i18n="setup.calib3">Corners (4 points)</i></span>
-          <span class="calib-dot"><b>4</b><i data-i18n="setup.calib4">Alignment check</i></span>
-          <span class="calib-dot"><b>5</b><i data-i18n="setup.calib5">Gesture test</i></span>
+    <section class="view" id="view-air-quiz">
+      <div class="panel">
+        <h2 data-i18n-html="quiz.title">AIR QUIZ</h2>
+        <p class="lede" data-i18n-html="quiz.lede">Interactive quizzes controlled with hand gestures — answer by pinching in mid-air.</p>
+        <div class="quiz-wrap" id="quizWrap"></div>
+        <div class="row row-center">
+          <button class="btn" id="btnQuizNew" data-i18n-html="quiz.new">NEW QUIZ</button>
+          <span class="score" id="quizScore"></span>
         </div>
-        <p class="calib-note" data-i18n="setup.kbHint">Keyboard fallback: F5 start · ESC stop · →/← slides · B pause · Ctrl+/Ctrl- zoom · PgUp/PgDn scroll · Del clear</p>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- ============================= SAFETY ============================= -->
-  <section class="section alt" id="safety">
-    <div class="section-inner">
-      <p class="section-kicker" data-i18n="safety.label">Safety</p>
-      <h2 class="section-title" data-i18n="safety.title">Deny by default, refuse nothing important</h2>
-      <p class="section-lead" data-i18n="safety.lead">Every action goes through a classroom safety gate and an audit trail. Unknown actions are refused — a typo or a future AI command can never trigger an arbitrary action.</p>
-
-      <div class="safety-grid">
-        <article class="safe">
-          <h3 data-i18n="safety.c1">Registry-gated</h3>
-          <p data-i18n="safety.c1T">Only registered classroom actions exist. Anything unlisted is denied and audited as blocked.</p>
-        </article>
-        <article class="safe">
-          <h3 data-i18n="safety.c2">Graded risk</h3>
-          <p data-i18n="safety.c2T">Next slide, zoom, timer, quiz start run instantly. Clearing all annotations asks first. Ending the quiz is critical and is never auto-approved.</p>
-        </article>
-        <article class="safe">
-          <h3 data-i18n="safety.c3">Always reachable</h3>
-          <p data-i18n="safety.c3T">Pause, pointer off and the stop toggle never get blocked by a prompt — an incident can always be stopped reflexively.</p>
-        </article>
-        <article class="safe">
-          <h3 data-i18n="safety.c4">Honest demo</h3>
-          <p data-i18n="safety.c4T">Demo mode runs the same state machine with synthetic hands and a scripted lesson; it auto-approves to stay fluid and touches nothing on your real system.</p>
-        </article>
+    <section class="view" id="view-air-presentation">
+      <div class="panel">
+        <h2 data-i18n-html="presentation.title">AIR PRESENTATION</h2>
+        <p class="lede" data-i18n-html="presentation.lede">Deliver presentations without touching a thing — swipe in air to change slides.</p>
+        <div class="pres-stage" id="presStage"></div>
+        <div class="row row-center">
+          <button class="btn" id="btnPresPrev" data-i18n-html="presentation.prev">PREV</button>
+          <span class="pres-count" id="presCount">1 / 1</span>
+          <button class="btn" id="btnPresNext" data-i18n-html="presentation.next">NEXT</button>
+        </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- ============================= PRIVACY ============================= -->
-  <section class="section" id="privacy">
-    <div class="section-inner">
-      <p class="section-kicker" data-i18n="priv.label">Privacy</p>
-      <h2 class="section-title" data-i18n="priv.title">Your classroom stays in the room</h2>
-      <p class="section-lead" data-i18n="priv.lead">Camera processing is local by default — no camera frames are uploaded or recorded. The voice engine is the only choice: it is always visible, never silently switched.</p>
-
-      <div class="priv-grid">
-        <article class="priv">
-          <h3 data-i18n="priv.p1">Frames stay local</h3>
-          <p data-i18n="priv.p1T">MediaPipe + OpenCV run on the classroom PC. Zero uploads, zero cloud for gestures.</p>
-        </article>
-        <article class="priv">
-          <h3 data-i18n="priv.p2">Voice is a choice</h3>
-          <p data-i18n="priv.p2T">Google's online engine sends the spoken phrase to Google — flagged AUDIO ONLINE. Vosk or SAPI keep recognition 100% local (AUDIO LOCAL). If a local engine can't run, voice disables instead of silently falling back.</p>
-        </article>
-        <article class="priv">
-          <h3 data-i18n="priv.p3">No account</h3>
-          <p data-i18n="priv.p3T">No login, no telemetry, no updates being pushed during a lesson. Settings are a JSON file in the user folder.</p>
-        </article>
-        <article class="priv">
-          <h3 data-i18n="priv.p4">Auditable</h3>
-          <p data-i18n="priv.p4T">Every executed, blocked or pending action is written to the rotation log and the in-memory audit trail.</p>
-        </article>
+    <section class="view" id="view-ai-teacher">
+      <div class="panel">
+        <h2 data-i18n-html="teacher.title">AI TEACHER</h2>
+        <p class="lede" data-i18n-html="teacher.lede">Your AI co-teacher. Explain topics, run lessons, grade quizzes — all in mid-air.</p>
+        <div class="teach-chat" id="teachChat"></div>
+        <div class="teach-input row">
+          <input type="text" id="teachInput" data-i18n-placeholder-key="teacher.placeholder" placeholder="Ask your AI teacher anything..." aria-label="Ask your AI teacher" />
+          <button class="btn btn-primary" id="btnTeachSend" data-i18n-html="teacher.send">ASK</button>
+        </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- ============================= FAQ ============================= -->
-  <section class="section alt" id="faq">
-    <div class="section-inner">
-      <p class="section-kicker" data-i18n="faq.label">FAQ</p>
-      <h2 class="section-title" data-i18n="faq.title">Questions teachers actually ask</h2>
-
-      <div class="faq">
-        <details class="faq-item">
-          <summary data-i18n="faq.q1">Do I need a touchscreen?</summary>
-          <p data-i18n="faq.q1a">No. A computer, a webcam and a projector are enough. The air pointer and ink work at a distance — there is no touch frame and no sensor.</p>
-        </details>
-        <details class="faq-item">
-          <summary data-i18n="faq.q2">Which slide software does it drive?</summary>
-          <p data-i18n="faq.q2a">PowerPoint, LibreOffice Impress and PDF readers, through standard keys (F5, arrows, B, Ctrl±, PgUp/PgDn). It drives the presentation, it doesn't replace it.</p>
-        </details>
-        <details class="faq-item">
-          <summary data-i18n="faq.q3">Which languages?</summary>
-          <p data-i18n="faq.q3a">The interface and voice commands work in English, French, Arabic and Dutch — independently. Teach with an Arabic voice and an English interface if you like.</p>
-        </details>
-        <details class="faq-item">
-          <summary data-i18n="faq.q4">Does it need internet?</summary>
-          <p data-i18n="faq.q4a">No. Hand tracking and the demo run offline. Voice uses Google's cloud by default; choose Vosk or SAPI to make recognition fully offline. If an offline engine can't start, voice turns off rather than silently going online.</p>
-        </details>
-        <details class="faq-item">
-          <summary data-i18n="faq.q5">Is it free?</summary>
-          <p data-i18n="faq.q5a">Free, no account, no telemetry. A portable ZIP for Windows 10/11; install nothing if you just want the landing page and this demo.</p>
-        </details>
-        <details class="faq-item">
-          <summary data-i18n="faq.q6">Is calibration optional?</summary>
-          <p data-i18n="faq.q6a">You can skip it, but it stays honest: skipped corners are flagged as estimated, never silently precise. Re-run the 5-step wizard any time from the dock.</p>
-        </details>
+    <section class="view" id="view-calibration">
+      <div class="panel">
+        <h2 data-i18n-html="calibration.title">CALIBRATION</h2>
+        <p class="lede" data-i18n-html="calibration.lede">Map your camera to the projection surface for pixel-perfect touch.</p>
+        <div class="row row-center">
+          <button class="btn btn-primary" id="btnCalibStart" data-i18n-html="calibration.start">START CALIBRATION</button>
+          <button class="btn" id="btnCalibReset" data-i18n-html="calibration.reset">RESET</button>
+        </div>
+        <div class="calib-canvas-wrap" id="calibWrap"><canvas id="canvasCalib" aria-label="Calibration view"></canvas></div>
+        <div class="calib-score" id="calibScore"></div>
       </div>
-    </div>
-  </section>
-</main>
+    </section>
 
-<footer class="footer">
-  <div class="footer-inner">
-    <div class="footer-brand">
-      <span class="brand-mark" aria-hidden="true">
-        <svg viewBox="0 0 40 40" role="img">
-          <rect x="2" y="2" width="36" height="36" rx="10" fill="rgba(52,211,153,.12)" stroke="rgba(52,211,153,.45)" stroke-width="1.5"/>
-          <path d="M12 9v16M12 17h10M22 9v16M28 9v16" fill="none" stroke="#A9F5D8" stroke-width="3" stroke-linecap="round"/>
-          <path d="M9 26.5 L 31 26.5" stroke="#FFD166" stroke-width="2.5" stroke-linecap="round"/>
-        </svg>
-      </span>
-      <span class="footer-tag" data-i18n="footer.tag">EDU-AIR — contactless interactive classroom</span>
+    <section class="view" id="view-history">
+      <div class="panel">
+        <h2 data-i18n-html="history.title">HISTORY</h2>
+        <p class="lede" data-i18n-html="history.lede">Every stroke, every quiz, every session — your audit trail.</p>
+        <div class="hist-list" id="histList"></div>
+      </div>
+    </section>
+
+    <section class="view" id="view-settings">
+      <div class="panel">
+        <h2 data-i18n-html="settings.title">SETTINGS</h2>
+        <div class="set-list" id="setList"></div>
+      </div>
+    </section>
+
+    <section class="view" id="view-privacy">
+      <div class="panel">
+        <h2 data-i18n-html="privacy.title">PRIVACY</h2>
+        <div class="privacy-body" id="privacyBody"></div>
+      </div>
+    </section>
+
+    <section class="view" id="view-security">
+      <div class="panel">
+        <h2 data-i18n-html="security.title">SECURITY</h2>
+        <div class="sec-body" id="secBody"></div>
+      </div>
+    </section>
+
+    <section class="view" id="view-dashboard">
+      <div class="panel">
+        <h2 data-i18n-html="dash.title">DASHBOARD</h2>
+        <div class="stat-grid" id="dashStats"></div>
+        <div class="dash-grid" id="dashQuick"></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+
+<div class="modal-backdrop hidden" id="modalCalib" role="dialog" aria-modal="true" aria-labelledby="calibModalTitle">
+  <div class="modal">
+    <h3 id="calibModalTitle" data-i18n-html="calibration.title">CALIBRATION</h3>
+    <p class="lede" data-i18n-html="calibration.lede">Hold a single fingertip over each cross as it appears. Three+ points give you a homography; more points = higher score.</p>
+    <div class="calib-stage" id="calibStage"><canvas id="canvasCalibModal" aria-label="Calibration grid"></canvas></div>
+    <div class="row row-center">
+      <button class="btn btn-primary" id="btnCalibBegin" data-i18n-html="calibration.begin">BEGIN</button>
+      <button class="btn" id="btnCalibAuto" data-i18n-html="calibration.auto">AUTO</button>
+      <button class="btn" id="btnCalibClose" data-i18n-html="calibration.close">CLOSE</button>
+      <span class="score" id="calibScoreModal">SCORE 0%</span>
     </div>
-    <p class="footer-note" data-i18n="footer.note">EDU-AIR is a local desktop application built on the HADJ NO-TOUCH AI engine. No camera frame or audio ever leaves the classroom PC unless you switch the visible online voice engine.</p>
-    <p class="footer-meta"><span data-i18n="footer.allRights">Demo page · runs fully offline</span> · <button class="install-btn" id="install-btn" data-i18n="footer.install">Install this app</button></p>
   </div>
-</footer>
+</div>
+
+<div class="modal-backdrop hidden" id="modalQuizEdit" role="dialog" aria-modal="true" aria-labelledby="quizEditTitle">
+  <div class="modal">
+    <h3 id="quizEditTitle" data-i18n-html="quiz.editTitle">BUILD A QUIZ</h3>
+    <div class="qeditor" id="qeditor"></div>
+    <div class="row row-center">
+      <button class="btn" id="btnQuizAddQ" data-i18n-html="quiz.addq">+ ADD QUESTION</button>
+      <button class="btn btn-primary" id="btnQuizSave" data-i18n-html="quiz.save">SAVE QUIZ</button>
+      <button class="btn" id="btnQuizEditClose" data-i18n-html="quiz.close">CLOSE</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop hidden" id="modalDanger" role="dialog" aria-modal="true" aria-labelledby="dangerTitle">
+  <div class="modal modal-danger">
+    <h3 id="dangerTitle" data-i18n-html="danger.title">SAFETY GATE</h3>
+    <p data-i18n-html="danger.body" id="dangerBody">This action could disrupt an active session. Your safety engine is asking you to confirm.</p>
+    <div class="danger-reasons" id="dangerReasons"></div>
+    <div class="row row-center">
+      <button class="btn" id="btnDangerCancel" data-i18n-html="danger.cancel">CANCEL</button>
+      <button class="btn btn-danger" id="btnDangerConfirm" data-i18n-html="danger.confirm">CONFIRM</button>
+      <button class="btn" id="btnDangerEmergency" data-i18n-html="danger.emergency">&#9888; EMERGENCY STOP</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop hidden" id="modalDemo" role="dialog" aria-modal="true" aria-labelledby="demoTitle">
+  <div class="modal modal-demo">
+    <h3 id="demoTitle" data-i18n-html="demo.title">SIMULATION MODE</h3>
+    <p class="lede" data-i18n-html="demo.body">No camera hardware detected — running the <b>synthetic hand engine</b>. This is a faithful simulation so you can explore every feature.</p>
+    <label class="row row-center" for="chkDemoInput"><input type="checkbox" id="chkDemoInput" checked /> <span data-i18n-html="demo.kb">Enable keyboard/mouse as hand input</span></label>
+    <div class="row row-center">
+      <button class="btn btn-primary" id="btnDemoGo" data-i18n-html="demo.go">ENTER SMART SURFACE</button>
+    </div>
+  </div>
+</div>
+
+<footer class="toasts" id="toasts" aria-live="polite" aria-atomic="false"></footer>
 
 <script src="i18n.js"></script>
 <script src="app.js"></script>
