@@ -1,5 +1,8 @@
-/* EDU-AIR — service worker (network-first for HTML, cache-first for assets) */
-const CACHE_NAME = "edu-air-static-v1";
+/* EDU-AIR SMART SURFACE — service worker
+   Network-first for navigations (fresh HTML), cache-first for static assets.
+   Offline fallback: any navigation that misses the network is served from
+   the precached app shell, so the PWA launches with no connection. */
+const CACHE_NAME = "edu-air-static-v2";
 const SHELL = [
   "./",
   "./index.html",
@@ -10,6 +13,7 @@ const SHELL = [
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./icons/icon-maskable-512.png",
+  "./icons/icon.svg",
 ];
 
 self.addEventListener("install", (e) => {
@@ -26,6 +30,10 @@ self.addEventListener("activate", (e) => {
   );
 });
 
+self.addEventListener("message", (e) => {
+  if (e.data && e.data.type === "SKIP_WAITING") self.skipWaiting();
+});
+
 self.addEventListener("fetch", (e) => {
   const req = e.request;
   if (req.method !== "GET") return;
@@ -40,7 +48,9 @@ self.addEventListener("fetch", (e) => {
           caches.open(CACHE_NAME).then((c) => c.put(req, copy));
           return res;
         })
-        .catch(() => caches.match(req).then((hit) => hit || caches.match("./")))
+        .catch(() => caches.match(req)
+          .then((hit) => hit || caches.match("./index.html"))
+          .then((hit) => hit || caches.match("./")))
     );
     return;
   }

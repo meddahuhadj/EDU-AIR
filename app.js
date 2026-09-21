@@ -1115,7 +1115,7 @@ function renderDashboard(){
 }
 
 /* ---------------------------------------------------------------- */
-/* PWA install                                                        */
+/* PWA: service worker, install prompt, connectivity                  */
 /* ---------------------------------------------------------------- */
 function installPwa(){
   if(S.deferredPrompt){
@@ -1125,7 +1125,35 @@ function installPwa(){
     toast("pwa.install","info");
   }
 }
-on(window,"beforeinstallprompt", function(e){ e.preventDefault(); S.deferredPrompt = e; });
+function isPwaSecureContext(){
+  if(location.protocol === "https:") return true;
+  return location.hostname === "localhost" || location.hostname === "127.0.0.1" || location.hostname === "[::1]";
+}
+function registerServiceWorker(){
+  if(!("serviceWorker" in navigator)) return;
+  if(!isPwaSecureContext()) return;
+  navigator.serviceWorker.register("./sw.js", { scope:"./" }).then(function(reg){
+    if(reg && reg.waiting && navigator.serviceWorker.controller){
+      reg.waiting.postMessage({ type:"SKIP_WAITING" });
+    }
+  }).catch(function(){ /* PWA is progressive: app still runs without offline cache */ });
+}
+function labelInstallBtn(){
+  var btn = $("btnInstall"); if(!btn) return;
+  var l = t("settings.install");
+  btn.title = l; btn.setAttribute("aria-label", l);
+}
+function wirePwa(){
+  registerServiceWorker();
+  var btn = $("btnInstall");
+  labelInstallBtn();
+  on(window,"beforeinstallprompt", function(e){ e.preventDefault(); S.deferredPrompt = e; if(btn) btn.classList.remove("hidden"); });
+  on(window,"appinstalled", function(){ S.deferredPrompt = null; if(btn) btn.classList.add("hidden"); logEv("pwa.installed", {}); });
+  on(btn,"click", installPwa);
+  on(window,"online", function(){ toast("offline.off","ok"); });
+  on(window,"offline", function(){ toast("offline.on","info"); });
+  if(!navigator.onLine) toast("offline.on","info");
+}
 
 /* ---------------------------------------------------------------- */
 /* danger modal wiring                                                */
@@ -1177,12 +1205,14 @@ function boot(){
   wireCalibration();
   wireDangerModal();
   wireDemoModal();
+  wirePwa();
   startStatusCycle();
   setMode("safe");
   switchView("smart-surface");
   requestAnimationFrame(tick);
   if(window.i18n && window.i18n.onChange){
     window.i18n.onChange(function(){
+      labelInstallBtn();
       if(S.view==="settings") renderSettings();
       if(S.view==="privacy") renderStatic("privacyBody","privacy.body");
       if(S.view==="security") renderStatic("secBody","security.body");

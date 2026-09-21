@@ -1,0 +1,32 @@
+# Netlify deployment for EDU-AIR SMART SURFACE — static PWA ONLY.
+#
+# Publishes this repository root (index.html / app.js / i18n.js / styles.css /
+# sw.js / manifest.webmanifest / icons) to Netlify's edge: the same static
+# bundle Vercel (vercel.json) and Render (render.yaml) publish.
+#
+# It NEVER deploys the EDU-AIR desktop AI itself. The camera + hand-tracking
+# application is a local desktop program that must run on the user's own
+# machine and never leaves it. Web hosting cannot host a local desktop app.
+[build]
+  # Static app, already deployable as-is: no build command, no bundler.
+  command = ""
+
+  # Publish this repository root. cleanUrls is handled by Netlify's pretty
+  # URLs; kept in sync with vercel.json (cleanUrls: true).
+  publish = "."
+
+[build.environment]
+  # Honest: there is nothing to install or compile for a static deploy.
+  NODE_VERSION = "off"
+
+# Service worker must never be stale behind Netlify's CDN.
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+# Keep the app shell HTML fresh so updates land on the next load.
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache, must-revalidate"

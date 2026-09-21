@@ -1,0 +1,20 @@
+# Render Blueprint — EDU-AIR SMART SURFACE (static PWA)
+# Render Dashboard → New → Blueprint → select this repository.
+# Publishes this repository root exactly like vercel.json (Vercel) and
+# netlify.toml (Netlify). The desktop AI is never deployed here: it runs
+# locally on the teacher's machine and never leaves it.
+services:
+  - type: web
+    name: edu-air-smart-surface
+    runtime: static
+    buildCommand: ""
+    staticPublishPath: .
+    # En-têtes spécifiques pour que le service worker (sw.js) se mette à jour
+    # immédiatement, jamais servi depuis le cache CDN.
+    headers:
+      - path: /sw.js
+        name: Cache-Control
+        value: no-cache, no-store, must-revalidate
+      - path: /index.html
+        name: Cache-Control
+        value: no-cache, must-revalidate

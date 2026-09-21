@@ -1,3 +1,6 @@
 ﻿downloads/
 .vercel
 *.log
+__pycache__/
+*.pyc
+
