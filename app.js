@@ -26,7 +26,8 @@ var S = window.EDUAIR = {
     {t:"Safety by default", b:"Every action passes a safety gate: safe · confirm · critical. Nothing unregistered ever runs."},
     {t:"Works with what you already have", b:"Any PC + webcam + projector. No new hardware to buy or install."}
   ]},
-  calib: { pts:[], targets:[], score:0 },
+  calib: getLS("calib", { ok:false, H:null, pts:[], score:0, t:0 }),
+  ai: getLS("ai", { mode:"scripted", endpoint:"./api/chat", history:[] }),
   vision: { running:false, fps:0 },
   lab: { active:"circuit", params:{
     circuit:{voltage:6, resistance:100},
@@ -150,6 +151,7 @@ function switchView(view){
   if(view==="air-lab"){ renderLabControls(); S.lab.t0 = performance.now(); }
   if(view==="air-3d") resizeCanvas(canvas3d, stage3dEl());
   if(view==="air-vision") resizeCanvas(canvasVision, $("visionWrap"));
+  if(view==="calibration") refreshCalibView();
 }
 function stage3dEl(){ return $("stage3d"); }
 
@@ -1017,12 +1019,126 @@ function wireAirPresentation(){
 var HA = { state:"off", stream:null, landmarker:null, running:false, starting:false,
            loaded:false, loading:false, hand:null, handEver:false, gestureText:"", ripples:[], light:1,
            quality:"wait", qualityT:0, result:null, lastDet:0, modelErr:false, watchTimer:null,
-           fps:0, _fr:0, _ft:0, lastHandT:0, smx:null, smy:null };
+           fps:0, _fr:0, _ft:0, lastHandT:0, raw:null, smo:null, smo2:null };
 var MP_CDN  = "./vendor/vision_bundle.js";
-var MP_WASM = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm";
+var MP_WASM = "./vendor/wasm";
 var MP_MODEL = "./models/hand_landmarker.task";
 var HAND_EDGES = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[0,9],[9,10],[10,11],[11,12],
                   [0,13],[13,14],[14,15],[15,16],[0,17],[17,18],[18,19],[19,20],[5,9],[9,13],[13,17]];
+
+/* cursor smoothing — EMA + per-frame max step + transient-spike rejection */
+function makeSmoother(){
+  return { sx:null, sy:null, lx:null, ly:null };
+}
+function smootherStep(sm, rx, ry, W, H){
+  var wx = clamp(rx, 0, W), wy = clamp(ry, 0, H);
+  if(sm.sx === null){
+    sm.sx = wx; sm.sy = wy; sm.lx = wx; sm.ly = wy;
+    return { x: wx, y: wy };
+  }
+  /* 0 stability = raw (still bounded); otherwise EMA tuned by the slider */
+  var alpha = (S.stab||0) > 0 ? clamp(0.30 + (10 - Math.min(10, Math.max(1, S.stab||10))) * 0.055, 0.15, 0.9) : 1;
+  var mX = W * 0.16, mY = H * 0.16;
+  /* impossible jump (tracker flip): hold position this frame, learn the new anchor */
+  if(Math.abs(wx - sm.lx) > W * 0.35 || Math.abs(wy - sm.ly) > H * 0.35){
+    sm.lx = wx; sm.ly = wy;
+    return { x: sm.sx, y: sm.sy };
+  }
+  sm.lx = wx; sm.ly = wy;
+  var tX = sm.sx + clamp(wx - sm.sx, -mX, mX);
+  var tY = sm.sy + clamp(wy - sm.sy, -mY, mY);
+  sm.sx = clamp(sm.sx + (tX - sm.sx) * alpha, 0, W);
+  sm.sy = clamp(sm.sy + (tY - sm.sy) * alpha, 0, H);
+  return { x: sm.sx, y: sm.sy };
+}
+
+/* homography camera(viewport-normalized, mirrored) -> screen(px), DLT least squares */
+function lsSolveRows(rows, b){
+  var n = 8, i, j, k;
+  var A = [], G = [];
+  for(i=0;i<n;i++){
+    A[i] = new Array(n).fill(0); G[i] = 0;
+    for(k=0;k<rows.length;k++){
+      var r = rows[k], bi = b[k];
+      for(j=0;j<n;j++){ A[i][j] += r[i]*r[j]; }
+      G[i] += r[i]*bi;
+    }
+  }
+  for(i=0;i<n;i++){
+    var piv = i;
+    for(k=i+1;k<n;k++){ if(Math.abs(A[k][i]) > Math.abs(A[piv][i])) piv = k; }
+    if(Math.abs(A[piv][i]) < 1e-12) return null;
+    if(piv !== i){ var tmp=A[i]; A[i]=A[piv]; A[piv]=tmp; var tg=G[i]; G[i]=G[piv]; G[piv]=tg; }
+    for(k=i+1;k<n;k++){
+      var f = A[k][i]/A[i][i];
+      for(j=i;j<n;j++){ A[k][j] -= f*A[i][j]; }
+      G[k] -= f*G[i];
+    }
+  }
+  var h = new Array(n).fill(0);
+  for(i=n-1;i>=0;i--){
+    var s = G[i];
+    for(j=i+1;j<n;j++){ s -= A[i][j]*h[j]; }
+    h[i] = s/A[i][i];
+  }
+  return h;
+}
+function homographyFrom(pts){
+  var n = pts.length;
+  if(n < 4) return null;
+  var rows = [], b = [];
+  var vw = window.innerWidth||1, vh = window.innerHeight||1;
+  for(var i=0;i<n;i++){
+    var p = pts[i];
+    var X = p.X/vw, Y = p.Y/vh;
+    rows.push([p.u, p.v, 1, 0, 0, 0, -X*p.u, -X*p.v]);
+    rows.push([0, 0, 0, p.u, p.v, 1, -Y*p.u, -Y*p.v]);
+    b.push(X); b.push(Y);
+  }
+  var h = lsSolveRows(rows, b);
+  if(!h) return null;
+  return [[h[0],h[1],h[2]],[h[3],h[4],h[5]],[h[6],h[7],1]];
+}
+function applyH(H, u, v){
+  var a = H[0][0]*u + H[0][1]*v + H[0][2];
+  var c = H[1][0]*u + H[1][1]*v + H[1][2];
+  var q = H[2][0]*u + H[2][1]*v + H[2][2];
+  if(Math.abs(q) < 1e-9) q = 1e-9;
+  var x = a/q, y = c/q;
+  if(!isFinite(x) || !isFinite(y)) return { x: u, y: v };
+  return { x: x, y: y };
+}
+function homographyScore(H, pts){
+  var vw = window.innerWidth||1, vh = window.innerHeight||1;
+  var err = 0;
+  pts.forEach(function(p){
+    var n = applyH(H, p.u, p.v);
+    err += Math.hypot((n.x*vw) - p.X, (n.y*vh) - p.Y);
+  });
+  var avg = err / Math.max(1, pts.length);
+  return { errPx: avg, score: Math.min(100, Math.max(0, Math.round(100 - avg*2.5))) };
+}
+function saveCalib(){ setLS("calib", S.calib); }
+function calibChip(){ setChip("stCalib", (S.calib.ok && S.calib.H) ? "on" : "off"); }
+function aiChip(){ setChip("stAI", S.ai.mode === "live" ? "on" : "off"); }
+function syncAiBadge(){
+  var liveBadge = $("aiModeBadge");
+  if(!liveBadge) return;
+  var live = S.ai.mode === "live";
+  liveBadge.textContent = live ? t("teacher.live") : t("teacher.demo");
+  liveBadge.classList.toggle("live", live);
+  aiChip();
+}
+function refreshCalibView(){
+  var canvasInline = $("canvasCalib");
+  if(!canvasInline) return;
+  resizeCanvas(canvasInline, $("calibWrap"));
+  drawCalib(canvasInline, (S.calib.pts||[]).length, false);
+  var s = $("calibScore");
+  if(s) s.textContent = (S.calib.ok && S.calib.H && S.calib.score)
+    ? t("calib.scored").replace("{s}", S.calib.score+"%")
+    : t("calib.notDone");
+}
 
 /* audio feedback — tiny Web Audio beeps, no assets */
 var SND = { ctx:null };
@@ -1200,7 +1316,7 @@ function stopCamera(){
   HA.running = false;
   if(HA.stream){ HA.stream.getTracks().forEach(function(tr){ tr.stop(); }); HA.stream = null; }
   HA.state="off"; HA.hand = null; HA.handEver = false; HA.gestureText="";
-  HA.smx = null; HA.smy = null;
+  HA.raw = null; HA.smo = null; HA.smo2 = null;
   HA.result = null; HA.lastDet = 0;
   HA.lastHandT = 0;
   if(HA.watchTimer){ clearTimeout(HA.watchTimer); HA.watchTimer = null; }
@@ -1489,27 +1605,27 @@ function camLoop(){
   if(hands && hands.length){
     HA.lastHandT = performance.now();
     var p1 = hands[prim];
-    var rx = clamp((1 - p1[8].x) * W, 0, W);
-    var ry = clamp(p1[8].y * H, 0, H);
-    var sx = rx, sy = ry;
-    if(S.stab){
-      if(HA.smx === null || Math.abs(rx - HA.smx) > W * 0.35 || Math.abs(ry - HA.smy) > H * 0.35){ HA.smx = rx; HA.smy = ry; }
-      else {
-        var alpha = Math.max(0.12, 1 - (S.stab / 10) * 0.78);
-        HA.smx += (rx - HA.smx) * alpha;
-        HA.smy += (ry - HA.smy) * alpha;
-        sx = HA.smx; sy = HA.smy;
-      }
-    }
+    var rawU = 1 - p1[8].x, rawV = p1[8].y;
+    var mapPt = (S.calib.ok && S.calib.H) ? applyH(S.calib.H, rawU, rawV) : { x: rawU, y: rawV };
+    var rx = clamp(mapPt.x * W, 0, W);
+    var ry = clamp(mapPt.y * H, 0, H);
+    HA.raw = { u: rawU, v: rawV, x: rx, y: ry };
+    if(!HA.smo) HA.smo = makeSmoother();
+    var sm = smootherStep(HA.smo, rx, ry, W, H);
+    var sx = sm.x, sy = sm.y;
     HA.hand = { x:sx, y:sy };
     if(!HA.handEver){ HA.handEver = true; tutTrigger("hand"); }
     setChip("stHand","on");
     handleHand(p1, sx, sy, W);
     var p2 = hands.length > 1 ? hands[1-prim] : null;
     if(p2){
-      var s2x = clamp((1 - p2[8].x) * W, 0, W);
-      var s2y = clamp(p2[8].y * H, 0, H);
-      handleHand2(p2, s2x, s2y);
+      var rawU2 = 1 - p2[8].x, rawV2 = p2[8].y;
+      var mapPt2 = (S.calib.ok && S.calib.H) ? applyH(S.calib.H, rawU2, rawV2) : { x: rawU2, y: rawV2 };
+      var s2x = clamp(mapPt2.x * W, 0, W);
+      var s2y = clamp(mapPt2.y * H, 0, H);
+      if(!HA.smo2) HA.smo2 = makeSmoother();
+      var sm2 = smootherStep(HA.smo2, s2x, s2y, W, H);
+      handleHand2(p2, sm2.x, sm2.y);
     } else if(HS2.pinch){
       HS2.pinch = false;
       handEvent("pointerup", HS2.px, HS2.py, 0, 91, false);
@@ -1692,11 +1808,48 @@ function addChatBubble(text, who){
   var host = $("teachChat"); if(!host) return;
   var d = document.createElement("div");
   d.className = "chat-bubble "+(who==="me"?"chat-me":"chat-ai");
-  d.textContent = text;
+  if(who === "typing"){
+    d.className = "chat-bubble chat-ai chat-typing";
+    d.textContent = t("teacher.typing");
+  } else {
+    d.textContent = text;
+  }
   host.appendChild(d);
   host.scrollTop = host.scrollHeight;
+  return d;
+}
+function setChatBubble(bubble, text){
+  if(!bubble) return;
+  bubble.textContent = text;
+  bubble.classList.remove("chat-typing");
+  var host = $("teachChat");
+  if(host) host.scrollTop = host.scrollHeight;
+}
+function askLiveAI(msg){
+  var endpoint = (S.ai && S.ai.endpoint) || "./api/chat";
+  var body = { message: msg };
+  if(S.ai && S.ai.history && S.ai.history.length) body.history = S.ai.history.slice(-8);
+  return fetch(endpoint, {
+    method:"POST",
+    headers:{ "Content-Type":"application/json", "Accept":"application/json" },
+    body: JSON.stringify(body)
+  }).then(function(res){
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    return res.json();
+  }).then(function(data){
+    var reply = (data && (data.reply || data.answer)) || "";
+    if(!reply.trim()) throw new Error("empty");
+    S.ai.history = (S.ai.history || []).concat([
+      { role:"user", content:msg },
+      { role:"assistant", content:reply }
+    ]).slice(-20);
+    setLS("ai", S.ai);
+    aiChip();
+    return reply;
+  });
 }
 function wireAiTeacher(){
+  var liveBadge = $("aiModeBadge");
   function send(){
     var input = $("teachInput");
     var msg = input.value.trim();
@@ -1704,8 +1857,22 @@ function wireAiTeacher(){
     addChatBubble(msg, "me");
     input.value = "";
     logEv("teacher.ask", {});
-    setTimeout(function(){ addChatBubble(teacherReply(msg), "ai"); }, 450);
+    var live = S.ai.mode === "live";
+    if(live){
+      var typing = addChatBubble("", "typing");
+      askLiveAI(msg).then(function(reply){
+        setChatBubble(typing, reply);
+        logEv("teacher.live.ok", {});
+      }).catch(function(err){
+        setChatBubble(typing, teacherReply(msg));
+        toast("teacher.offline","warn");
+        logEv("teacher.live.fail", { err: String(err && err.message || err) });
+      });
+    } else {
+      setTimeout(function(){ addChatBubble(teacherReply(msg), "ai"); }, 450);
+    }
   }
+  syncAiBadge();
   on($("btnTeachSend"),"click", send);
   on($("teachInput"),"keydown", function(e){ if(e.key==="Enter") send(); });
 }
@@ -1746,8 +1913,17 @@ function drawCalib(canvas, collected, active){
 }
 function wireCalibration(){
   var canvasInline = $("canvasCalib"), canvasModal = $("canvasCalibModal");
-  function refreshInline(){ resizeCanvas(canvasInline, $("calibWrap")); drawCalib(canvasInline, S.calib.pts.length, false); }
-  on($("btnCalibReset"),"click", function(){ S.calib.pts=[]; S.calib.score=0; var s=$("calibScore"); if(s) s.textContent="0%"; refreshInline(); toast("calibration.reset","info"); });
+  function calibLabel(){
+    if(S.calib.ok && S.calib.H && S.calib.score) return t("calib.scored").replace("{s}", S.calib.score+"%");
+    return t("calib.notDone");
+  }
+  function refreshInline(){ refreshCalibView(); }
+  on($("btnCalibReset"),"click", function(){
+    S.calib = { ok:false, H:null, pts:[], score:0, t:0 };
+    saveCalib(); calibChip();
+    var s=$("calibScore"); if(s) s.textContent = t("calib.notDone");
+    refreshInline(); toast("calibration.reset","info"); logEv("calib.reset", {});
+  });
   window.addEventListener("resize", refreshInline);
   refreshInline();
 
@@ -1757,19 +1933,42 @@ function wireCalibration(){
   function setGuide(html){
     var g = $("calibGuide"); if(g) g.innerHTML = html;
   }
-  function finishCalib(byAuto){
+  function stopWizard(){
     wizardActive = false;
     if(wizardTimer){ clearInterval(wizardTimer); wizardTimer = null; }
-    S.calib.score = 100;
-    drawCalib(canvasModal, S.calib.pts.length, false);
-    var sc = $("calibScoreModal"); if(sc) sc.textContent = "100%";
-    var s = $("calibScore"); if(s) s.textContent = "100%";
-    setGuide(t("calib.doneText"));
-    toast("calib.done","ok");
-    logEv(byAuto ? "calib.auto" : "calib.done", {});
   }
-  function afterPoint(x, y){
-    S.calib.pts.push({x:x,y:y});
+  function finishCalib(byAuto){
+    stopWizard();
+    if(byAuto){
+      /* "AUTO" = default framing: no live homography, pointer falls back to direct mapping */
+      S.calib = { ok:false, H:null, pts:[], score:0, t:Date.now() };
+      saveCalib(); calibChip();
+      drawCalib(canvasModal, S.calib.pts.length, false);
+      var s = $("calibScore"); if(s) s.textContent = t("calib.notDone");
+      setGuide(t("calib.autoNote"));
+      toast("calib.auto","info");
+      logEv("calib.auto", {});
+      return;
+    }
+    var H = homographyFrom(S.calib.pts);
+    if(!H){
+      setGuide(t("calib.fail"));
+      toast("calib.fail","err");
+      logEv("calib.fail", {n:S.calib.pts.length});
+      return;
+    }
+    var q = homographyScore(H, S.calib.pts);
+    S.calib.H = H; S.calib.ok = true; S.calib.score = q.score; S.calib.t = Date.now();
+    saveCalib(); calibChip();
+    drawCalib(canvasModal, S.calib.pts.length, false);
+    var sc = $("calibScoreModal"); if(sc) sc.textContent = q.score+"%";
+    var s = $("calibScore"); if(s) s.textContent = calibLabel();
+    setGuide(t("calib.doneText2").replace("{s}", q.score+"%").replace("{e}", Math.round(q.errPx)+"px"));
+    toast("calib.done","ok");
+    logEv("calib.done", {score:q.score, err:Math.round(q.errPx)});
+  }
+  function afterPoint(u, v, X, Y){
+    S.calib.pts.push({u:u, v:v, X:X, Y:Y});
     dwell = 0;
     drawCalib(canvasModal, S.calib.pts.length, true);
     var pct = Math.round(S.calib.pts.length/targetsNow().length*100);
@@ -1778,6 +1977,7 @@ function wireCalibration(){
   }
   function startCalibWizard(){
     S.calib.pts = []; dwell = 0;
+    if(HA.state !== "on") startCamera();
     resizeCanvas(canvasModal, $("calibStage"));
     drawCalib(canvasModal, 0, true);
     var sc = $("calibScoreModal"); if(sc) sc.textContent = "0%";
@@ -1791,20 +1991,18 @@ function wireCalibration(){
       var idx = S.calib.pts.length;
       drawCalib(canvasModal, idx, true);
       if(idx >= tgs.length) return;
-      var r = canvasModal.getBoundingClientRect();
-      var handX = (HA.state==="on" && HA.hand) ? HA.hand.x - r.left : null;
-      var handY = (HA.state==="on" && HA.hand) ? HA.hand.y - r.top : null;
-      if(handX == null){
+      if(!HA.raw || HA.state !== "on" || !HA.handEver){
         dwell = 0;
-        setGuide(t("calib.guideHand") + " <span class='dim'>" + t("calib.guideOrClick") + "</span>");
+        setGuide(HA.state === "on" ? (t("calib.guideHand") + " <span class='dim'>" + t("calib.guideOrClick") + "</span>") : t("calib.noCam"));
         return;
       }
+      var r = canvasModal.getBoundingClientRect();
       var tgt = tgs[idx];
-      var d = Math.hypot(handX - tgt[0], handY - tgt[1]);
+      var d = Math.hypot(HA.raw.x - (r.left + tgt[0]), HA.raw.y - (r.top + tgt[1]));
       setGuide(t("calib.guideTap").replace("{n}", idx+1) + (d < 60 ? " <span class='ok'>✓</span>" : ""));
       if(d < 60){
         dwell++;
-        if(dwell >= 8){ afterPoint(handX, handY); }
+        if(dwell >= 8){ afterPoint(HA.raw.u, HA.raw.v, r.left + tgt[0], r.top + tgt[1]); }
       } else { dwell = 0; }
     }, 80);
   }
@@ -1817,16 +2015,23 @@ function wireCalibration(){
     var tgs = targetsNow();
     var idx = S.calib.pts.length;
     if(idx >= tgs.length) return;
-    if(Math.hypot(x-tgs[idx][0], y-tgs[idx][1]) < 34){ afterPoint(x, y); }
+    if(Math.hypot(x-tgs[idx][0], y-tgs[idx][1]) < 34){
+      /* click fallback: use the modal-local point and the last known hand direction (u,v) */
+      whenClickHasNoRaw(tgs, idx, r);
+    }
   });
-  on($("btnCalibAuto"),"click", function(){
-    var tgs = targetsNow();
-    S.calib.pts = tgs.map(function(p){ return {x:p[0],y:p[1]}; });
-    finishCalib(true);
-  });
+  function whenClickHasNoRaw(tgs, idx, r){
+    var target = { X: r.left + tgs[idx][0], Y: r.top + tgs[idx][1] };
+    if(HA.raw && HA.state==="on"){
+      afterPoint(HA.raw.u, HA.raw.v, target.X, target.Y);
+    } else {
+      /* no live hand: fall back to neutral (center) u,v so the homography stays solvable */
+      afterPoint(0.5, 0.5, target.X, target.Y);
+    }
+  }
+  on($("btnCalibAuto"),"click", function(){ finishCalib(true); });
   on($("btnCalibClose"),"click", function(){
-    wizardActive = false;
-    if(wizardTimer){ clearInterval(wizardTimer); wizardTimer = null; }
+    stopWizard();
     hideModal("modalCalib"); refreshInline();
   });
 }
@@ -1914,6 +2119,40 @@ function renderSettings(){
   });
   handWrap.appendChild(handLabel); handWrap.appendChild(handSel);
   host.appendChild(handWrap);
+
+  var aiWrap = document.createElement("div"); aiWrap.className="field";
+  var aiLabel = document.createElement("label"); aiLabel.textContent = t("settings.aiMode");
+  var aiSel = document.createElement("select"); aiSel.className="sel";
+  ["scripted","live"].forEach(function(v){
+    var o = document.createElement("option"); o.value=v; o.textContent = t("ai.mode"+(v==="scripted"?"Scripted":"Live"));
+    if((S.ai.mode||"scripted")===v) o.selected = true;
+    aiSel.appendChild(o);
+  });
+  aiSel.addEventListener("change", function(){
+    S.ai.mode = aiSel.value;
+    setLS("ai", S.ai);
+    syncAiBadge();
+    endPointField.style.display = S.ai.mode==="live" ? "" : "none";
+    logEv("ai.mode", {v:S.ai.mode});
+  });
+  aiWrap.appendChild(aiLabel); aiWrap.appendChild(aiSel);
+  host.appendChild(aiWrap);
+
+  var endPointField = document.createElement("div"); endPointField.className="field";
+  var endPointLabel = document.createElement("label"); endPointLabel.textContent = t("settings.aiEndpoint");
+  var endPointInput = document.createElement("input"); endPointInput.type="text"; endPointInput.className="txt";
+  endPointInput.value = S.ai.endpoint || "./api/chat";
+  endPointInput.addEventListener("change", function(){
+    S.ai.endpoint = endPointInput.value.trim() || "./api/chat";
+    setLS("ai", S.ai);
+    logEv("ai.endpoint", {v:S.ai.endpoint});
+  });
+  endPointLabel.appendChild(endPointInput);
+  endPointField.appendChild(endPointLabel);
+  var aiHint = document.createElement("p"); aiHint.className="hint"; aiHint.textContent = t("settings.aiModeHint");
+  endPointField.appendChild(aiHint);
+  endPointField.style.display = (S.ai.mode==="live") ? "" : "none";
+  host.appendChild(endPointField);
 
   host.appendChild(fieldRow("settings.a11yMotion", S.a11y.motion, function(v){ S.a11y.motion=v; document.body.classList.toggle("reduce-motion", v); }));
   host.appendChild(fieldRow("settings.a11yContrast", S.a11y.contrast, function(v){ S.a11y.contrast=v; document.body.classList.toggle("high-contrast", v); }));
@@ -2161,17 +2400,20 @@ function boot(){
   wireVoice();
   wirePwa();
   startStatusCycle();
+  setTimeout(function(){ calibChip(); syncAiBadge(); }, 2300);
   setMode("safe");
   switchView("smart-surface");
   requestAnimationFrame(tick);
   if(window.i18n && window.i18n.onChange){
     window.i18n.onChange(function(){
-      labelInstallBtn();
+labelInstallBtn();
+      syncAiBadge();
       if(S.view==="settings") renderSettings();
       if(S.view==="privacy") renderStatic("privacyBody","privacy.body");
       if(S.view==="security") renderStatic("secBody","security.body");
       if(S.view==="dashboard") renderDashboard();
       if(S.view==="air-lab") renderLabControls();
+      if(S.view==="calibration") refreshCalibView();
       if(S.view==="air-quiz") renderQuiz();
       if(S.view==="air-presentation") renderPresentation();
       if(VC.on){ stopVoice(); toggleVoice(); }
