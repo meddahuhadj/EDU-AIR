@@ -222,3 +222,68 @@ class ClassroomIntentEngine:
         if quiz_active and domain in ("presentation", "annotation", "timer"):
             return None
         return intent
+
+
+# ---------------------------------------------------------------------------
+# Auto Profile Detection: active window -> interaction mode
+# ---------------------------------------------------------------------------
+class AutoProfileManager:
+    """Detects active foreground window and suggests/switches interaction profile."""
+    
+    PRESENTATION_KEYWORDS = ("powerpoint", "slides", "keynote", "acrobat", "pdf", "impress", "presentation")
+    MEDIA_KEYWORDS = ("youtube", "vlc", "spotify", "netflix", "media player", "deezer", "soundcloud", "twitch", "prime video")
+    ANNOTATION_KEYWORDS = ("paint", "photoshop", "onenote", "whiteboard", "draw", "krita", "figma", "illustrator")
+    WEB_KEYWORDS = ("chrome", "edge", "firefox", "brave", "opera", "safari")
+
+    def __init__(self, enabled: bool = True):
+        self.enabled = enabled
+        self.current_profile: str = "general"
+        self.last_window_title: str = ""
+
+    def get_active_window_title(self) -> str:
+        """Returns the title of the active foreground window on Windows, or empty string."""
+        import os
+        if os.name != "nt":
+            return ""
+        try:
+            import ctypes
+            user32 = ctypes.windll.user32
+            hwnd = user32.GetForegroundWindow()
+            if not hwnd:
+                return ""
+            length = user32.GetWindowTextLengthW(hwnd)
+            if length == 0:
+                return ""
+            buff = ctypes.create_unicode_buffer(length + 1)
+            user32.GetWindowTextW(hwnd, buff, length + 1)
+            return buff.value
+        except Exception:
+            return ""
+
+    def detect_profile(self, title: str) -> str:
+        if not title:
+            return "general"
+        t = title.lower()
+        if any(k in t for k in self.PRESENTATION_KEYWORDS):
+            return "presentation"
+        if any(k in t for k in self.MEDIA_KEYWORDS):
+            return "media"
+        if any(k in t for k in self.ANNOTATION_KEYWORDS):
+            return "annotation"
+        if any(k in t for k in self.WEB_KEYWORDS):
+            return "web"
+        return "general"
+
+    def check_profile_switch(self) -> tuple[bool, str, str]:
+        """Polls active window. Returns (changed: bool, new_profile: str, window_title: str)."""
+        if not self.enabled:
+            return False, self.current_profile, ""
+        title = self.get_active_window_title()
+        if not title or title == self.last_window_title:
+            return False, self.current_profile, title
+        self.last_window_title = title
+        new_prof = self.detect_profile(title)
+        if new_prof != self.current_profile:
+            self.current_profile = new_prof
+            return True, new_prof, title
+        return False, self.current_profile, title

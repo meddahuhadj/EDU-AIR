@@ -137,6 +137,23 @@ class InteractivePointer:
         self._one_euro = OneEuroFilter(min_cutoff=1.2, beta=0.04)
         self.micro_gesture_mapper = MicroGestureMapper()
 
+        # Dwell click & Rest zone ergonomic additions
+        self.dwell_enabled: bool = True
+        self.dwell_delay: float = 0.55          # seconds needed to trigger dwell click
+        self.dwell_radius_px: float = 22.0      # max displacement to consider pointer stationary
+        self.dwell_progress: float = 0.0        # 0.0 to 1.0 (used for UI progress ring)
+        self._dwell_anchor: tuple[float, float] | None = None
+        self._dwell_start_t: float = 0.0
+        self._dwell_fired: bool = False
+        self.on_dwell_click: Optional[Callable[[tuple[float, float]], None]] = None
+
+        self.in_rest_zone: bool = False
+        self.rest_zone_enabled: bool = False
+        self.rest_zone_threshold_y: float = 0.88 # bottom 12% of camera frame triggers rest pause
+        self._offset_x: float = 0.0
+        self._offset_y: float = 0.0
+        self.active_preset: str = "normal"
+
     @property
     def _diag_px(self) -> float:
         return (self.screen_w ** 2 + self.screen_h ** 2) ** 0.5
@@ -180,11 +197,24 @@ class InteractivePointer:
         """
         now = time.monotonic()
         if not self.enabled or raw_norm is None:
+            self._reset_dwell()
             return self._pos
+
+        # Rest zone check: if hand lowered to bottom border of camera frame, pause interaction
+        if self.rest_zone_enabled and raw_norm[1] >= self.rest_zone_threshold_y:
+            self.in_rest_zone = True
+            self._reset_dwell()
+            return self._pos
+        else:
+            self.in_rest_zone = False
+
         s = self.settings
         self.metrics.frames_processed += 1
         t_norm = self.raw_to_screen(raw_norm)
-        target = (t_norm[0] * self.screen_w, t_norm[1] * self.screen_h)
+        target = (
+            _clip((t_norm[0] * self.screen_w) + self._offset_x, 0, self.screen_w),
+            _clip((t_norm[1] * self.screen_h) + self._offset_y, 0, self.screen_h)
+        )
 
         # spike rejection: a single-frame jump beyond the threshold is a
         # tracking glitch and must never yank the projected pointer.
@@ -200,6 +230,8 @@ class InteractivePointer:
             delta = abs(target[0] - self._pos[0]) + abs(target[1] - self._pos[1])
             if delta < s.dead_zone * self._diag_px:
                 self._feed_tremor(delta)
+                # Still check dwell even when in dead zone (user is trying to stay still to click!)
+                self._update_dwell(now)
                 return self._pos
 
         # Adaptive 1€ Filter + EMA combination
@@ -224,12 +256,84 @@ class InteractivePointer:
         self.metrics.last_update = now
         self.metrics.latency_ms = (now - self._t0) * 1000.0 if self._t0 else 0.0
         self._t0 = now
+
+        # Dwell clicking progress check
+        self._update_dwell(now)
+
         if self.on_moved is not None:
             try:
                 self.on_moved(self._pos)
             except Exception:
                 pass
         return self._pos
+
+    def _reset_dwell(self) -> None:
+        self._dwell_anchor = None
+        self._dwell_start_t = 0.0
+        self._dwell_fired = False
+        self.dwell_progress = 0.0
+
+    def _update_dwell(self, now: float) -> None:
+        if not self.dwell_enabled or self._pos is None:
+            self._reset_dwell()
+            return
+
+        if self._dwell_anchor is None:
+            self._dwell_anchor = self._pos
+            self._dwell_start_t = now
+            self._dwell_fired = False
+            self.dwell_progress = 0.0
+            return
+
+        dist = ((self._pos[0] - self._dwell_anchor[0]) ** 2 +
+                (self._pos[1] - self._dwell_anchor[1]) ** 2) ** 0.5
+
+        if dist <= self.dwell_radius_px:
+            elapsed = now - self._dwell_start_t
+            self.dwell_progress = min(1.0, elapsed / max(0.01, self.dwell_delay))
+            if self.dwell_progress >= 1.0 and not self._dwell_fired:
+                self._dwell_fired = True
+                if self.on_dwell_click is not None:
+                    try:
+                        self.on_dwell_click(self._pos)
+                    except Exception:
+                        pass
+        else:
+            # User moved beyond dwell radius, reset anchor to new position
+            self._dwell_anchor = self._pos
+            self._dwell_start_t = now
+            self._dwell_fired = False
+            self.dwell_progress = 0.0
+
+    def apply_preset(self, preset: str) -> None:
+        """Apply a sensitivity / smoothing profile preset."""
+        preset = preset.lower()
+        if preset == "smooth":
+            self._one_euro.min_cutoff = 0.8
+            self._one_euro.beta = 0.01
+            self.settings.smoothing = 0.25
+            self.settings.speed = 0.85
+            self.active_preset = "smooth"
+        elif preset == "fast":
+            self._one_euro.min_cutoff = 2.0
+            self._one_euro.beta = 0.08
+            self.settings.smoothing = 0.80
+            self.settings.speed = 1.30
+            self.active_preset = "fast"
+        else:  # normal
+            self._one_euro.min_cutoff = 1.2
+            self._one_euro.beta = 0.04
+            self.settings.smoothing = 0.50
+            self.settings.speed = 1.00
+            self.active_preset = "normal"
+
+    def recenter_offset(self, target_pos: tuple[float, float] | None = None) -> None:
+        """Quick 1-point alignment: centers pointer to screen center or specified point."""
+        if self._pos is None:
+            return
+        target = target_pos or (self.screen_w / 2.0, self.screen_h / 2.0)
+        self._offset_x += (target[0] - self._pos[0])
+        self._offset_y += (target[1] - self._pos[1])
 
     # internal --------------------------------------------------------------
     def _feed_tremor(self, delta_px: float) -> None:

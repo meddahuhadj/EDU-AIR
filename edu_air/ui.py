@@ -238,8 +238,11 @@ class OverlayWindow(QWidget):
         # ---- interactive pointer ---------------------------------------------
         if s.pointer.visible and s.pointer.position is not None:
             px, py = s.pointer.position
+            dwell_prog = getattr(s.pointer, "dwell_progress", 0.0)
+            in_rest = getattr(s.pointer, "in_rest_zone", False)
             self._paint_pointer(p, px, py, s.settings.annotation.pointer_size,
-                                s.settings.annotation.pointer_color)
+                                s.settings.annotation.pointer_color,
+                                dwell_progress=dwell_prog, in_rest=in_rest)
 
         # ---- quiz overlay ------------------------------------------------------
         if s.quiz.active and s.quiz.question is not None:
@@ -276,8 +279,10 @@ class OverlayWindow(QWidget):
             p.drawLine(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1])
 
     def _paint_pointer(self, p: QPainter, px: float, py: float,
-                       size: int, color: str) -> None:
-        col = QColor(color)
+                       size: int, color: str,
+                       dwell_progress: float = 0.0,
+                       in_rest: bool = False) -> None:
+        col = QColor("#f59e0b") if in_rest else QColor(color)
         size = max(10, size)
         r = size / 2
         c = QPen(col, 2)
@@ -290,6 +295,20 @@ class OverlayWindow(QWidget):
         c2 = QPen(col, 3)
         p.setPen(c2)
         p.drawEllipse(px - 2, py - 2, 4, 4)
+
+        # Dwell progress circular loading ring
+        if dwell_progress > 0.0:
+            ring_r = r + 8
+            glow_pen = QPen(QColor("#34d399"), 3)  # Emerald glow
+            p.setPen(glow_pen)
+            span_angle = int(dwell_progress * 360 * 16)
+            p.drawArc(int(px - ring_r), int(py - ring_r), int(ring_r * 2), int(ring_r * 2), 90 * 16, -span_angle)
+
+        if in_rest:
+            f = QFont("Segoe UI", 9, QFont.Weight.Bold)
+            p.setFont(f)
+            p.setPen(QColor("#f59e0b"))
+            p.drawText(int(px + r + 6), int(py + 4), "Zzz")
 
     def _paint_quiz(self, p: QPainter, quiz, labels, w: int, h: int,
                     revealed: bool) -> None:
@@ -355,10 +374,10 @@ class OverlayWindow(QWidget):
         st = s.status
         mode_badge = QColor(90, 160, 90) if s.mode == "demo" else QColor(235, 150, 60)
         hud_x = w - 260
-        hud_y = h - 120
+        hud_y = h - 145
         p.setBrush(mode_badge)
         p.setPen(Qt.PenStyle.NoPen)
-        p.drawRoundedRect(hud_x, hud_y, 250, 110, 10, 10)
+        p.drawRoundedRect(hud_x, hud_y, 250, 135, 10, 10)
         f = QFont("Segoe UI", int(h / 60), QFont.Weight.DemiBold)
         p.setFont(f)
         p.setPen(QColor("white"))
@@ -377,12 +396,189 @@ class OverlayWindow(QWidget):
             i18n.t("hud.quiz",
                    state=i18n.t("quiz.on") if st.quiz_active else i18n.t("quiz.off")),
         ]
-        y = hud_y + 22
+        if getattr(s.pointer, "in_rest_zone", False):
+            lines.append("✋ Mode Repos (Main basse)")
+        if getattr(s, "auto_profile", None):
+            lines.append(f"🤖 Profil: {s.auto_profile.upper()}")
+        y = hud_y + 20
         for line in lines:
             p.drawText(hud_x + 14, y, line)
-            y += int(h / 48)
+            y += int(h / 52)
         if s.mode == "demo":
             p.drawText(hud_x + 14, y, i18n.t("hud.demo"))
+
+
+# ---------------------------------------------------------------------------
+# Floating quick toolbar: draggable, always-on-top, instant actions.
+# ---------------------------------------------------------------------------
+class FloatingToolbarWindow(QWidget):
+    """A sleek, translucent, frameless floating toolbar placed on the presenter's screen.
+    
+    Provides 1-click access to:
+      - ⏸️ Pause / Reprendre
+      - 🎯 Recalibrage Express (1-Point align)
+      - 🖍️ Mode Tableau Blanc / Dessin
+      - ⏱️ Clic Dwell (ON/OFF)
+      - ⚡ Preset de Vitesse (Normal / Doux / Rapide)
+      - 🎙️ Micro (Mute / Unmute)
+      - ▾ Réduire / Développer
+    """
+    def __init__(self, session: ClassroomSession, parent=None):
+        super().__init__(parent)
+        self.session = session
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint
+                            | Qt.WindowType.WindowStaysOnTopHint
+                            | Qt.WindowType.Tool)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        self._drag_pos = None
+        self._collapsed = False
+        self._build_ui()
+        self.resize(440, 52)
+        # Position top-center of screen by default
+        screen = QGuiApplication.primaryScreen().geometry()
+        self.move(int((screen.width() - 440) / 2), 24)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._drag_pos = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+            event.accept()
+
+    def mouseMoveEvent(self, event):
+        if event.buttons() == Qt.MouseButton.LeftButton and self._drag_pos is not None:
+            self.move(event.globalPosition().toPoint() - self._drag_pos)
+            event.accept()
+
+    def _build_ui(self):
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(4, 4, 4, 4)
+        layout.setSpacing(4)
+
+        self._container = QFrame()
+        self._container.setStyleSheet(f"""
+            QFrame {{
+                background-color: rgba(22, 26, 36, 0.94);
+                border: 1px solid {BORDER};
+                border-radius: 10px;
+            }}
+            QPushButton {{
+                background: {SURFACE_ALT};
+                color: {TEXT};
+                border: 1px solid {BORDER};
+                border-radius: 6px;
+                padding: 4px 8px;
+                font-size: 12px;
+                font-weight: 600;
+            }}
+            QPushButton:hover {{
+                background: #2b3040;
+                border-color: {ACCENT};
+            }}
+            QPushButton:checked {{
+                background: {ACCENT};
+                border-color: {ACCENT_HOVER};
+                color: #ffffff;
+            }}
+        """)
+        c_lay = QHBoxLayout(self._container)
+        c_lay.setContentsMargins(6, 4, 6, 4)
+        c_lay.setSpacing(6)
+
+        grip = QLabel("⠿")
+        grip.setStyleSheet("color: #717d96; font-size: 13px; font-weight: bold;")
+        grip.setToolTip("Glisser pour déplacer")
+        c_lay.addWidget(grip)
+
+        # 1. Pause/Resume
+        self.btn_pause = QPushButton("⏸️")
+        self.btn_pause.setCheckable(True)
+        self.btn_pause.setToolTip("Mettre en pause le suivi / Reprendre")
+        self.btn_pause.clicked.connect(self._toggle_pause)
+        c_lay.addWidget(self.btn_pause)
+
+        # 2. Recenter (1-point calibration)
+        self.btn_recenter = QPushButton("🎯 Centre")
+        self.btn_recenter.setToolTip("Aligner le curseur au centre (Recalibrage 1-Point)")
+        self.btn_recenter.clicked.connect(self._recenter)
+        c_lay.addWidget(self.btn_recenter)
+
+        # 3. Annotation/Draw toggle
+        self.btn_draw = QPushButton("🖍️ Tableau")
+        self.btn_draw.setCheckable(True)
+        self.btn_draw.setToolTip("Activer / Désactiver le dessin")
+        self.btn_draw.clicked.connect(self._toggle_draw)
+        c_lay.addWidget(self.btn_draw)
+
+        # 4. Dwell click toggle
+        self.btn_dwell = QPushButton("⏱️ Clic Auto")
+        self.btn_dwell.setCheckable(True)
+        self.btn_dwell.setChecked(getattr(self.session.pointer, "dwell_enabled", True))
+        self.btn_dwell.setToolTip("Activer / Désactiver le clic par temporisation (Dwell)")
+        self.btn_dwell.clicked.connect(self._toggle_dwell)
+        c_lay.addWidget(self.btn_dwell)
+
+        # 5. Preset selector button
+        self.btn_preset = QPushButton("⚡ Normal")
+        self.btn_preset.setToolTip("Changer de sensibilité : Normal -> Doux -> Rapide")
+        self.btn_preset.clicked.connect(self._cycle_preset)
+        c_lay.addWidget(self.btn_preset)
+
+        # 6. Mic mute toggle
+        self.btn_mic = QPushButton("🎙️")
+        self.btn_mic.setCheckable(True)
+        self.btn_mic.setChecked(True)
+        self.btn_mic.setToolTip("Activer / Muer le microphone")
+        self.btn_mic.clicked.connect(self._toggle_mic)
+        c_lay.addWidget(self.btn_mic)
+
+        # 7. Collapse button
+        self.btn_col = QPushButton("▾")
+        self.btn_col.setToolTip("Réduire / Développer")
+        self.btn_col.clicked.connect(self._toggle_collapse)
+        c_lay.addWidget(self.btn_col)
+
+        layout.addWidget(self._container)
+
+    def _toggle_pause(self):
+        p = self.session.pointer
+        p.set_enabled(not self.btn_pause.isChecked())
+        self.btn_pause.setText("▶️" if self.btn_pause.isChecked() else "⏸️")
+
+    def _recenter(self):
+        if hasattr(self.session.pointer, "recenter_offset"):
+            self.session.pointer.recenter_offset()
+
+    def _toggle_draw(self):
+        from .annotation import TOOL_DRAW, TOOL_POINT
+        if self.btn_draw.isChecked():
+            self.session.set_tool(TOOL_DRAW)
+        else:
+            self.session.set_tool(TOOL_POINT)
+
+    def _toggle_dwell(self):
+        p = self.session.pointer
+        p.dwell_enabled = self.btn_dwell.isChecked()
+
+    def _cycle_preset(self):
+        p = self.session.pointer
+        presets = ["normal", "smooth", "fast"]
+        current = getattr(p, "active_preset", "normal")
+        next_preset = presets[(presets.index(current) + 1) % len(presets)] if current in presets else "normal"
+        if hasattr(p, "apply_preset"):
+            p.apply_preset(next_preset)
+        labels = {"normal": "⚡ Normal", "smooth": "🌿 Doux", "fast": "🚀 Rapide"}
+        self.btn_preset.setText(labels.get(next_preset, "⚡ Normal"))
+
+    def _toggle_mic(self):
+        v = self.session.voice
+        if hasattr(v, "set_listening"):
+            v.set_listening(self.btn_mic.isChecked())
+
+    def _toggle_collapse(self):
+        self._collapsed = not self._collapsed
+        for w in (self.btn_recenter, self.btn_draw, self.btn_dwell, self.btn_preset, self.btn_mic):
+            w.setVisible(not self._collapsed)
+        self.btn_col.setText("▸" if self._collapsed else "▾")
+        self.adjustSize()
 
 
 # ---------------------------------------------------------------------------
@@ -398,12 +594,25 @@ class ClassroomWindow(QMainWindow):
         self.session.set_mode(SETTINGS.classroom.mode)
         self._overlay = OverlayWindow(self.session,
                                       screen_index=SETTINGS.classroom.projector_screen)
+        self.floating_toolbar = FloatingToolbarWindow(self.session)
+        self.floating_toolbar.show()
         self.sensitivity = AccessibilityController(AccessibilityState())
         self._buttons: dict[str, QPushButton] = {}
         self._build_ui()
         self.status_changed.connect(self._on_status)
         self._refresh_timer = QTimer(self)
         self._refresh_timer.timeout.connect(self.refresh)
+        self._refresh_timer.start(200)
+
+    def closeEvent(self, event):
+        try:
+            if hasattr(self, "floating_toolbar") and self.floating_toolbar:
+                self.floating_toolbar.close()
+            if hasattr(self, "_overlay") and self._overlay:
+                self._overlay.close()
+        except Exception:
+            pass
+        super().closeEvent(event)
         self._refresh_timer.start(200)
 
     @property

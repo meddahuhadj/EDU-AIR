@@ -221,7 +221,34 @@ class ClassroomSession:
         self.pending_confirmations: list[str] = []
         self.interaction_log: deque = deque(maxlen=120)
         self.status = ClassroomStatus(mode=self.mode)
+
+        # Wire pointer dwell clicking & auto-profile
+        self.pointer.on_dwell_click = self._on_dwell_click
+        self.pointer.rest_zone_enabled = True
+        self.auto_profile_manager = ci.AutoProfileManager()
+        self.auto_profile: str = "general"
+        self._last_profile_check: float = 0.0
+
         self._snapshot()
+
+    def _on_dwell_click(self, pos: tuple[float, float]) -> None:
+        if self.control_locked or not self.pointer.enabled:
+            return
+        x, y = int(pos[0]), int(pos[1])
+        if self.mode == "demo":
+            self.interaction_log.append((time.monotonic(), "DWELL_CLICK", f"Dwell click at ({x}, {y}) [DEMO]"))
+        else:
+            try:
+                self.backend.click_left(x, y)
+                self.interaction_log.append((time.monotonic(), "DWELL_CLICK", f"Dwell click at ({x}, {y})"))
+            except Exception:
+                pass
+
+    def check_auto_profile(self) -> None:
+        changed, new_prof, title = self.auto_profile_manager.check_profile_switch()
+        if changed:
+            self.auto_profile = new_prof
+            self.interaction_log.append((time.monotonic(), "AUTO_PROFILE", f"Switched to {new_prof} for '{title}'"))
 
     # ---- wiring ------------------------------------------------------------
     def _make_presentation_driver(self):
@@ -272,6 +299,10 @@ class ClassroomSession:
     # ---- inputs ---------------------------------------------------------------
     def update_pointer(self, raw_norm: tuple[float, float] | None) -> tuple[float, float] | None:
         """Feed the raw fingertip; stores/returns filtered screen position."""
+        now = time.monotonic()
+        if now - self._last_profile_check > 1.0:
+            self._last_profile_check = now
+            self.check_auto_profile()
         pos = self.pointer.update(raw_norm)
         self._snapshot()
         return pos
