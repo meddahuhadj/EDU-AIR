@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import time
 from collections import deque
+from dataclasses import dataclass, field
 from typing import Optional
 
 from hadj_no_touch.gestures import gesture_engine as ge
@@ -27,15 +28,7 @@ from hadj_no_touch.voice import voice_commands as vc
 from . import voice as cvoice
 from . import intent as ci
 from .annotation import AnnotationModel, TOOL_NONE
-from .backends import (
-    ClassroomBackend, RealBackend, DemoBackend, RecordingBackend,
-)
-from .board import WhiteboardModel
-from .classroom_status import ClassroomStatus
 from .config import SETTINGS
-from .journal import ClassJournal
-from .lesson import LessonPlan, STEP_SLIDE, STEP_QUIZ, STEP_TIMER, STEP_BOARD
-from .participation import ParticipationTracker
 from .pointer import InteractivePointer
 from .presentation import PresentationController, RecordingDriver
 from .quiz import VoiceQuiz, QuestionBank
@@ -44,18 +37,6 @@ from .safety import (
     SafetyDecision,
     RISK_SAFE, RISK_CONFIRM, RISK_CRITICAL,
 )
-from .touch.events import TouchEvent, TouchState
-from . import wall_toolbar
-
-__all__ = [
-    "ClassroomBackend", "RealBackend", "DemoBackend", "RecordingBackend",
-    "ClassroomStatus", "ClassroomSession",
-    "MODE_CONTACTLESS", "MODE_WALL",
-    "OUT_EXECUTED", "OUT_SIMULATED", "OUT_BLOCKED", "OUT_PENDING", "OUT_FAILED",
-]
-
-MODE_CONTACTLESS = "contactless"
-MODE_WALL = "wall"
 
 OUT_EXECUTED = "executed"
 OUT_SIMULATED = "simulated"
@@ -65,20 +46,155 @@ OUT_FAILED = "failed"
 
 
 # ---------------------------------------------------------------------------
+# OS backend abstraction (real classroom = HADJ Win32, demo/tests = recorded).
+# ---------------------------------------------------------------------------
+class ClassroomBackend:
+    """Thin seam over the computer the classroom controls."""
+
+    def key(self, name: str, modifiers: list[str] | None = None) -> None:
+        raise NotImplementedError
+
+    def wheel(self, amount: int) -> None:
+        raise NotImplementedError
+
+    def move_cursor(self, x: int, y: int) -> None:
+        raise NotImplementedError
+
+    def click_left(self, x: int | None = None, y: int | None = None) -> None:
+        raise NotImplementedError
+
+    def click_right(self, x: int | None = None, y: int | None = None) -> None:
+        raise NotImplementedError
+
+
+class RealBackend(ClassroomBackend):
+    def __init__(self) -> None:
+        from hadj_no_touch.windows import keyboard_control, mouse_control
+        self._kc = keyboard_control
+        self._mc = mouse_control
+
+    def key(self, name, modifiers=None):
+        self._kc.tap(name, modifiers)
+
+    def wheel(self, amount):
+        self._mc.scroll(amount)
+
+    def move_cursor(self, x, y):
+        self._mc.move_to(int(x), int(y))
+
+    def click_left(self, x=None, y=None):
+        self._mc.click_left(x, y)
+
+    def click_right(self, x=None, y=None):
+        self._mc.click_right(x, y)
+
+
+class DemoBackend(ClassroomBackend):
+    """Forgets every request — demo mode never touches the OS."""
+
+    def key(self, name, modifiers=None):
+        pass
+
+    def wheel(self, amount):
+        pass
+
+    def move_cursor(self, x, y):
+        pass
+
+    def click_left(self, x=None, y=None):
+        pass
+
+    def click_right(self, x=None, y=None):
+        pass
+
+
+class RecordingBackend(ClassroomBackend):
+    """Records every request for tests / the report."""
+
+    def __init__(self) -> None:
+        self.keys: list[tuple[str, list]] = []
+        self.wheels: list[int] = []
+        self.cursor_moves: list[tuple[int, int]] = []
+        self.left_clicks: list[tuple[int, int]] = []
+        self.right_clicks: list[tuple[int, int]] = []
+
+    def key(self, name, modifiers=None):
+        self.keys.append((name, list(modifiers or [])))
+
+    def wheel(self, amount):
+        self.wheels.append(amount)
+
+    def move_cursor(self, x, y):
+        self.cursor_moves.append((int(x), int(y)))
+
+    def click_left(self, x=None, y=None):
+        self.left_clicks.append((int(x) if x is not None else None,
+                                 int(y) if y is not None else None))
+
+    def click_right(self, x=None, y=None):
+        self.right_clicks.append((int(x) if x is not None else None,
+                                  int(y) if y is not None else None))
+
+    @property
+    def key_sequence(self) -> list[str]:
+        return [name for name, _ in self.keys]
+
+
+# ---------------------------------------------------------------------------
+# Status snapshot consumed by the HUD / overlay.
+# ---------------------------------------------------------------------------
+@dataclass
+class ClassroomStatus:
+    mode: str = "real"                     # real | demo
+    detector: str = ""
+    fps: float = 0.0
+    # presentation
+    presentation_state: str = "idle"       # idle | active | paused
+    current_slide: int = 0
+    total_slides: int = 0
+    # pointer
+    pointer_visible: bool = True
+    pointer_pos: tuple = (0, 0)
+    pointer_tremor: float = 0.0
+    pointer_spikes: int = 0
+    # interaction
+    last_command: str = ""
+    last_event: str = ""
+    current_interaction: str = "none"
+    gesture: str = ""
+    control_locked: bool = False
+    # classroom timer
+    clock_seconds: int = 0
+    timer_running: bool = False
+    # annotation
+    annotation_tool: str = TOOL_NONE
+    stroke_count: int = 0
+    # quiz
+    quiz_active: bool = False
+    quiz_state: str = "idle"
+    quiz_score: tuple = (0, 0)             # (correct, wrong)
+    quiz_question_n: int = 0
+    quiz_question: str = ""
+    quiz_options: list = field(default_factory=list)
+    quiz_revealed: bool = False
+    # safety
+    last_decision: str = ""
+    confirmed_required: int = 0
+    # environment (traffic light)
+    lighting: str = "unknown"          # dark | low | good | bright
+    ambient_noise: str = "unknown"     # ok | loud
+    hand_visible: bool = False
+    performance_mode: bool = False
+
+
+# ---------------------------------------------------------------------------
 # The classroom session.
-#
-# ``ClassroomBackend``/``RealBackend``/``DemoBackend``/``RecordingBackend``
-# now live in ``edu_air.backends``, and ``ClassroomStatus`` in
-# ``edu_air.classroom_status`` -- both re-exported here (see ``__all__``)
-# so existing ``from edu_air.classroom import ...`` call sites are
-# unaffected by the split.
 # ---------------------------------------------------------------------------
 class ClassroomSession:
     def __init__(self, backend: ClassroomBackend | None = None,
                  settings=None, pointer: InteractivePointer | None = None,
                  presentation: PresentationController | None = None,
                  annotation: AnnotationModel | None = None,
-                 board: WhiteboardModel | None = None,
                  quiz: VoiceQuiz | None = None,
                  intent_engine: ci.ClassroomIntentEngine | None = None,
                  safety: ClassroomSafetyEngine | None = None):
@@ -91,26 +207,12 @@ class ClassroomSession:
         self.presentation.on_record = self._on_command_record
         if self.mode == "demo":
             self.presentation.suppress_launch = True
-        # Interactive whiteboard: each page owns its ink; ``annotation`` stays
-        # the *current* page's model so every legacy drawing path (gestures,
-        # touch, annotation actions) keeps working against the live page.
-        if board is None:
-            self.board = WhiteboardModel(self.settings.board, self.settings.annotation)
-            if annotation is not None:
-                self.board.pages[0].model = annotation
-        else:
-            self.board = board
+        self.annotation = annotation or AnnotationModel(self.settings.annotation)
         self.quiz = quiz or VoiceQuiz(QuestionBank(), self.settings.quiz)
-        self.participation = ParticipationTracker()
-        self.journal = ClassJournal()
-        self.lesson = LessonPlan()
-        self._lesson_timer_limit: float = 0.0
-        self._touch_toolbar_active = False
         self.intent_engine = intent_engine or ci.ClassroomIntentEngine()
         self.safety = safety or ClassroomSafetyEngine()
         self.auto_approve = self.mode == "demo"
         self.control_locked = False
-        self.interaction_mode = MODE_CONTACTLESS  # contactless | wall (see TOGGLE_WALL_MODE)
         self.domain = "idle"               # idle | presentation | quiz | annotation
         self._clock_s: float = 0.0
         self._timer_running = False
@@ -120,12 +222,6 @@ class ClassroomSession:
         self.interaction_log: deque = deque(maxlen=120)
         self.status = ClassroomStatus(mode=self.mode)
         self._snapshot()
-
-    # ---- whiteboard access ---------------------------------------------------
-    @property
-    def annotation(self) -> AnnotationModel:
-        """The interactive board's current-page ink model (legacy API)."""
-        return self.board.annotation
 
     # ---- wiring ------------------------------------------------------------
     def _make_presentation_driver(self):
@@ -173,15 +269,6 @@ class ClassroomSession:
         self.settings.classroom.performance_mode = bool(on)
         self._snapshot()
 
-    def set_calibration_drift(self, suspected: bool) -> None:
-        """Fed by ``SurfaceTouchDetector.drift`` (see ui.py's pipeline loop):
-        the homography no longer seems to fit the room -- surfaced to the
-        UI/HUD instead of silently keeping on writing at a possibly wrong
-        spot. Clears itself once a fresh calibration run resets the
-        detector's monitor."""
-        self.status.calibration_drift = bool(suspected)
-        self._snapshot()
-
     # ---- inputs ---------------------------------------------------------------
     def update_pointer(self, raw_norm: tuple[float, float] | None) -> tuple[float, float] | None:
         """Feed the raw fingertip; stores/returns filtered screen position."""
@@ -213,14 +300,6 @@ class ClassroomSession:
             return None
         return self.execute(intent)
 
-    @property
-    def _pinch_ink_enabled(self) -> bool:
-        """Pinch-click ink is only meaningful in contactless mode -- once
-        wall mode is on, contact IS the click (see ``handle_touch_event``);
-        navigation gestures (swipe/circle/palm, handled elsewhere) and the
-        remote-cursor paths below stay available in both modes."""
-        return self.interaction_mode != MODE_WALL
-
     def _handle_pointer_gesture(self, event: ge.GestureEvent) -> SafetyDecision | None:
         """Pointer-dependent gestures (move, click, drag, erase)."""
         x, y = event.x, event.y
@@ -228,7 +307,6 @@ class ClassroomSession:
             x, y = self.pointer.position
 
         tool = self.annotation.tool
-        ink_ok = self._pinch_ink_enabled
         if event.kind == ge.MOVE:
             if self.pointer.visible and self.presentation.active and self.mode == "real":
                 self.backend.move_cursor(int(x), int(y))
@@ -237,13 +315,13 @@ class ClassroomSession:
 
         if event.kind == ge.LEFT_CLICK:
             norm = (x / max(1, self.pointer.screen_w), y / max(1, self.pointer.screen_h))
-            if ink_ok and tool in ("draw", "highlight"):
+            if tool in ("draw", "highlight"):
                 self.annotation.begin(norm)
                 self._set_interaction(f"{tool} stroke start")
                 self._snapshot()
                 return SafetyDecision("ANNOTATION_DRAW", True, RISK_SAFE, False,
                                       "annotation stroke started")
-            if ink_ok and tool == "point":
+            if tool == "point":
                 self.annotation.dot(norm)
                 self._set_interaction("dot dropped")
                 self._snapshot()
@@ -256,7 +334,7 @@ class ClassroomSession:
 
         if event.kind == ge.DRAG_START:
             norm = (x / max(1, self.pointer.screen_w), y / max(1, self.pointer.screen_h))
-            if ink_ok and tool in ("draw", "highlight"):
+            if tool in ("draw", "highlight"):
                 self.annotation.begin(norm)
                 self._set_interaction(f"{tool} stroke")
                 self._snapshot()
@@ -267,7 +345,7 @@ class ClassroomSession:
             if self.annotation.drawing:
                 self.annotation.move(norm)
                 self._snapshot()
-            elif ink_ok and tool == "erase":
+            elif tool == "erase":
                 self.annotation.erase_at(norm)
                 self._set_interaction("erase")
                 self._snapshot()
@@ -283,96 +361,6 @@ class ClassroomSession:
 
         return None
 
-    # ---- wall/touch mode ---------------------------------------------------------
-    def handle_touch_event(self, ev: TouchEvent) -> SafetyDecision | None:
-        """Route one ``SurfaceTouchDetector`` event into the ink pipeline.
-
-        Contact IS the click here: DOWN starts a stroke/dot/erase exactly
-        where the pinch-click LEFT_CLICK path does for the contactless
-        pointer, MOVE follows while touching, UP lifts the pen. Mirrors
-        ``_handle_pointer_gesture`` -- per-stroke geometry is not re-audited
-        every frame, only the tool selection (ANNOTATION_DRAW/HIGHLIGHT/
-        ERASE) that already went through the safety gate when it was
-        chosen.
-
-        A DOWN inside the projected wall toolbar (``wall_toolbar.py``) is
-        never ink: it fires that button's action instead, and every MOVE/UP
-        of the same physical touch is swallowed (``_touch_toolbar_active``)
-        so dragging off the toolbar afterward can never be misread as an
-        erase/draw stroke."""
-        if self.control_locked or self.interaction_mode != MODE_WALL:
-            return None
-
-        pos = (ev.x, ev.y)
-
-        if ev.state == TouchState.DOWN:
-            action = wall_toolbar.hit_test(pos)
-            if action is not None:
-                self._touch_toolbar_active = True
-                return self.execute(ci.ClassroomIntent(action=action, source="touch"))
-            self._touch_toolbar_active = False
-
-        elif self._touch_toolbar_active:
-            if ev.state == TouchState.UP:
-                self._touch_toolbar_active = False
-            return None
-
-        tool = self.annotation.tool
-
-        if ev.state == TouchState.DOWN:
-            if tool in ("draw", "highlight"):
-                self.annotation.begin(pos)
-                self._set_interaction(f"{tool} touch start")
-                self._snapshot()
-                return SafetyDecision("ANNOTATION_DRAW", True, RISK_SAFE, False,
-                                      "touch stroke started")
-            if tool == "point":
-                self.annotation.dot(pos)
-                self._set_interaction("touch dot")
-                self._snapshot()
-                return SafetyDecision("ANNOTATION_DOT", True, RISK_SAFE, False,
-                                      "touch dot added")
-            if tool == "erase":
-                self.annotation.erase_at(pos)
-                self._set_interaction("touch erase")
-                self._snapshot()
-                return SafetyDecision("ANNOTATION_ERASE", True, RISK_SAFE, False,
-                                      "touch erase")
-            return None
-
-        if ev.state == TouchState.MOVE:
-            if self.annotation.drawing:
-                self.annotation.move(pos)
-                self._snapshot()
-            elif tool == "erase":
-                self.annotation.erase_at(pos)
-                self._snapshot()
-            return None
-
-        if ev.state == TouchState.UP:
-            self.annotation.finish()
-            self._set_interaction("idle")
-            self._snapshot()
-            return None
-
-        return None
-
-    # ---- palm eraser ---------------------------------------------------------
-    def handle_palm_wipe(self, pos_norm: tuple[float, float]) -> None:
-        """One frame of an active palm wipe (see
-        ``edu_air.touch.palm_eraser.PalmEraseDetector`` -- only called once
-        the palm has already travelled far enough in contact to count as a
-        deliberate wipe, never for a hand merely resting near the wall).
-        Wall mode only, like the rest of the touch pipeline; a wide radius
-        (``TouchSettings.palm_erase_radius``) mirrors a real whiteboard
-        eraser rather than the narrow fingertip eraser tool."""
-        if self.control_locked or self.interaction_mode != MODE_WALL:
-            return
-        removed = self.annotation.erase_at(pos_norm, radius_norm=self.settings.touch.palm_erase_radius)
-        if removed:
-            self._set_interaction("palm erase")
-            self._snapshot()
-
     # ---- voice -----------------------------------------------------------------
     def handle_voice_text(self, text: str, language: str | None = None) -> SafetyDecision | None:
         """Recognised speech -> classroom intent -> safety-approved action."""
@@ -383,9 +371,7 @@ class ClassroomSession:
         intent = self.intent_engine.from_voice(result, quiz_active=self.quiz.active)
         if intent is None:
             return None
-        routed = self.intent_engine.route(intent, quiz_active=self.quiz.active,
-                                          domain=self.domain,
-                                          presentation_active=self.presentation.active)
+        routed = self.intent_engine.route(intent, quiz_active=self.quiz.active)
         if routed is None:
             return None
         return self.execute(routed)
@@ -436,16 +422,6 @@ class ClassroomSession:
         action = intent.action
         demo = self.mode == "demo"
 
-        # Board domain focus: while the interactive whiteboard is the active
-        # surface and no real presentation deck is running, slide navigation
-        # (swipe gesture, PageUp/Down, generic "next"/"previous" voice)
-        # advances the board pages instead.
-        if (action in (ci.NEXT_SLIDE, ci.PREV_SLIDE)
-                and self.domain == "board"
-                and not self.presentation.active):
-            action = ci.BOARD_NEXT_PAGE if action == ci.NEXT_SLIDE \
-                else ci.BOARD_PREV_PAGE
-
         # --- presentation ---------------------------------------------------
         if action in (ci.PRESENTATION_START,):
             self.domain = "presentation"
@@ -486,72 +462,50 @@ class ClassroomSession:
             self.presentation.scroll_down()
             return OUT_EXECUTED if not demo else OUT_SIMULATED
 
-        # --- pointer ----------------------------------------------------------
+        # --- pointer & micro-gestures ------------------------------------------
         if action == ci.POINTER_ON:
             self.pointer.visible = True
             return OUT_EXECUTED if not demo else OUT_SIMULATED
         if action == ci.POINTER_OFF:
             self.pointer.visible = False
             return OUT_EXECUTED if not demo else OUT_SIMULATED
-        if action == ci.TOGGLE_WALL_MODE:
-            self.interaction_mode = MODE_CONTACTLESS if self.interaction_mode == MODE_WALL else MODE_WALL
-            # Keep the persisted "wall mode in use" flag in sync so the
-            # per-frame detector's own enabled check (defense in depth
-            # alongside the ui.py call-site gate) never silently disagrees
-            # with the session's active interaction mode.
-            self.settings.touch.enabled = (self.interaction_mode == MODE_WALL)
-            self._set_interaction(f"mode: {self.interaction_mode}")
+        if action == ci.MICRO_GESTURES_TOGGLE:
+            self.pointer.micro_gesture_mapper.enabled = not self.pointer.micro_gesture_mapper.enabled
+            self._set_interaction(f"micro_gestures {'enabled' if self.pointer.micro_gesture_mapper.enabled else 'disabled'}")
             return OUT_EXECUTED if not demo else OUT_SIMULATED
 
         # --- annotation ---------------------------------------------------------
         if action == ci.ANNOTATION_DRAW:
-            self.board.set_tool("draw")
+            self.annotation.set_tool("draw")
             self.domain = "annotation"
             self._set_interaction("draw")
             return OUT_EXECUTED
         if action == ci.ANNOTATION_HIGHLIGHT:
-            self.board.set_tool("highlight")
+            self.annotation.set_tool("highlight")
             self.domain = "annotation"
             self._set_interaction("highlight")
             return OUT_EXECUTED
+        if action == ci.ANNOTATION_SHAPE:
+            self.annotation.set_tool("shape")
+            self.domain = "annotation"
+            self._set_interaction("shape")
+            return OUT_EXECUTED
         if action == ci.ANNOTATION_ERASE:
-            self.board.set_tool("erase")
+            self.annotation.set_tool("erase")
             self.domain = "annotation"
             self._set_interaction("erase")
             return OUT_EXECUTED
         if action == ci.ANNOTATION_CLEAR:
             self.annotation.clear()
-            self.board.set_tool(TOOL_NONE)
+            self.annotation.set_tool(TOOL_NONE)
             self._set_interaction("annotations cleared")
             return OUT_EXECUTED
-
-        # --- interactive board (TNI) --------------------------------------------
-        if action == ci.BOARD_NEXT_PAGE:
-            self.domain = "board"
-            self.board.next_page()
-            return OUT_EXECUTED
-        if action == ci.BOARD_PREV_PAGE:
-            self.domain = "board"
-            self.board.prev_page()
-            return OUT_EXECUTED
-        if action == ci.BOARD_ADD_PAGE:
-            self.domain = "board"
-            self.board.add_page()
-            return OUT_EXECUTED
-        if action == ci.BOARD_CLEAR_PAGE:
-            self.board.clear_current()
-            return OUT_EXECUTED
-        if action == ci.BOARD_DELETE_PAGE:
-            self.domain = "board"
-            self.board.delete_page()
-            return OUT_EXECUTED
-        if action == ci.BOARD_BACKGROUND:
-            self.domain = "board"
-            self.board.set_background(intent.params.get("name", "blank"))
-            return OUT_EXECUTED
-        if action == ci.BOARD_UNDO:
-            self.domain = "board"
-            self.board.undo()
+        if action == ci.LESSON_SAVE:
+            import os
+            from tempfile import gettempdir
+            out_path = os.path.join(gettempdir(), f"lesson_export_{int(time.time())}.png")
+            success = self.annotation.export_canvas(out_path)
+            self._set_interaction(f"lesson saved -> {out_path}" if success else "save failed")
             return OUT_EXECUTED
 
         # --- quiz ----------------------------------------------------------------
@@ -589,64 +543,12 @@ class ClassroomSession:
         if action == ci.TIMER_START:
             self._timer_running = True
             self._clock_s = 0.0
-            self._lesson_timer_limit = 0.0
             return OUT_EXECUTED
         if action == ci.TIMER_STOP:
             self._timer_running = False
             return OUT_EXECUTED
 
-        # --- participation tally -------------------------------------------------------
-        if action == ci.PARTICIPATION_MARK:
-            rec = self.participation.mark()
-            self._set_interaction(f"participation #{rec.index}")
-            return OUT_EXECUTED if not demo else OUT_SIMULATED
-
-        # --- lesson sequencer -----------------------------------------------------------
-        if action == ci.LESSON_NEXT:
-            self._apply_lesson_step(self.lesson.advance())
-            return OUT_EXECUTED if not demo else OUT_SIMULATED
-        if action == ci.LESSON_PREV:
-            self.lesson.back()
-            self._set_interaction(f"lesson: {self.lesson.progress_text()}")
-            return OUT_EXECUTED if not demo else OUT_SIMULATED
-
         return OUT_FAILED
-
-    def _apply_lesson_step(self, step) -> None:
-        """Trigger the classroom action a lesson step stands for.
-
-        Each step kind maps onto the exact same subsystem call a teacher
-        would reach for by hand (``next_slide``/``quiz.start``/timer/
-        board page) -- the plan is a named shortcut, not a new capability.
-        A step of ``None`` (plan exhausted) only updates the status label.
-        """
-        if step is None:
-            self._set_interaction(f"lesson: {self.lesson.progress_text()}")
-            return
-        if step.kind == STEP_SLIDE:
-            self._ensure_presentation_active()
-            self.presentation.next_slide()
-        elif step.kind == STEP_QUIZ:
-            if not self.quiz.active:
-                self.quiz.start()
-            self.domain = "quiz"
-        elif step.kind == STEP_TIMER:
-            self._timer_running = True
-            self._clock_s = 0.0
-            self._lesson_timer_limit = max(0.0, step.duration_s)
-        elif step.kind == STEP_BOARD:
-            self.domain = "board"
-            self.board.next_page()
-        self._set_interaction(f"lesson: {self.lesson.progress_text()}")
-
-    def load_lesson_json(self, path) -> bool:
-        """Load a lesson plan prepared ahead of class (see
-        :meth:`edu_air.lesson.LessonPlan.load_json`). Returns False when the
-        file is missing or unreadable (the current plan is left untouched)."""
-        ok = self.lesson.load_json(path)
-        if ok:
-            self._set_interaction(f"lesson loaded: {self.lesson.progress_text()}")
-        return ok
 
     # ---- api for the UI / tests ------------------------------------------------
     def approve_pending(self) -> list[str]:
@@ -687,8 +589,6 @@ class ClassroomSession:
         self.quiz.tick(dt)
         if self._timer_running:
             self._clock_s += dt
-            if self._lesson_timer_limit and self._clock_s >= self._lesson_timer_limit:
-                self._timer_running = False
         self._snapshot()
 
     # ---- status -------------------------------------------------------------------
@@ -727,16 +627,10 @@ class ClassroomSession:
         s.current_interaction = self.status.current_interaction
         s.gesture = self.status.gesture
         s.control_locked = self.control_locked
-        s.interaction_mode = self.interaction_mode
         s.clock_seconds = int(self._clock_s)
         s.timer_running = self._timer_running
-        s.participation_count = self.participation.count
-        s.lesson_progress = self.lesson.progress_text()
         s.annotation_tool = self.annotation.tool
         s.stroke_count = self.annotation.count
-        s.board_page = self.board.current_index + 1
-        s.board_pages = self.board.page_count
-        s.board_background = self.board.current.background
         s.quiz_active = self.quiz.active
         s.quiz_state = self.quiz.state
         s.quiz_score = (self.quiz.stats.correct, self.quiz.stats.wrong)
@@ -752,5 +646,4 @@ class ClassroomSession:
         s.hand_visible = bool(getattr(self.status, "hand_visible", False))
         s.performance_mode = bool(getattr(self.settings.classroom,
                                           "performance_mode", False))
-        s.calibration_drift = bool(getattr(self.status, "calibration_drift", False))
         self.status = s

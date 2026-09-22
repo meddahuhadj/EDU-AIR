@@ -25,13 +25,11 @@ from hadj_no_touch.safety import ActionSpec
 from .intent import (
     PRESENTATION_START, PRESENTATION_STOP, NEXT_SLIDE, PREV_SLIDE,
     PAUSE_PRESENTATION, RESUME_PRESENTATION, ZOOM_IN, ZOOM_OUT, SCROLL_UP, SCROLL_DOWN,
-    POINTER_ON, POINTER_OFF, TOGGLE_WALL_MODE,
+    POINTER_ON, POINTER_OFF, MICRO_GESTURES_TOGGLE,
     ANNOTATION_DRAW, ANNOTATION_HIGHLIGHT, ANNOTATION_ERASE, ANNOTATION_CLEAR,
-    BOARD_NEXT_PAGE, BOARD_PREV_PAGE, BOARD_ADD_PAGE, BOARD_CLEAR_PAGE,
-    BOARD_DELETE_PAGE, BOARD_BACKGROUND, BOARD_UNDO,
+    ANNOTATION_SHAPE, LESSON_SAVE,
     QUIZ_START, QUIZ_STOP, QUIZ_NEXT, QUIZ_PREV, QUIZ_ANSWER, QUIZ_REVEAL,
-    QUIZ_RESTART, TIMER_START, TIMER_STOP, PARTICIPATION_MARK,
-    LESSON_NEXT, LESSON_PREV,
+    QUIZ_RESTART, TIMER_START, TIMER_STOP,
     SAFETY_TOGGLES,
 )
 
@@ -73,23 +71,17 @@ CLASSROOM_ACTIONS: list[ActionSpec] = [
     _safe(ZOOM_OUT, "Zoom out"),
     _safe(SCROLL_UP, "Scroll up"),
     _safe(SCROLL_DOWN, "Scroll down"),
-    # --- interactive pointer --------------------------------------------------
+    # --- interactive pointer & micro-gestures ---------------------------------
     _safe(POINTER_ON, "Show the pointer"),
     _safe(POINTER_OFF, "Hide the pointer"),
-    _safe(TOGGLE_WALL_MODE, "Switch between wall (touch) and contactless mode"),
+    _safe(MICRO_GESTURES_TOGGLE, "Toggle micro-gesture anti-fatigue mode"),
     # --- air annotation -------------------------------------------------------
     _safe(ANNOTATION_DRAW, "Use the drawing pen"),
     _safe(ANNOTATION_HIGHLIGHT, "Use the highlighter"),
     _safe(ANNOTATION_ERASE, "Use the eraser"),
+    _safe(ANNOTATION_SHAPE, "Use the geometric shape tool"),
+    _safe(LESSON_SAVE, "Save/export lesson notes to image"),
     _confirm(ANNOTATION_CLEAR, "Clear all annotations"),
-    # --- interactive board (TNI) ---------------------------------------------
-    _safe(BOARD_NEXT_PAGE, "Next whiteboard page"),
-    _safe(BOARD_PREV_PAGE, "Previous whiteboard page"),
-    _safe(BOARD_ADD_PAGE, "Add a new whiteboard page"),
-    _confirm(BOARD_CLEAR_PAGE, "Clear the current whiteboard page"),
-    _confirm(BOARD_DELETE_PAGE, "Delete the current whiteboard page"),
-    _safe(BOARD_BACKGROUND, "Change the whiteboard background"),
-    _safe(BOARD_UNDO, "Undo the last stroke"),
     # --- voice quiz -------------------------------------------------------------
     _safe(QUIZ_START, "Start the quiz"),
     _safe(QUIZ_NEXT, "Next question"),
@@ -101,11 +93,6 @@ CLASSROOM_ACTIONS: list[ActionSpec] = [
     # --- classroom timer ---------------------------------------------------------
     _safe(TIMER_START, "Start the classroom timer"),
     _safe(TIMER_STOP, "Stop the classroom timer"),
-    # --- participation tally -------------------------------------------------------
-    _safe(PARTICIPATION_MARK, "Log a student participation"),
-    # --- lesson sequencer ---------------------------------------------------------
-    _safe(LESSON_NEXT, "Advance to the next lesson step"),
-    _safe(LESSON_PREV, "Go back one lesson step"),
 ]
 
 

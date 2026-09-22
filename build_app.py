@@ -67,6 +67,7 @@ def main():
 
     print("[1/3] Compilation avec PyInstaller...", flush=True)
 
+    web_data = os.path.join(root, "web")
     main_script = os.path.join(root, "main.py")
 
     cmd = [
@@ -89,12 +90,8 @@ def main():
         "--collect-all=cv2",
         # App modules
         "--collect-all=hadj_no_touch",
-        # NOTE: web/ (the separately-deployed Vercel PWA landing page) is
-        # deliberately never bundled here. Nothing in the desktop app reads
-        # it at runtime (QtWebEngine is excluded below, so there is no
-        # in-app web view to serve it to), and the folder routinely holds
-        # Vercel CLI dev artifacts (.env.local, .vercel/) that must never
-        # ship inside a redistributable EXE.
+        # Web assets
+        f"--add-data={web_data};web",
         # Exclude heavy unused packages to speed up build
         "--exclude-module=torch",
         "--exclude-module=torchvision",

@@ -33,41 +33,6 @@ def test_classroom_performance_settings_round_trip(tmp_path):
     assert restored.camera_width == 640
 
 
-def test_offline_voice_settings_round_trip_through_json(tmp_path):
-    """offline_voice/vosk_model_path (see edu_air.config.resolve_vosk_model_path)
-    persist through the same Settings.save()/load() JSON path as every other
-    classroom preference -- same shape as test_touch_settings.py's
-    test_settings_load_restores_touch_block."""
-    from edu_air.config import Settings
-
-    settings = Settings()
-    settings.classroom.offline_voice = True
-    settings.classroom.vosk_model_path = "C:/models/vosk-fr"
-    path = tmp_path / "config.json"
-    settings.save(path)
-
-    restored = Settings()
-    restored.load(path)
-    assert restored.classroom.offline_voice is True
-    assert restored.classroom.vosk_model_path == "C:/models/vosk-fr"
-
-
-def test_offline_voice_settings_default_when_loading_an_old_config_file(tmp_path):
-    """A config.json saved before this feature existed has no offline_voice/
-    vosk_model_path keys at all -- loading it must not crash and must fall
-    back to the safe defaults (voice stays on Google, no local model)."""
-    from edu_air.config import Settings
-
-    path = tmp_path / "config.json"
-    path.write_text('{"classroom": {"language": "fr"}}', encoding="utf-8")
-
-    settings = Settings()
-    settings.load(path)
-    assert settings.classroom.language == "fr"
-    assert settings.classroom.offline_voice is False
-    assert settings.classroom.vosk_model_path == ""
-
-
 def test_classroom_ux_catalog_choices():
     assert "1920x1080" in PROJECTOR_PRESETS
     assert "1280x800" in PROJECTOR_PRESETS

@@ -14,6 +14,27 @@
   const RM = window.matchMedia("(prefers-reduced-motion: reduce)");
   const lerpEase = RM.matches ? 0.9 : 0.14;
 
+  /* ---------- ROI Calculator ---------- */
+  window.updateROICalculator = function(rooms) {
+    const numRooms = parseInt(rooms, 10) || 1;
+    const tniCost = numRooms * 2500;
+    const eduCost = numRooms * 30;
+    const savings = tniCost - eduCost;
+    const percent = ((savings / tniCost) * 100).toFixed(1);
+
+    const formatEUR = (v) => v.toLocaleString("fr-FR") + " €";
+
+    const elRoomsVal = document.getElementById("calc-rooms-val");
+    const elTniCost = document.getElementById("calc-tni-cost");
+    const elEduCost = document.getElementById("calc-edu-cost");
+    const elSavings = document.getElementById("calc-savings");
+
+    if (elRoomsVal) elRoomsVal.innerText = numRooms;
+    if (elTniCost) elTniCost.innerText = formatEUR(tniCost);
+    if (elEduCost) elEduCost.innerText = formatEUR(eduCost);
+    if (elSavings) elSavings.innerText = formatEUR(savings) + " (" + percent + "%)";
+  };
+
   /* ---------- Reveal on scroll ---------- */
 
   const revealEls = $$(".reveal");

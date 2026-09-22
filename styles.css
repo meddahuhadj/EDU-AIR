@@ -1396,3 +1396,107 @@ html[dir="rtl"] .hud-val.tabnum { direction: ltr; unicode-bidi: isolate; }
 @media (max-width: 620px) {
   .proof-grid { grid-template-columns: 1fr; }
 }
+
+/* ---------- TNI vs EDU-AIR Comparison Matrix & ROI Calculator ---------- */
+
+.tni-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr;
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+.tni-calc-card {
+  padding: 1.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+.tni-calc-card h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--cyan);
+}
+.calc-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.calc-inputs input[type="range"] {
+  accent-color: var(--cyan);
+  cursor: pointer;
+}
+.calc-val {
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+.calc-results {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+}
+.calc-res-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.res-tni {
+  color: #ff6b6b;
+  font-weight: 700;
+}
+.res-edu {
+  color: #51cf66;
+  font-weight: 700;
+}
+.calc-res-highlight {
+  border-top: 1px solid var(--line);
+  padding-top: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.calc-res-highlight strong {
+  font-size: 1.4rem;
+  color: var(--cyan);
+}
+.tni-matrix-wrap {
+  padding: 1.2rem;
+  overflow-x: auto;
+}
+.tni-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.92rem;
+}
+.tni-table th, .tni-table td {
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--line);
+}
+.tni-table th {
+  color: var(--cyan);
+  font-weight: 700;
+}
+.badge-green {
+  background: rgba(81, 207, 102, 0.15);
+  color: #51cf66;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.82rem;
+}
+.badge-red {
+  background: rgba(255, 107, 107, 0.15);
+  color: #ff6b6b;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.82rem;
+}
+
+@media (max-width: 900px) {
+  .tni-grid {
+    grid-template-columns: 1fr;
+  }
+}

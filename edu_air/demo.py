@@ -158,14 +158,6 @@ class DemoStep:
         return cls("gesture", name, {"pos": pos})
 
     @classmethod
-    def stroke(cls, start=(0.25, 0.20), end=(0.70, 0.50),
-               points: int = 5) -> "DemoStep":
-        """Drag the pointer from ``start`` to ``end`` (pixel coords on the
-        1280x720 demo surface) to draw a freehand stroke."""
-        return cls("stroke", "", {"start": tuple(start), "end": tuple(end),
-                                  "n": int(points)})
-
-    @classmethod
     def wait(cls, seconds: float) -> "DemoStep":
         return cls("wait", f"{seconds}", {})
 
@@ -202,36 +194,6 @@ def default_script(language: str = "en") -> list[DemoStep]:
         steps.append(DemoStep.gesture("point", moving_point(time.monotonic() % 5)))
         steps.append(DemoStep.wait(0.3))
     return steps
-
-
-def board_script(language: str = "en") -> list[DemoStep]:
-    """A scripted interactive-whiteboard (TNI) lesson: draw, add pages,
-    switch page backgrounds, undo, delete — all in safe demo mode."""
-    if language == "fr":
-        draw, newpage, prev, nxt, undo, grid, delpage = (
-            "dessiner", "nouvelle page", "page précédente", "page suivante",
-            "annuler le dessin", "fond quadrillé", "supprime la page")
-    elif language == "ar":
-        draw, newpage, prev, nxt, undo, grid, delpage = (
-            "رسم", "صفحة جديدة", "الصفحة السابقة", "الصفحة التالية",
-            "تراجع", "خلفيه شبكيه", "احذف هذه الصفحة")
-    else:  # en (and default for other languages)
-        draw, newpage, prev, nxt, undo, grid, delpage = (
-            "drawing mode", "new page", "previous page", "next page",
-            "undo", "grid background", "delete the page")
-    return [
-        DemoStep.voice(draw, language),
-        DemoStep.stroke(),                                  # ink on page 1
-        DemoStep.voice(newpage, language),                  # -> page 2
-        DemoStep.stroke(),                                  # ink on page 2
-        DemoStep.voice(undo, language),                     # undo page 2 stroke
-        DemoStep.stroke(),                                  # re-draw page 2
-        DemoStep.voice(grid, language),                     # ruled grid on page 2
-        DemoStep.voice(prev, language),                     # back to page 1
-        DemoStep.voice(nxt, language),                      # forward to page 2
-        DemoStep.voice(newpage, language),                  # blank page 3
-        DemoStep.voice(delpage, language),                  # delete page 3
-    ]
 
 
 # ---------------------------------------------------------------------------
@@ -272,20 +234,6 @@ class DemoSession:
                                   ts=time.monotonic())
             self.session.handle_gesture(evt)
             return f"gesture: {step.value} @ ({tip[0]:.2f},{tip[1]:.2f})"
-        if step.kind == "stroke":
-            from hadj_no_touch.gestures import gesture_engine as ge
-            a = step.params.get("start", (0.25, 0.20))
-            b = step.params.get("end", (0.70, 0.50))
-            n = max(2, int(step.params.get("n", 5)))
-            kinds = [ge.DRAG_START] + [ge.DRAG_UPDATE] * (n - 2) + [ge.DRAG_END]
-            for i, k in enumerate(kinds):
-                t = i / (n - 1)
-                x = a[0] + (b[0] - a[0]) * t
-                y = a[1] + (b[1] - a[1]) * t
-                self.session.handle_gesture(
-                    ge.GestureEvent(kind=k, x=x, y=y, confidence=0.95,
-                                    ts=time.monotonic()))
-            return f"stroke: ({a[0]:.2f},{a[1]:.2f}) -> ({b[0]:.2f},{b[1]:.2f})"
         return None
 
     def run_all(self) -> list[str]:

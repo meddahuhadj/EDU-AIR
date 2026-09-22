@@ -1,51 +1,39 @@
-"""EDU-AIR control dock (PySide6).
+"""EDU-AIR classroom window and projection overlay (PySide6).
 
-``ClassroomWindow`` is the control dock on the teacher's own screen: camera
-preview, live status, mode switch (real/demo), sensitivity and language
-controls, tool palette (point / draw / highlight / erase / clear), quiz
-bank picker, calibration wizard and keyboard hints.
+Two Qt surfaces:
 
-The other two Qt-facing pieces this module used to hold now live next to
-it as siblings (still re-exported here so existing
-``from edu_air.ui import ...`` call sites are unaffected):
+  1. ``OverlayWindow``  — a translucent, frameless, always-on-top window placed
+     on the projector screen. It paints the air-annotation strokes, the
+     interactive pointer, the voice-quiz question + A/B/C/D, and the classroom
+     HUD (current slide, last teacher command, timer, mode badge, key hints).
+     It is click-through by default so the presenter app underneath keeps
+     receiving input.
 
-  * ``edu_air.overlay.OverlayWindow`` — the translucent, frameless,
-    always-on-top projector window (annotation strokes, pointer, quiz,
-    HUD). Click-through by default so the presenter app underneath keeps
-    receiving input.
-  * ``edu_air.pipeline.ClassroomPipeline`` — the background thread that
-    reads the webcam, runs the gesture engine and feeds the classroom
-    session; recognized voice arrives through the HADJ ``SpeechManager``.
+  2. ``ClassroomWindow`` — the control dock on the teacher's own screen:
+     camera preview, live status, mode switch (real/demo), sensitivity and
+     language controls, tool palette (point / draw / highlight / erase /
+     clear), quiz bank picker, calibration launcher and keyboard hints.
 
-All UI updates are marshalled through Qt signals.
+The ``ClassroomPipeline`` background loop reads the webcam, runs the gesture
+engine and feeds the classroom session; recognized voice arrives through the
+HADJ ``SpeechManager``. All UI updates are marshalled through Qt signals.
 """
 
 from __future__ import annotations
 
 import os
+import threading
 import time
-from pathlib import Path
 from typing import Optional
 
-from PySide6.QtCore import Qt, Signal, QTimer
-from PySide6.QtGui import QColor, QKeyEvent, QPainter, QPen
+from PySide6.QtCore import QObject, Qt, Signal, QTimer
+from PySide6.QtGui import QColor, QFont, QGuiApplication, QKeyEvent, QPainter, QPen
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QFrame, QHBoxLayout, QLabel, QMainWindow, QPushButton,
     QVBoxLayout, QWidget, QGridLayout, QMessageBox, QScrollArea,
 )
 
 from . import __version__, i18n
-# Re-exported for existing `from edu_air.ui import OverlayWindow /
-# ClassroomPipeline / ...` call sites -- their actual homes are
-# edu_air.overlay / edu_air.pipeline (see module docstring above).
-from .overlay import OverlayWindow, _pick_screen
-from .pipeline import ClassroomPipeline, LowFpsWatchdog, _CameraReader, _camera_backend
-
-__all__ = [
-    "ClassroomWindow", "make_session",
-    "OverlayWindow", "ClassroomPipeline", "LowFpsWatchdog",
-    "_CameraReader", "_camera_backend", "_pick_screen",
-]
 
 # ---------------------------------------------------------------------------
 # Dark, modern control-dock theme. Palette kept as named constants so status
@@ -187,16 +175,214 @@ from .safety import ClassroomSafetyEngine
 from . import intent as ci
 
 
-def _median_point(samples: list[tuple[float, float]]) -> Optional[tuple[float, float]]:
-    """Median x/y of a short fingertip-capture window -- robust to the odd
-    tracking glitch in a ~1s hold in a way a plain average is not, without
-    pulling in numpy for a list this small."""
-    if not samples:
-        return None
-    xs = sorted(s[0] for s in samples)
-    ys = sorted(s[1] for s in samples)
-    mid = len(samples) // 2
-    return (xs[mid], ys[mid])
+def _pick_screen(index: int):
+    screens = QGuiApplication.screens()
+    if index is not None and index >= 0 and index < len(screens):
+        return screens[index]
+    return QGuiApplication.primaryScreen()
+
+
+# ---------------------------------------------------------------------------
+# Projection overlay.
+# ---------------------------------------------------------------------------
+class OverlayWindow(QWidget):
+    def __init__(self, session: ClassroomSession, settings=None,
+                 screen_index: int = -1, parent=None):
+        super().__init__(parent)
+        self.session = session
+        self.settings = settings or SETTINGS
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint
+                            | Qt.WindowType.WindowStaysOnTopHint
+                            | Qt.WindowType.WindowDoesNotAcceptFocus
+                            | Qt.WindowType.WindowTransparentForInput
+                            | Qt.WindowType.Tool)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, True)
+        self._last_paint = 0.0
+        self._target_screen = screen_index
+        if os.name == "nt":
+            try:
+                import ctypes
+                hwnd = int(self.winId())
+                GWL_EXSTYLE = -20
+                WS_EX_NOACTIVATE = 0x08000000
+                WS_EX_TRANSPARENT = 0x00000020
+                old_style = ctypes.windll.user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
+                ctypes.windll.user32.SetWindowLongW(hwnd, GWL_EXSTYLE, old_style | WS_EX_NOACTIVATE | WS_EX_TRANSPARENT)
+            except Exception:
+                pass
+
+    def place_on_screen(self, index: int) -> None:
+        screen = _pick_screen(index)
+        geo = screen.geometry()
+        self.setGeometry(geo)
+        self._target_screen = index
+
+    def paintEvent(self, event) -> None:  # noqa: N802
+        now = time.monotonic()
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        w, h = self.width(), self.height()
+        s = self.session
+
+        # ---- air annotation strokes -----------------------------------------
+        if s.settings.annotation.enabled:
+            for geo in s.annotation.geometry(w, h):
+                pts = geo["points"]
+                if not pts:
+                    continue
+                self._paint_stroke(p, pts, geo["color"], geo["width"],
+                                   geo["highlight"])
+
+        # ---- interactive pointer ---------------------------------------------
+        if s.pointer.visible and s.pointer.position is not None:
+            px, py = s.pointer.position
+            self._paint_pointer(p, px, py, s.settings.annotation.pointer_size,
+                                s.settings.annotation.pointer_color)
+
+        # ---- quiz overlay ------------------------------------------------------
+        if s.quiz.active and s.quiz.question is not None:
+            self._paint_quiz(p, s.quiz, s.settings.quiz.option_labels,
+                             w, h, revealed=s.quiz.revealed)
+
+        # ---- HUD ----------------------------------------------------------------
+        if s.settings.presentation.show_hud:
+            self._paint_hud(p, s, w, h)
+
+        # cheap repaint on the local frame budget (pointer is animated)
+        if now - self._last_paint > 0.05:
+            self._last_paint = now
+            QTimer.singleShot(50, self.update)
+        p.end()
+
+    # painters ----------------------------------------------------------------
+    def _paint_stroke(self, p: QPainter, pts, color: str, width: float,
+                      highlight: bool) -> None:
+        pen = QPen(QColor(color), max(1.0, width))
+        if highlight:
+            alpha = int(255 * max(0.1, min(0.9, self.settings.annotation.highlight_opacity)))
+            pen.setColor(QColor(pen.color().red(), pen.color().green(),
+                                pen.color().blue(), alpha))
+            pen.setWidthF(pen.widthF() * 2)
+        pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+        pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+        p.setPen(pen)
+        if len(pts) == 1:
+            r = max(2.0, pen.widthF() / 2)
+            p.drawEllipse(pts[0][0] - r, pts[0][1] - r, r * 2, r * 2)
+            return
+        for i in range(len(pts) - 1):
+            p.drawLine(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1])
+
+    def _paint_pointer(self, p: QPainter, px: float, py: float,
+                       size: int, color: str) -> None:
+        col = QColor(color)
+        size = max(10, size)
+        r = size / 2
+        c = QPen(col, 2)
+        p.setPen(c)
+        p.drawEllipse(px - r, py - r, size, size)
+        p.drawLine(px - size, py, px - r, py)
+        p.drawLine(px + r, py, px + size, py)
+        p.drawLine(px, py - size, px, py - r)
+        p.drawLine(px, py + r, px, py + size)
+        c2 = QPen(col, 3)
+        p.setPen(c2)
+        p.drawEllipse(px - 2, py - 2, 4, 4)
+
+    def _paint_quiz(self, p: QPainter, quiz, labels, w: int, h: int,
+                    revealed: bool) -> None:
+        from .voice import LETTER_TO_INDEX
+        q = quiz.question
+        rtl = i18n.is_rtl()
+        ox, oy, ow, oh = int(w * 0.18), int(h * 0.20), int(w * 0.64), int(h * 0.60)
+        p.fillRect(ox, oy, ow, oh, QColor(12, 18, 30, 235))
+        pen = QPen(QColor(120, 200, 255), 2)
+        p.setPen(pen)
+        p.drawRoundedRect(ox, oy, ow, oh, 14, 14)
+
+        f_title = QFont("Segoe UI", int(h / 34), QFont.Weight.Bold)
+        p.setFont(f_title)
+        p.setPen(QColor("white"))
+        p.drawText(ox + 24, oy + 52,
+                   i18n.t("quiz.question", n=quiz.current_question_idx + 1))
+        f_q = QFont("Segoe UI", int(h / 30))
+        p.setFont(f_q)
+        rect = (ox + 24, oy + 76, ow - 48, oh - 140)
+        p.drawText(*rect, Qt.AlignmentFlag.AlignLeft
+                   | Qt.AlignmentFlag.AlignTop
+                   | Qt.TextFlag.TextWordWrap, q.text)
+
+        row_h = (oh - 200) // 4
+        for i, label in enumerate(labels):
+            option = q.options[i] if i < len(q.options) else ""
+            ly = oy + 200 + i * row_h
+            is_answer = (i == q.answer_idx)
+            chip = QColor(38, 90, 150) if not revealed \
+                else (QColor(60, 160, 80) if is_answer else QColor(150, 60, 60))
+            p.setBrush(chip)
+            p.setPen(QPen(QColor(180, 210, 255), 1))
+            p.drawRoundedRect(ox + 48, ly, ow - 96, row_h - 10, 8, 8)
+            f_o = QFont("Segoe UI", int(h / 42), QFont.Weight.DemiBold)
+            p.setFont(f_o)
+            p.setPen(QColor("white"))
+            p.drawText(ox + 64, ly, 60, row_h - 10,
+                       Qt.AlignmentFlag.AlignVCenter, label)
+            f_opt = QFont("Segoe UI", int(h / 44))
+            p.setFont(f_opt)
+            txt_rect = (ox + 130, ly, ow - 200, row_h - 10)
+            align = Qt.AlignmentFlag.AlignRight if rtl else Qt.AlignmentFlag.AlignLeft
+            p.drawText(*txt_rect, align
+                       | Qt.AlignmentFlag.AlignVCenter
+                       | Qt.TextFlag.TextWordWrap, option)
+        if revealed:
+            fans = QFont("Segoe UI", int(h / 52))
+            p.setFont(fans)
+            p.setPen(QColor(120, 200, 255))
+            p.drawText(ox + 24, oy + oh - 34,
+                       i18n.t("quiz.correct",
+                              x=labels[q.answer_idx]))
+
+    @staticmethod
+    def _tool_key(tool: str) -> str:
+        """Map an annotation tool name to its i18n key."""
+        return {"point": "tool.point", "draw": "tool.draw",
+                "highlight": "tool.highlight", "erase": "tool.erase"
+                }.get(tool, "tool.draw")
+
+    def _paint_hud(self, p: QPainter, s, w: int, h: int) -> None:
+        st = s.status
+        mode_badge = QColor(90, 160, 90) if s.mode == "demo" else QColor(235, 150, 60)
+        hud_x = w - 260
+        hud_y = h - 120
+        p.setBrush(mode_badge)
+        p.setPen(Qt.PenStyle.NoPen)
+        p.drawRoundedRect(hud_x, hud_y, 250, 110, 10, 10)
+        f = QFont("Segoe UI", int(h / 60), QFont.Weight.DemiBold)
+        p.setFont(f)
+        p.setPen(QColor("white"))
+        state_key = {
+            "idle": "state.idle", "active": "state.active",
+            "paused": "state.paused",
+        }.get(st.presentation_state, "state.idle")
+        lines = [
+            f"EDU-AIR · v{__version__}",
+            i18n.t("hud.slide", cur=st.current_slide,
+                   total=max(1, st.total_slides),
+                   state=i18n.t(state_key).upper()),
+            i18n.t("hud.cmd", cmd=st.last_command or "—"),
+            i18n.t("hud.tool_clock", tool=i18n.t(self._tool_key(st.annotation_tool)),
+                   secs=st.clock_seconds),
+            i18n.t("hud.quiz",
+                   state=i18n.t("quiz.on") if st.quiz_active else i18n.t("quiz.off")),
+        ]
+        y = hud_y + 22
+        for line in lines:
+            p.drawText(hud_x + 14, y, line)
+            y += int(h / 48)
+        if s.mode == "demo":
+            p.drawText(hud_x + 14, y, i18n.t("hud.demo"))
 
 
 # ---------------------------------------------------------------------------
@@ -214,76 +400,11 @@ class ClassroomWindow(QMainWindow):
                                       screen_index=SETTINGS.classroom.projector_screen)
         self.sensitivity = AccessibilityController(AccessibilityState())
         self._buttons: dict[str, QPushButton] = {}
-        self._restore_board()
-        self._restore_journal()
         self._build_ui()
         self.status_changed.connect(self._on_status)
         self._refresh_timer = QTimer(self)
         self._refresh_timer.timeout.connect(self.refresh)
         self._refresh_timer.start(200)
-
-    # ---- TNI notebook persistence ------------------------------------------
-    def _board_nb_path(self) -> Path:
-        from edu_air.config import data_dir
-        p = Path(getattr(SETTINGS.board, "persist_path", "board.json"))
-        return p if p.is_absolute() else data_dir() / p
-
-    def _restore_board(self) -> None:
-        """Load the saved notebook on startup (guarded, never crashes)."""
-        if not getattr(SETTINGS.board, "persist", False):
-            return
-        if getattr(self.session, "mode", None) == "demo":
-            return
-        try:
-            self.session.board.load_nb(self._board_nb_path())
-        except Exception as exc:
-            self._safe_log(f"Board restore skipped: {exc}")
-
-    def _persist_board(self) -> None:
-        """Save the notebook on exit (guarded, never crashes)."""
-        if not getattr(SETTINGS.board, "persist", False):
-            return
-        if getattr(self.session, "mode", None) == "demo":
-            return
-        try:
-            self.session.board.save_nb(self._board_nb_path())
-        except Exception as exc:
-            self._safe_log(f"Board save failed: {exc}")
-
-    def _safe_log(self, msg: str) -> None:
-        try:
-            self.show_log(msg)
-        except Exception:
-            pass
-
-    # ---- class journal persistence -----------------------------------------
-    def _journal_path(self) -> Path:
-        from edu_air.config import data_dir
-        return data_dir() / "journal.json"
-
-    def _restore_journal(self) -> None:
-        """Load the saved journal on startup (guarded, never crashes) --
-        same pattern as ``_restore_board``. Demo-mode "classes" never
-        touch the real history, restored or written."""
-        if getattr(self.session, "mode", None) == "demo":
-            return
-        try:
-            self.session.journal.load_json(self._journal_path())
-        except Exception as exc:
-            self._safe_log(f"Journal restore skipped: {exc}")
-
-    def _persist_journal(self) -> None:
-        if getattr(self.session, "mode", None) == "demo":
-            return
-        try:
-            self.session.journal.save_json(self._journal_path())
-        except Exception as exc:
-            self._safe_log(f"Journal save failed: {exc}")
-
-    def closeEvent(self, event) -> None:
-        self._persist_board()
-        self._persist_journal()
-        super().closeEvent(event)
 
     @property
     def camera_preview(self) -> QLabel:
@@ -358,7 +479,7 @@ class ClassroomWindow(QMainWindow):
         grid.setSpacing(8)
         for i, key in enumerate(["mode", "presentation", "pointer", "command",
                                  "interaction", "gesture", "timer", "quiz",
-                                 "tool", "strokes", "board", "safety", "fps",
+                                 "tool", "strokes", "safety", "fps",
                                  "lighting", "noise", "hand"]):
             lab = QLabel(self._status_text(key, ""))
             lab.setStyleSheet(
@@ -387,32 +508,10 @@ class ClassroomWindow(QMainWindow):
                                           self._toggle_mode)
         self._overlay_btn = self._add_button(ctrl1, i18n.t("btn.overlay"),
                                              self._toggle_overlay)
-        self._rehearsal_btn = self._add_button(ctrl1, i18n.t("btn.rehearsal"),
-                                               self._toggle_rehearsal)
-        self._rehearsal_btn.setCheckable(True)
         self._calibration_btn = self._add_button(ctrl1, i18n.t("btn.calibration"),
                                                  self._run_calibration)
-        self._quick_calibration_btn = self._add_button(
-            ctrl1, i18n.t("btn.quick_calibration"), self._quick_calibrate_pointer)
-        self._wall_mode_btn = self._add_button(ctrl1, i18n.t("btn.wall_mode"),
-                                               self._toggle_wall_mode)
-        self._wall_mode_btn.setCheckable(True)
         self._export_btn = self._add_button(ctrl1, i18n.t("btn.export"), None)
         self._export_btn.clicked.connect(self._export_board)
-        self._export_pdf_btn = self._add_button(ctrl1, i18n.t("btn.export_pdf"), None)
-        self._export_pdf_btn.clicked.connect(self._export_pdf)
-        self._export_quiz_btn = self._add_button(ctrl1, i18n.t("btn.export_quiz"), None)
-        self._export_quiz_btn.clicked.connect(self._export_quiz)
-        self._participation_btn = self._add_button(ctrl1, i18n.t("btn.participation"), None)
-        self._participation_btn.clicked.connect(self._mark_participation)
-        self._export_participation_btn = self._add_button(
-            ctrl1, i18n.t("btn.export_participation"), None)
-        self._export_participation_btn.clicked.connect(self._export_participation)
-        self._log_class_btn = self._add_button(ctrl1, i18n.t("btn.log_class"), None)
-        self._log_class_btn.clicked.connect(self._log_class)
-        self._export_journal_btn = self._add_button(
-            ctrl1, i18n.t("btn.export_journal"), None)
-        self._export_journal_btn.clicked.connect(self._export_journal)
         self._clear_btn = self._add_button(ctrl1, i18n.t("btn.clear"), None)
         self._clear_btn.clicked.connect(self._clear_board)
         ctrl1.addStretch(1)
@@ -429,58 +528,6 @@ class ClassroomWindow(QMainWindow):
                 lambda _=False, t=tool: self._select_tool(t))
         ctrl2.addStretch(1)
         actions_box.addLayout(ctrl2)
-
-        # ---- interactive board (TNI) row ---------------------------------------
-        board_row = QHBoxLayout()
-        board_row.setSpacing(8)
-        self._board_prev_btn = self._add_button(
-            board_row, i18n.t("btn.board_prev"), self._board_prev)
-        self._board_page_lbl = QLabel("1/1")
-        self._board_page_lbl.setStyleSheet(
-            f"background:{SURFACE_ALT}; color:{TEXT}; padding:6px 10px;"
-            f"border-radius:6px; border:1px solid {BORDER}; min-width:56px;")
-        self._board_page_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        board_row.addWidget(self._board_page_lbl)
-        self._board_next_btn = self._add_button(
-            board_row, i18n.t("btn.board_next"), self._board_next)
-        self._board_add_btn = self._add_button(
-            board_row, i18n.t("btn.board_add"), self._board_add)
-        self._board_del_btn = self._add_button(
-            board_row, i18n.t("btn.board_del"), self._board_del)
-        self._board_undo_btn = self._add_button(
-            board_row, i18n.t("btn.board_undo"), self._board_undo)
-        self._board_bg_lbl = QLabel(i18n.t("label.board_bg"))
-        board_row.addWidget(self._board_bg_lbl)
-        self._board_bg_keys = ["blank", "grid", "lines"]
-        self.board_bg_combo = QComboBox()
-        self.board_bg_combo.addItems(
-            [i18n.t(f"bg.{k}") for k in self._board_bg_keys])
-        self.board_bg_combo.currentIndexChanged.connect(self._change_board_bg)
-        board_row.addWidget(self.board_bg_combo)
-        self._board_persist_chk = QCheckBox(i18n.t("label.board_persist"))
-        self._board_persist_chk.setChecked(
-            bool(getattr(SETTINGS.board, "persist", False)))
-        self._board_persist_chk.toggled.connect(self._toggle_board_persist)
-        board_row.addWidget(self._board_persist_chk)
-        board_row.addStretch(1)
-        actions_box.addLayout(board_row)
-
-        # ---- lesson sequencer row ---------------------------------------------
-        lesson_row = QHBoxLayout()
-        lesson_row.setSpacing(8)
-        self._lesson_load_btn = self._add_button(
-            lesson_row, i18n.t("btn.lesson_load"), self._load_lesson)
-        self._lesson_prev_btn = self._add_button(
-            lesson_row, i18n.t("btn.lesson_prev"), self._lesson_prev)
-        self._lesson_progress_lbl = QLabel(i18n.t("label.lesson_none"))
-        self._lesson_progress_lbl.setStyleSheet(
-            f"background:{SURFACE_ALT}; color:{TEXT}; padding:6px 10px;"
-            f"border-radius:6px; border:1px solid {BORDER};")
-        self._lesson_progress_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        lesson_row.addWidget(self._lesson_progress_lbl, 1)
-        self._lesson_next_btn = self._add_button(
-            lesson_row, i18n.t("btn.lesson_next"), self._lesson_next)
-        actions_box.addLayout(lesson_row)
 
         # ---- settings card ----------------------------------------------------
         settings_box = self._card(lay, "Réglages")
@@ -511,11 +558,6 @@ class ClassroomWindow(QMainWindow):
         self.lang_combo.currentTextChanged.connect(self._change_language)
         row2.addWidget(self._voice_lbl)
         row2.addWidget(self.lang_combo)
-        self._offline_voice_chk = QCheckBox(i18n.t("label.offline_voice"))
-        self._offline_voice_chk.setToolTip(i18n.t("label.offline_voice_tip"))
-        self._offline_voice_chk.setChecked(bool(SETTINGS.classroom.offline_voice))
-        self._offline_voice_chk.toggled.connect(self._toggle_offline_voice)
-        row2.addWidget(self._offline_voice_chk)
         row2.addStretch(1)
         settings_box.addLayout(row2)
 
@@ -527,10 +569,6 @@ class ClassroomWindow(QMainWindow):
         self._perf_check.toggled.connect(self._toggle_performance)
         row3.addWidget(self._perf_lbl)
         row3.addWidget(self._perf_check)
-        self._shape_correction_chk = QCheckBox(i18n.t("label.shape_correction"))
-        self._shape_correction_chk.setChecked(bool(SETTINGS.annotation.shape_correction))
-        self._shape_correction_chk.toggled.connect(self._toggle_shape_correction)
-        row3.addWidget(self._shape_correction_chk)
         self._extapp_lbl = QLabel(i18n.t("label.external_app"))
         self._extapp_combo = QComboBox()
         self._extapp_combo.addItems(
@@ -542,51 +580,6 @@ class ClassroomWindow(QMainWindow):
         row3.addWidget(self._extapp_combo)
         row3.addStretch(1)
         settings_box.addLayout(row3)
-
-        # ---- wall/touch mode settings ------------------------------------------
-        row4 = QHBoxLayout()
-        row4.setSpacing(8)
-        self._touch_backend_lbl = QLabel(i18n.t("label.touch_backend"))
-        self.touch_backend_combo = QComboBox()
-        self._touch_backend_keys = ["shadow_gap", "ir_pen", "color_marker"]
-        self.touch_backend_combo.addItems(
-            [i18n.t(f"backend.{k}") for k in self._touch_backend_keys])
-        cur_backend = SETTINGS.touch.backend
-        if cur_backend in self._touch_backend_keys:
-            self.touch_backend_combo.setCurrentIndex(self._touch_backend_keys.index(cur_backend))
-        self.touch_backend_combo.currentIndexChanged.connect(self._change_touch_backend)
-        row4.addWidget(self._touch_backend_lbl)
-        row4.addWidget(self.touch_backend_combo)
-
-        self._touch_sens_lbl = QLabel(i18n.t("label.touch_sensitivity"))
-        self.touch_sensitivity_combo = QComboBox()
-        self.touch_sensitivity_combo.addItems([
-            i18n.t("sens.low"), i18n.t("sens.medium"), i18n.t("sens.high")])
-        self.touch_sensitivity_combo.setCurrentText(
-            i18n.t(f"sens.{SETTINGS.touch.sensitivity}"))
-        self.touch_sensitivity_combo.currentTextChanged.connect(self._change_touch_sensitivity)
-        row4.addWidget(self._touch_sens_lbl)
-        row4.addWidget(self.touch_sensitivity_combo)
-        row4.addStretch(1)
-        settings_box.addLayout(row4)
-
-        row5 = QHBoxLayout()
-        row5.setSpacing(8)
-        self._palm_lbl = QLabel(i18n.t("label.palm_rejection"))
-        self._palm_check = QCheckBox()
-        self._palm_check.setChecked(SETTINGS.touch.palm_rejection)
-        self._palm_check.toggled.connect(self._toggle_palm_rejection)
-        row5.addWidget(self._palm_lbl)
-        row5.addWidget(self._palm_check)
-
-        self._touch_debug_lbl = QLabel(i18n.t("label.touch_debug"))
-        self._touch_debug_check = QCheckBox()
-        self._touch_debug_check.setChecked(SETTINGS.touch.debug_visual)
-        self._touch_debug_check.toggled.connect(self._toggle_touch_debug)
-        row5.addWidget(self._touch_debug_lbl)
-        row5.addWidget(self._touch_debug_check)
-        row5.addStretch(1)
-        settings_box.addLayout(row5)
 
         self._hint_lbl = QLabel(i18n.t("hint.keyboard"))
         self._hint_lbl.setStyleSheet(f"color:{TEXT_MUTED}; font-size:11px;")
@@ -660,23 +653,22 @@ class ClassroomWindow(QMainWindow):
             self._show_overlay()
 
     def _show_overlay(self) -> None:
-        if not self._overlay._rehearsal_mode:
-            self._overlay.place_on_screen(SETTINGS.classroom.projector_screen)
+        self._overlay.place_on_screen(SETTINGS.classroom.projector_screen)
         self._overlay.show()
-        self._overlay._apply_click_through(not self._overlay._rehearsal_mode)
-
-    def _toggle_rehearsal(self) -> None:
-        """Mode maquette: preview the lesson (slides, ink, quiz) in a
-        normal, bordered window on the teacher's own screen instead of the
-        full-screen click-through projector overlay -- for preparing a
-        class with no projector plugged in."""
-        enabled = self._rehearsal_btn.isChecked()
-        self._overlay.set_rehearsal_mode(enabled)
-        if not self._overlay.isVisible():
-            self._show_overlay()
+        if os.name == "nt":
+            try:
+                import ctypes
+                hwnd = int(self._overlay.winId())
+                GWL_EXSTYLE = -20
+                WS_EX_NOACTIVATE = 0x08000000
+                WS_EX_TRANSPARENT = 0x00000020
+                old_style = ctypes.windll.user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
+                ctypes.windll.user32.SetWindowLongW(hwnd, GWL_EXSTYLE, old_style | WS_EX_NOACTIVATE | WS_EX_TRANSPARENT)
+            except Exception:
+                pass
 
     def _select_tool(self, tool: str) -> None:
-        self.session.board.set_tool(tool)
+        self.session.annotation.set_tool(tool)
         self.session.domain = "annotation"
         self.refresh()
 
@@ -690,143 +682,6 @@ class ClassroomWindow(QMainWindow):
             return
         self.session.execute(ci.ClassroomIntent(ci.ANNOTATION_CLEAR, source="ui"))
         self.refresh()
-
-    def _board_prev(self) -> None:
-        self.session.execute(ci.ClassroomIntent(ci.BOARD_PREV_PAGE, source="ui"))
-        self.refresh()
-
-    def _board_next(self) -> None:
-        self.session.execute(ci.ClassroomIntent(ci.BOARD_NEXT_PAGE, source="ui"))
-        self.refresh()
-
-    def _board_add(self) -> None:
-        self.session.execute(ci.ClassroomIntent(ci.BOARD_ADD_PAGE, source="ui"))
-        self.refresh()
-
-    def _board_undo(self) -> None:
-        self.session.execute(ci.ClassroomIntent(ci.BOARD_UNDO, source="ui"))
-        self.refresh()
-
-    def _board_del(self) -> None:
-        if self.session.board.page_count <= 1:
-            self.show_log(i18n.t("confirm.last_page"))
-            return
-        decision = self.session.safety.decide(ci.BOARD_DELETE_PAGE)
-        if decision.requires_confirmation:
-            if QMessageBox.question(self, i18n.t("confirm.title"),
-                                    i18n.t("confirm.del_page")) \
-                    == QMessageBox.StandardButton.Yes:
-                self.session.execute(ci.ClassroomIntent(ci.BOARD_DELETE_PAGE, source="ui"))
-            return
-        self.session.execute(ci.ClassroomIntent(ci.BOARD_DELETE_PAGE, source="ui"))
-        self.refresh()
-
-    def _lessons_dir(self) -> str:
-        """The bundled ``lessons/`` folder next to the app entry point (see
-        ``lessons/example_lesson.json``) -- opened by default so a teacher
-        who has never used the sequencer sees a real, valid example instead
-        of an empty file browser and no idea what shape to write."""
-        d = Path(__file__).resolve().parent.parent / "lessons"
-        return str(d) if d.is_dir() else ""
-
-    def _load_lesson(self) -> None:
-        from PySide6.QtWidgets import QFileDialog
-        path, _ = QFileDialog.getOpenFileName(
-            self, i18n.t("btn.lesson_load"), self._lessons_dir(), "JSON (*.json)")
-        if not path:
-            return
-        if not self.session.load_lesson_json(path):
-            self.show_log(i18n.t("lesson.load_failed"))
-            return
-        self._refresh_lesson_label()
-
-    def _lesson_next(self) -> None:
-        self.session.execute(ci.ClassroomIntent(ci.LESSON_NEXT, source="ui"))
-        self._refresh_lesson_label()
-        self.refresh()
-
-    def _lesson_prev(self) -> None:
-        self.session.execute(ci.ClassroomIntent(ci.LESSON_PREV, source="ui"))
-        self._refresh_lesson_label()
-        self.refresh()
-
-    def _refresh_lesson_label(self) -> None:
-        text = self.session.lesson.progress_text()
-        self._lesson_progress_lbl.setText(text or i18n.t("label.lesson_none"))
-
-    def _change_board_bg(self, index: int) -> None:
-        if 0 <= index < len(self._board_bg_keys):
-            self.session.board.set_background(self._board_bg_keys[index])
-            self.refresh()
-
-    def _toggle_board_persist(self, checked: bool) -> None:
-        SETTINGS.board.persist = bool(checked)
-        if checked and getattr(self.session, "mode", None) != "demo":
-            try:
-                self.session.board.save_nb(self._board_nb_path())
-                self._safe_log(f"Notebook saved: {self._board_nb_path()}")
-            except Exception as exc:
-                self._safe_log(f"Notebook save failed: {exc}")
-        SETTINGS.save()
-        self.refresh()
-
-    def _export_pdf(self) -> None:
-        """Export the whole multi-page whiteboard to a single PDF file."""
-        try:
-            from PySide6.QtWidgets import QFileDialog
-            from PySide6.QtGui import (QImage, QPainter, QPdfWriter, QPen,
-                                       QColor, QPageSize)
-            from PySide6.QtCore import Qt, QSize
-            from .board import background_lines as _bg_lines
-            import os, time
-            default_name = f"EDU_AIR_Board_{time.strftime('%Y%m%d_%H%M%S')}.pdf"
-            path, _ = QFileDialog.getSaveFileName(
-                self, i18n.t("btn.export_pdf"), default_name,
-                "PDF (*.pdf);;All Files (*.*)")
-            if not path:
-                return
-            w, h = 1600, 900
-            writer = QPdfWriter(path)
-            writer.setPageSize(QPageSize(QSize(w, h)))
-            writer.setResolution(96)
-            painter = QPainter(writer)
-            board = self.session.board
-            for pi, page in enumerate(board.pages):
-                painter.save()
-                painter.fillRect(0, 0, w, h, QColor(255, 255, 255))
-                cfg = board.settings
-                if page.background != "blank":
-                    step = cfg.bg_grid_step_norm if page.background == "grid" \
-                        else cfg.bg_line_step_norm
-                    pen = QPen(QColor(cfg.bg_grid_color), 1)
-                    painter.setPen(pen)
-                    for x1, y1, x2, y2 in _bg_lines(page.background, w, h, step):
-                        painter.drawLine(int(x1), int(y1), int(x2), int(y2))
-                for item in page.model.geometry(w, h):
-                    pts = item["points"]
-                    if not pts:
-                        continue
-                    pen = QPen(QColor(item["color"]), max(1.0, item["width"]))
-                    if item["highlight"]:
-                        pen.setWidthF(pen.widthF() * 2)
-                    pen.setCapStyle(Qt.PenCapStyle.RoundCap)
-                    pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
-                    painter.setPen(pen)
-                    if len(pts) == 1:
-                        r = max(2.0, pen.widthF() / 2)
-                        painter.drawEllipse(pts[0][0] - r, pts[0][1] - r, r * 2, r * 2)
-                    else:
-                        for i in range(len(pts) - 1):
-                            painter.drawLine(pts[i][0], pts[i][1],
-                                             pts[i + 1][0], pts[i + 1][1])
-                painter.restore()
-                if pi < len(board.pages) - 1:
-                    writer.newPage()
-            painter.end()
-            self.show_log(i18n.t("export.pdf_success", page=len(board.pages),
-                                 path=os.path.basename(path)))
-        except Exception as exc:
-            self.show_log(f"Export error: {exc}")
 
     def _export_board(self) -> None:
         """Export current whiteboard annotations/canvas to PNG image."""
@@ -871,139 +726,6 @@ class ClassroomWindow(QMainWindow):
         except Exception as exc:
             self.show_log(f"Export error: {exc}")
 
-    def _export_quiz(self) -> None:
-        """Export the quiz's per-question answer history to CSV -- a real
-        session record (question, given/correct answer, right/wrong/skipped,
-        time) for the teacher's cahier de classe, not just the live score."""
-        try:
-            from PySide6.QtWidgets import QFileDialog
-            import os, time
-            if not self.session.quiz.history:
-                self.show_log(i18n.t("export.quiz_empty"))
-                return
-            default_name = f"EDU_AIR_Quiz_{time.strftime('%Y%m%d_%H%M%S')}.csv"
-            path, _ = QFileDialog.getSaveFileName(
-                self, i18n.t("btn.export_quiz"), default_name,
-                "CSV (*.csv);;All Files (*.*)")
-            if not path:
-                return
-            self.session.quiz.export_csv(path)
-            self.show_log(i18n.t("export.quiz_success", path=os.path.basename(path)))
-        except Exception as exc:
-            self.show_log(f"Export error: {exc}")
-
-    def _mark_participation(self) -> None:
-        self.session.execute(ci.ClassroomIntent(ci.PARTICIPATION_MARK, source="ui"))
-        self.show_log(i18n.t("participation.marked", n=self.session.participation.count))
-        self.refresh()
-
-    def _export_participation(self) -> None:
-        """Export the participation tally to CSV -- same shape as the quiz
-        export, for the teacher's cahier de classe."""
-        try:
-            from PySide6.QtWidgets import QFileDialog
-            import os, time
-            if not self.session.participation.history:
-                self.show_log(i18n.t("export.participation_empty"))
-                return
-            default_name = f"EDU_AIR_Participation_{time.strftime('%Y%m%d_%H%M%S')}.csv"
-            path, _ = QFileDialog.getSaveFileName(
-                self, i18n.t("btn.export_participation"), default_name,
-                "CSV (*.csv);;All Files (*.*)")
-            if not path:
-                return
-            self.session.participation.export_csv(path)
-            self.show_log(i18n.t("export.participation_success", path=os.path.basename(path)))
-        except Exception as exc:
-            self.show_log(f"Export error: {exc}")
-
-    # ---- class journal ------------------------------------------------------
-    def _log_class(self) -> None:
-        """One line in the journal for the class that just happened: date/
-        time (automatic), board pages used (read from the live board),
-        and an optional free-text note the teacher types now while it's
-        fresh."""
-        from PySide6.QtWidgets import QInputDialog
-        notes, ok = QInputDialog.getText(self, i18n.t("journal.title"),
-                                         i18n.t("journal.notes_prompt"))
-        if not ok:
-            return
-        entry = self.session.journal.log(self.session.board.page_count, notes)
-        self._persist_journal()
-        self.show_log(i18n.t("journal.logged", date=entry.date, n=self.session.journal.count))
-
-    def _export_journal(self) -> None:
-        """Export the whole class journal to a PDF table, then open the
-        default mail client's compose window and reveal the PDF in
-        Explorer. Windows has no way to attach a file through a plain
-        mailto: link, so this is the honest "one click" flow: it gets the
-        teacher to compose-window-plus-file-ready, not a silent
-        auto-attach-and-send that would need SMTP credentials stored on
-        the classroom PC."""
-        try:
-            from PySide6.QtWidgets import QFileDialog
-            from PySide6.QtGui import QPainter, QPdfWriter, QPageSize, QFont, QColor
-            from PySide6.QtCore import QSize
-            import os, time, subprocess, urllib.parse, webbrowser
-
-            if not self.session.journal.entries:
-                self.show_log(i18n.t("export.journal_empty"))
-                return
-            default_name = f"EDU_AIR_Journal_{time.strftime('%Y%m%d_%H%M%S')}.pdf"
-            path, _ = QFileDialog.getSaveFileName(
-                self, i18n.t("btn.export_journal"), default_name,
-                "PDF (*.pdf);;All Files (*.*)")
-            if not path:
-                return
-
-            w, h = 1600, 2200
-            writer = QPdfWriter(path)
-            writer.setPageSize(QPageSize(QSize(w, h)))
-            writer.setResolution(96)
-            painter = QPainter(writer)
-            col_x = [60, 320, 520, 700]
-
-            def _new_page_header() -> int:
-                painter.fillRect(0, 0, w, h, QColor(255, 255, 255))
-                painter.setFont(QFont("Segoe UI", 28, QFont.Weight.Bold))
-                painter.setPen(QColor(20, 20, 20))
-                painter.drawText(60, 80, i18n.t("journal.pdf_title"))
-                painter.setFont(QFont("Segoe UI", 16, QFont.Weight.DemiBold))
-                headers = [i18n.t("journal.col_date"), i18n.t("journal.col_time"),
-                          i18n.t("journal.col_pages"), i18n.t("journal.col_notes")]
-                for x, htext in zip(col_x, headers):
-                    painter.drawText(x, 150, htext)
-                painter.drawLine(60, 170, w - 60, 170)
-                return 210
-
-            y = _new_page_header()
-            painter.setFont(QFont("Segoe UI", 15))
-            for entry in self.session.journal.entries:
-                if y > h - 80:
-                    writer.newPage()
-                    y = _new_page_header()
-                    painter.setFont(QFont("Segoe UI", 15))
-                painter.drawText(col_x[0], y, entry.date)
-                painter.drawText(col_x[1], y, entry.time)
-                painter.drawText(col_x[2], y, str(entry.board_pages))
-                painter.drawText(col_x[3], y, entry.notes)
-                y += 36
-            painter.end()
-
-            self.show_log(i18n.t("export.journal_success", path=os.path.basename(path)))
-            try:
-                subprocess.run(["explorer", "/select,", os.path.normpath(path)])
-            except Exception:
-                pass
-            try:
-                mailto = ("mailto:?subject=" + urllib.parse.quote(i18n.t("journal.mail_subject"))
-                          + "&body=" + urllib.parse.quote(i18n.t("journal.mail_body")))
-                webbrowser.open(mailto)
-            except Exception:
-                pass
-        except Exception as exc:
-            self.show_log(f"Export error: {exc}")
-
     def _change_camera_index(self, index: int) -> None:
         SETTINGS.camera.index = max(0, index)
         if hasattr(self, "_pipeline") and self._pipeline:
@@ -1015,59 +737,11 @@ class ClassroomWindow(QMainWindow):
         key = reverse.get(value, value)
         self.sensitivity.set_sensitivity(key)
 
-    # ---- wall/touch mode -------------------------------------------------------
-    def _toggle_wall_mode(self) -> None:
-        self.session.execute(ci.ClassroomIntent(ci.TOGGLE_WALL_MODE, source="ui"))
-        self._wall_mode_btn.setChecked(self.session.interaction_mode == "wall")
-        self.refresh()
-
-    def _change_touch_backend(self, index: int) -> None:
-        if not (0 <= index < len(self._touch_backend_keys)):
-            return
-        name = self._touch_backend_keys[index]
-        SETTINGS.touch.backend = name
-        pipeline = getattr(self, "_pipeline", None)
-        if pipeline is not None and pipeline.touch_detector is not None:
-            from .touch import build_backend
-            pipeline.touch_detector.set_backend(build_backend(name))
-            # set_backend() starts the fresh backend blank -- without this
-            # the teacher's already-learned "plan tactile" baseline is
-            # silently lost the moment they try a different backend, even
-            # switching straight back to the one they just calibrated.
-            pipeline.touch_detector.load_plane_calibration(
-                (SETTINGS.calibration or {}).get("touch_plane", {}))
-        SETTINGS.save()
-
-    def _change_touch_sensitivity(self, value: str) -> None:
-        reverse = {i18n.t(f"sens.{k}"): k for k in ("low", "medium", "high")}
-        SETTINGS.touch.sensitivity = reverse.get(value, value)
-        SETTINGS.touch.apply_sensitivity()
-        SETTINGS.save()
-
-    def _toggle_palm_rejection(self, checked: bool) -> None:
-        SETTINGS.touch.palm_rejection = bool(checked)
-        SETTINGS.save()
-
-    def _toggle_touch_debug(self, checked: bool) -> None:
-        SETTINGS.touch.debug_visual = bool(checked)
-        SETTINGS.save()
-
     def _toggle_performance(self, on: bool) -> None:
         SETTINGS.classroom.performance_mode = bool(on)
         self.session.set_performance(bool(on))
         SETTINGS.save()
         self.refresh()
-
-    def _toggle_shape_correction(self, on: bool) -> None:
-        SETTINGS.annotation.shape_correction = bool(on)
-        SETTINGS.save()
-
-    def _toggle_offline_voice(self, on: bool) -> None:
-        """Takes effect the next time voice recognition (re)starts -- the
-        active engine, if any, keeps running until then (same as changing
-        the camera index while a pipeline is live)."""
-        SETTINGS.classroom.offline_voice = bool(on)
-        SETTINGS.save()
 
     def _change_external_app(self, value: str) -> None:
         reverse = {i18n.t(f"extapp.{k}"): k
@@ -1097,9 +771,6 @@ class ClassroomWindow(QMainWindow):
         self._camera_lbl.setText(i18n.t("camera.preview"))
         self._sens_lbl.setText(i18n.t("label.sensitivity"))
         self._voice_lbl.setText(i18n.t("label.voice"))
-        self._offline_voice_chk.setText(i18n.t("label.offline_voice"))
-        self._offline_voice_chk.setToolTip(i18n.t("label.offline_voice_tip"))
-        self._shape_correction_chk.setText(i18n.t("label.shape_correction"))
         self._perf_lbl.setText(i18n.t("label.performance"))
         self._extapp_lbl.setText(i18n.t("label.external_app"))
         self._hint_lbl.setText(i18n.t("hint.keyboard"))
@@ -1125,60 +796,14 @@ class ClassroomWindow(QMainWindow):
         # buttons
         self._mode_btn.setText(i18n.t("btn.demo_real"))
         self._overlay_btn.setText(i18n.t("btn.overlay"))
-        self._rehearsal_btn.setText(i18n.t("btn.rehearsal"))
-        if self._overlay._rehearsal_mode:
-            self._overlay.setWindowTitle(i18n.t("rehearsal.window_title"))
         self._calibration_btn.setText(i18n.t("btn.calibration"))
-        self._quick_calibration_btn.setText(i18n.t("btn.quick_calibration"))
-        self._wall_mode_btn.setText(i18n.t("btn.wall_mode"))
         self._export_btn.setText(i18n.t("btn.export"))
-        self._export_pdf_btn.setText(i18n.t("btn.export_pdf"))
-        self._export_quiz_btn.setText(i18n.t("btn.export_quiz"))
-        self._participation_btn.setText(i18n.t("btn.participation"))
-        self._export_participation_btn.setText(i18n.t("btn.export_participation"))
-        self._log_class_btn.setText(i18n.t("btn.log_class"))
-        self._export_journal_btn.setText(i18n.t("btn.export_journal"))
         self._clear_btn.setText(i18n.t("btn.clear"))
         self._prev_btn.setText(i18n.t("btn.prev_slide"))
         self._next_btn.setText(i18n.t("btn.next_slide"))
         self._cam_lbl.setText(i18n.t("label.camera"))
-        self._board_prev_btn.setText(i18n.t("btn.board_prev"))
-        self._board_next_btn.setText(i18n.t("btn.board_next"))
-        self._board_add_btn.setText(i18n.t("btn.board_add"))
-        self._board_del_btn.setText(i18n.t("btn.board_del"))
-        self._board_undo_btn.setText(i18n.t("btn.board_undo"))
-        self._board_bg_lbl.setText(i18n.t("label.board_bg"))
-        self._board_persist_chk.setText(i18n.t("label.board_persist"))
-        self._lesson_load_btn.setText(i18n.t("btn.lesson_load"))
-        self._lesson_prev_btn.setText(i18n.t("btn.lesson_prev"))
-        self._lesson_next_btn.setText(i18n.t("btn.lesson_next"))
-        self._refresh_lesson_label()
-        cur_bg_idx = self.board_bg_combo.currentIndex()
-        self.board_bg_combo.blockSignals(True)
-        self.board_bg_combo.clear()
-        self.board_bg_combo.addItems([i18n.t(f"bg.{k}") for k in self._board_bg_keys])
-        self.board_bg_combo.setCurrentIndex(max(0, cur_bg_idx))
-        self.board_bg_combo.blockSignals(False)
         for tool, btn in self._tool_buttons.items():
             btn.setText(i18n.t(f"tool.{tool}"))
-        self._touch_backend_lbl.setText(i18n.t("label.touch_backend"))
-        cur_backend_idx = self.touch_backend_combo.currentIndex()
-        self.touch_backend_combo.blockSignals(True)
-        self.touch_backend_combo.clear()
-        self.touch_backend_combo.addItems(
-            [i18n.t(f"backend.{k}") for k in self._touch_backend_keys])
-        self.touch_backend_combo.setCurrentIndex(max(0, cur_backend_idx))
-        self.touch_backend_combo.blockSignals(False)
-        self._touch_sens_lbl.setText(i18n.t("label.touch_sensitivity"))
-        self.touch_sensitivity_combo.blockSignals(True)
-        prev_touch_sens = SETTINGS.touch.sensitivity
-        self.touch_sensitivity_combo.clear()
-        self.touch_sensitivity_combo.addItems([
-            i18n.t("sens.low"), i18n.t("sens.medium"), i18n.t("sens.high")])
-        self.touch_sensitivity_combo.setCurrentText(i18n.t(f"sens.{prev_touch_sens}"))
-        self.touch_sensitivity_combo.blockSignals(False)
-        self._palm_lbl.setText(i18n.t("label.palm_rejection"))
-        self._touch_debug_lbl.setText(i18n.t("label.touch_debug"))
         # status labels refresh themselves on next refresh() call
         self.refresh()
 
@@ -1190,136 +815,17 @@ class ClassroomWindow(QMainWindow):
         self.session.execute(ci.ClassroomIntent(ci.PREV_SLIDE, source="ui"))
         self.refresh()
 
-    def _calibrate_corners_live(self, cal, pipeline) -> None:
-        """Step 3: measure the 4 projected corners from the live air-pointer
-        fingertip instead of trusting hardcoded placeholders -- this is
-        what the whole homography (and therefore every pointer/ink
-        position on screen) is built from, so it is the one step that
-        matters most to get from real tracking rather than a guess."""
-        if pipeline is None or pipeline.tracker is None:
-            cal.estimate_corners(SETTINGS.classroom.calibration_resolution)
-            return
-
-        from PySide6.QtCore import QEventLoop
-
-        corner_keys = ["calibration.corner_tl", "calibration.corner_tr",
-                      "calibration.corner_br", "calibration.corner_bl"]
-        measured = 0
-        for idx, key in enumerate(corner_keys):
-            QMessageBox.information(
-                self, i18n.t("calibration.title"),
-                i18n.t("calibration.corner_point_step", corner=i18n.t(key)))
-            pipeline.begin_fingertip_capture()
-            loop = QEventLoop()
-            QTimer.singleShot(1200, loop.quit)
-            loop.exec()
-            median = _median_point(pipeline.end_fingertip_capture())
-            if median is not None:
-                cal.add_corner(median, index=idx)
-                measured += 1
-
-        cal.finish_corners()
-        if measured == 0:
-            cal.estimate_corners(SETTINGS.classroom.calibration_resolution)
-            self.show_log(i18n.t("calibration.corners_incomplete", n=0))
-        elif measured < 4:
-            self.show_log(i18n.t("calibration.corners_incomplete", n=measured))
-        else:
-            self.show_log(i18n.t("calibration.corners_done", n=measured))
-
-    def _calibrate_alignment_live(self, cal, pipeline) -> None:
-        """Step 5: check the homography just built against real on-screen
-        targets instead of reporting a cosmetic, never-measured error --
-        each target is shown as a crosshair on the projector overlay so
-        the teacher has something concrete to aim at."""
-        from .calibration import ALIGN_TARGETS
-
-        if pipeline is None or pipeline.tracker is None or cal.report.mapping is None:
-            cal.finish_alignment(1)
-            return
-
-        from PySide6.QtCore import QEventLoop
-
-        overlay = getattr(self, "_overlay", None)
-        measured = 0
-        for i, target in enumerate(ALIGN_TARGETS):
-            if overlay is not None:
-                overlay.set_calibration_target(target)
-            QMessageBox.information(
-                self, i18n.t("calibration.title"),
-                i18n.t("calibration.alignment_step", n=i + 1, total=len(ALIGN_TARGETS)))
-            pipeline.begin_fingertip_capture()
-            loop = QEventLoop()
-            QTimer.singleShot(1200, loop.quit)
-            loop.exec()
-            median = _median_point(pipeline.end_fingertip_capture())
-            if median is not None:
-                cal.add_alignment(target, median)
-                measured += 1
-
-        if overlay is not None:
-            overlay.set_calibration_target(None)
-        cal.finish_alignment(1)
-        if measured:
-            self.show_log(i18n.t("calibration.alignment_result", n=measured,
-                                 err=cal.report.alignment_error))
-
-    def _calibrate_touch_plane(self, cal, pipeline) -> None:
-        """The "plan tactile" wizard step: optionally have the teacher
-        touch each of the 4 board corners for real so the active wall-mode
-        backend can learn its contact baseline (see
-        ``ProjectorCalibration.finish_touch_plane`` /
-        ``edu_air.touch.plane_calibration``). Skippable and reversible --
-        wall mode is only toggled on here if it wasn't already, and is
-        toggled back off afterward."""
-        if pipeline is None or pipeline.touch_detector is None:
-            cal.finish_touch_plane(backend=None)
-            return
-        if QMessageBox.question(self, i18n.t("calibration.title"),
-                                i18n.t("calibration.touch_plane_prompt")) \
-                != QMessageBox.StandardButton.Yes:
-            cal.finish_touch_plane(backend=None)
-            return
-
-        from PySide6.QtCore import QEventLoop
-
-        was_wall = self.session.interaction_mode == "wall"
-        if not was_wall:
-            self.session.execute(ci.ClassroomIntent(ci.TOGGLE_WALL_MODE, source="ui"))
-
-        corner_keys = ["calibration.corner_tl", "calibration.corner_tr",
-                      "calibration.corner_br", "calibration.corner_bl"]
-        total = 0
-        for idx, key in enumerate(corner_keys):
-            QMessageBox.information(
-                self, i18n.t("calibration.title"),
-                i18n.t("calibration.touch_plane_step", corner=i18n.t(key)))
-            pipeline.touch_detector.begin_capture()
-            loop = QEventLoop()
-            QTimer.singleShot(1800, loop.quit)
-            loop.exec()
-            for s in pipeline.touch_detector.end_capture():
-                cal.add_touch_sample(idx, s)
-                total += 1
-
-        if not was_wall:
-            self.session.execute(ci.ClassroomIntent(ci.TOGGLE_WALL_MODE, source="ui"))
-
-        cal.finish_touch_plane(backend=pipeline.touch_detector.backend)
-        if cal.touch_plane.get("zones"):
-            self.show_log(i18n.t("calibration.touch_plane_done", n=total,
-                                 corners=len(cal.touch_samples)))
-
     def _run_calibration(self) -> None:
         from .calibration import ProjectorCalibration, STAGE_ORDER
         cal = ProjectorCalibration()
-        pipeline = getattr(self, "_pipeline", None)
-        cal.step_camera(bool(self.session.status.hand_visible or pipeline is None),
-                        "webcam connected")
+        cal.step_camera(True, "webcam connected")
         cal.step_projection(True, "projection area framed")
-        self._calibrate_corners_live(cal, pipeline)
-        self._calibrate_touch_plane(cal, pipeline)
-        self._calibrate_alignment_live(cal, pipeline)
+        cal.add_corner((0.2, 0.3))
+        cal.add_corner((0.7, 0.3))
+        cal.add_corner((0.75, 0.7))
+        cal.add_corner((0.25, 0.7))
+        cal.finish_corners()
+        cal.finish_alignment(1)
         cal.observe_gesture("point")
         cal.observe_gesture("pinch")
         cal.observe_gesture("swipe")
@@ -1328,60 +834,12 @@ class ClassroomWindow(QMainWindow):
         report = cal.complete()
         if report.mapping is not None:
             self.session.pointer.set_calibration(report.mapping)
-            if pipeline is not None and pipeline.touch_detector is not None:
-                pipeline.touch_detector.set_calibration(report.mapping)
-                if cal.touch_plane:
-                    pipeline.touch_detector.load_plane_calibration(cal.touch_plane)
         QMessageBox.information(
             self, i18n.t("calibration.title"),
             i18n.t("calibration.body",
                    homography=i18n.t("calibration.ok") if report.mapping else i18n.t("calibration.fallback"),
                    err=report.alignment_error,
                    stages=", ".join(s for s in STAGE_ORDER)))
-
-    def _quick_calibrate_pointer(self) -> None:
-        """A fast mid-class touch-up: 3 taps instead of the full wizard's 4
-        corners + optional touch plane + 5-target alignment check. Updates
-        the pointer (and, if wall mode's touch detector exists, that too)
-        in place -- does not touch ``ProjectorCalibration``'s stage report,
-        so it never interferes with a later full re-calibration."""
-        from .calibration import QUICK_CALIB_TARGETS, quick_calibrate
-
-        pipeline = getattr(self, "_pipeline", None)
-        if pipeline is None or pipeline.tracker is None:
-            self.show_log(i18n.t("calibration.quick_no_camera"))
-            return
-
-        from PySide6.QtCore import QEventLoop
-
-        overlay = getattr(self, "_overlay", None)
-        measured: list[tuple[float, float]] = []
-        for i, target in enumerate(QUICK_CALIB_TARGETS):
-            if overlay is not None:
-                overlay.set_calibration_target(target)
-            QMessageBox.information(
-                self, i18n.t("calibration.title"),
-                i18n.t("calibration.quick_point_step", n=i + 1,
-                       total=len(QUICK_CALIB_TARGETS)))
-            pipeline.begin_fingertip_capture()
-            loop = QEventLoop()
-            QTimer.singleShot(1200, loop.quit)
-            loop.exec()
-            median = _median_point(pipeline.end_fingertip_capture())
-            if median is not None:
-                measured.append(median)
-
-        if overlay is not None:
-            overlay.set_calibration_target(None)
-
-        mapping = quick_calibrate(measured)
-        if mapping is not None:
-            self.session.pointer.set_calibration(mapping)
-            if pipeline.touch_detector is not None:
-                pipeline.touch_detector.set_calibration(mapping)
-            self.show_log(i18n.t("calibration.quick_done", n=len(measured)))
-        else:
-            self.show_log(i18n.t("calibration.quick_incomplete", n=len(measured)))
 
     # ---- status refresh ------------------------------------------------------
     def refresh(self) -> None:
@@ -1419,10 +877,6 @@ class ClassroomWindow(QMainWindow):
                               if s.annotation_tool else "—"))
         self._status_labels["strokes"].setText(
             self._status_text("strokes", s.stroke_count))
-        self._status_labels["board"].setText(
-            self._status_text("board",
-                              f"{s.board_page}/{s.board_pages} · "
-                              f"{i18n.t('bg.' + s.board_background)}"))
         self._status_labels["safety"].setText(
             self._status_text("safety", s.last_decision))
         self._status_labels["fps"].setText(
@@ -1431,22 +885,6 @@ class ClassroomWindow(QMainWindow):
         self._set_env_label("noise", s.ambient_noise)
         hand_state = "visible" if s.hand_visible else "lost"
         self._set_env_label("hand", hand_state)
-        self._wall_mode_btn.setChecked(s.interaction_mode == "wall")
-        self._lesson_progress_lbl.setText(s.lesson_progress or i18n.t("label.lesson_none"))
-        board = self.session.board
-        self._board_page_lbl.setText(f"{board.current_index + 1}/{board.page_count}")
-        bg_idx = self._board_bg_keys.index(board.current.background)
-        if self.board_bg_combo.currentIndex() != bg_idx:
-            self.board_bg_combo.blockSignals(True)
-            self.board_bg_combo.setCurrentIndex(bg_idx)
-            self.board_bg_combo.blockSignals(False)
-        if self._perf_check.isChecked() != s.performance_mode:
-            # Reflects an auto-triggered low-CPU switch too, not just the
-            # checkbox's own clicks -- see ClassroomPipeline's sustained-low-FPS
-            # watchdog in _loop().
-            self._perf_check.blockSignals(True)
-            self._perf_check.setChecked(s.performance_mode)
-            self._perf_check.blockSignals(False)
         self.status_changed.emit(s)
         self._burst_repaint()
 
@@ -1494,14 +932,6 @@ class ClassroomWindow(QMainWindow):
             run(ci.ZOOM_OUT)
         elif key == Qt.Key.Key_Delete:
             run(ci.ANNOTATION_CLEAR)
-        elif key == Qt.Key.Key_W:
-            run(ci.TOGGLE_WALL_MODE)
-        elif ctrl and key == Qt.Key.Key_N:
-            run(ci.BOARD_ADD_PAGE)
-        elif ctrl and key == Qt.Key.Key_Z:
-            run(ci.BOARD_UNDO)
-        elif key == Qt.Key.Key_P:
-            run(ci.PARTICIPATION_MARK)
         elif key in (Qt.Key.Key_A, Qt.Key.Key_C, Qt.Key.Key_D):
             letter = chr(key)
             idx = {"A": 0, "C": 2, "D": 3}[letter]
@@ -1509,6 +939,348 @@ class ClassroomWindow(QMainWindow):
         else:
             super().keyPressEvent(event)
         self.refresh()
+
+
+# ---------------------------------------------------------------------------
+# Camera + gesture + voice pipeline.
+# ---------------------------------------------------------------------------
+def _camera_backend(cv2_mod) -> int:
+    """Pick the video backend: DirectShow fails fast (returns "no frame") on a
+    busy/broken webcam instead of hanging forever like MSMF on Windows."""
+    if os.name == "nt" and hasattr(cv2_mod, "CAP_DSHOW"):
+        return cv2_mod.CAP_DSHOW
+    return getattr(cv2_mod, "CAP_ANY", 0)
+
+
+class _CameraReader:
+    """Runs ``cam.read()`` on its own thread.
+
+    DirectShow "fails fast" most of the time, but a contended or flaky
+    webcam driver can still make ``read()`` block indefinitely (no timeout
+    of its own). That used to happen inside the main pipeline loop, so one
+    stuck read froze gesture handling, voice routing and the classroom
+    clock together — the window kept answering Windows' ping (different
+    thread), which made it look "responsive but doing nothing" instead of
+    visibly crashed. Isolating the read here means a hang only ever stales
+    the camera frame; the existing 4s watchdog in the pipeline loop still
+    detects and recovers from that via ``_fallback_from_camera``.
+    """
+
+    def __init__(self, cam) -> None:
+        self._cam = cam
+        self._lock = threading.Lock()
+        self._frame = None
+        self._ts = 0.0
+        self._running = threading.Event()
+        self._running.set()
+        self._thread = threading.Thread(
+            target=self._loop, name="edu_air_camreader", daemon=True)
+        self._thread.start()
+
+    def _loop(self) -> None:
+        while self._running.is_set():
+            try:
+                ok, frame = self._cam.read()
+            except Exception:
+                ok, frame = False, None
+            if ok and frame is not None:
+                with self._lock:
+                    self._frame = frame
+                    self._ts = time.monotonic()
+            else:
+                time.sleep(0.01)
+
+    def latest(self):
+        """Returns ``(frame_or_None, age_seconds)``."""
+        with self._lock:
+            frame, ts = self._frame, self._ts
+        age = (time.monotonic() - ts) if ts else float("inf")
+        return frame, age
+
+    def stop(self) -> None:
+        self._running.clear()
+        self._thread.join(timeout=1.0)
+
+
+class ClassroomPipeline(QObject):
+    frame_ready = Signal(object)
+    voice_ready = Signal(str)
+    log_line = Signal(str)
+    camera_state = Signal(str)  # "on" | "off" | "demo"
+
+    def __init__(self, session: ClassroomSession, parent=None):
+        super().__init__(parent)
+        self.session = session
+        self._running = threading.Event()
+        self._thread: Optional[threading.Thread] = None
+        self.tracker = None
+        self.gesture_engine = None
+        self._env_quality = None
+        self._last_tracked: list = []
+        self._noise_closed = threading.Event()
+        self._noise_thread: Optional[threading.Thread] = None
+        self._preview_h = 200
+        self._last_frame = None
+        self._demo_fallback = session.mode == "demo"
+        self._camera_fallback = False   # webcam unusable -> synthetic pointer
+        self._requested_camera_index: int | None = None
+
+    def request_camera_index(self, index: int) -> None:
+        self._requested_camera_index = index
+
+    # ---- lifecycle ------------------------------------------------------------
+    def start(self) -> None:
+        if self._thread is not None:
+            return
+        self._running.set()
+        self._thread = threading.Thread(target=self._loop, name="edu_air_pipeline",
+                                        daemon=True)
+        self._thread.start()
+        try:
+            self._start_voice()
+        except Exception:
+            self.log_line.emit("voice unavailable")
+
+    def stop(self) -> None:
+        self._running.clear()
+        self._noise_closed.set()
+        if self._noise_thread is not None:
+            self._noise_thread.join(timeout=1.0)
+            self._noise_thread = None
+        if self._thread is not None:
+            self._thread.join(timeout=2.0)
+            self._thread = None
+
+    def _start_voice(self) -> None:
+        from hadj_no_touch.voice.speech_recognition import SpeechManager
+        from hadj_no_touch.config import VoiceSettings
+        lang = {"en": "en-US", "fr": "fr-FR", "ar": "ar-SA",
+                "nl": "nl-NL"} \
+            .get(self.session.settings.classroom.language, "en-US")
+        self._voice = SpeechManager(on_text=self.voice_ready.emit)
+        self._voice.settings = VoiceSettings(language=lang)
+        engine = self._voice.create()
+        if engine is not None:
+            self._voice.start()
+            self.log_line.emit(i18n.t("voice.engine", name=engine.name))
+        else:
+            self.log_line.emit(i18n.t("voice.unavailable"))
+
+        if self._demo_fallback:
+            self.session.set_environment(lighting="good", ambient_noise="ok",
+                                         hand_visible=True)
+        else:
+            self._noise_thread = threading.Thread(
+                target=self._noise_loop, name="edu_air_noise", daemon=True)
+            self._noise_thread.start()
+
+    def _noise_loop(self) -> None:
+        """Background ambient-noise meter -> classroom traffic light.
+
+        Backs off when the microphone is busy (e.g. the speech recogniser
+        holds it) so the two consumers never fight over the device."""
+        from .voice import NoiseProbe
+        probe = NoiseProbe()
+        state = "unknown"
+        misses = 0
+        period = 2.0
+        while not self._noise_closed.wait(period):
+            try:
+                v = probe.read(0.4)
+            except Exception:
+                v = "unknown"
+            if v == "unknown":
+                misses += 1
+                period = 6.0 if misses >= 2 else 2.0
+                continue
+            misses = 0
+            period = 2.0
+            state = v
+            try:
+                self.session.set_environment(ambient_noise=state)
+            except Exception:
+                pass
+
+    def _fallback_from_camera(self) -> None:
+        """Camera open/read watchdog: drop the webcam, keep the class going
+        with synthetic pointers and honest "unknown" environment states."""
+        if self._camera_fallback:
+            return
+        self._camera_fallback = True
+        try:
+            self.camera_state.emit("off")
+        except Exception:
+            pass
+        try:
+            self.session.set_environment(hand_visible=False)
+        except Exception:
+            pass
+        self.log_line.emit(
+            "Camera unavailable — synthetic pointer mode. "
+            "Close other apps using the webcam and restart.")
+
+    # ---- main loop --------------------------------------------------------------
+    def _loop(self) -> None:
+        try:
+            import cv2
+        except Exception:
+            cv2 = None
+        from hadj_no_touch.performance import EnvironmentQuality
+        from hadj_no_touch.vision.hand_tracking import HandTracker
+        from hadj_no_touch.gestures import gesture_engine as ge
+        self._env_quality = EnvironmentQuality()
+
+        cam = None
+        cap_w, cap_h = self.session.settings.classroom.capture_size()
+        if not self._demo_fallback and cv2 is not None:
+            try:
+                from hadj_no_touch.camera.camera_config import resolve_camera, apply_exposure
+                cam_idx, backend = resolve_camera(preferred=0, max_index=4)
+                if cam_idx >= 0:
+                    backend_arg = backend if backend is not None else _camera_backend(cv2)
+                    cam = cv2.VideoCapture(cam_idx, backend_arg)
+                    if cam.isOpened():
+                        cam.set(cv2.CAP_PROP_FRAME_WIDTH, cap_w)
+                        cam.set(cv2.CAP_PROP_FRAME_HEIGHT, cap_h)
+                        apply_exposure(cam)
+                        ok_test, test_frame = cam.read()
+                        if not ok_test or test_frame is None or test_frame.size == 0:
+                            # Re-open at native resolution if resolution change broke output
+                            cam.release()
+                            cam = cv2.VideoCapture(cam_idx, backend_arg)
+                            apply_exposure(cam)
+            except Exception:
+                try:
+                    if cam is not None:
+                        cam.release()
+                except Exception:
+                    pass
+                cam = None
+
+            if (cam is None or not cam.isOpened()) and cv2 is not None:
+                try:
+                    cam = cv2.VideoCapture(0, _camera_backend(cv2))
+                    if cam.isOpened():
+                        cam.set(cv2.CAP_PROP_FRAME_WIDTH, cap_w)
+                        cam.set(cv2.CAP_PROP_FRAME_HEIGHT, cap_h)
+                except Exception:
+                    try:
+                        if cam is not None:
+                            cam.release()
+                    except Exception:
+                        pass
+                    cam = None
+
+        if self._demo_fallback:
+            self.camera_state.emit("demo")
+        else:
+            self.camera_state.emit(
+                "on" if cam is not None and cam.isOpened() else "off")
+
+        self.tracker = HandTracker()
+        self.gesture_engine = ge.GestureEngine()
+
+        # cam.read() itself has no timeout, and some Windows camera drivers
+        # (DirectShow included, under contention) can stall on it forever.
+        # Isolate the read on its own thread so a stuck driver only ever
+        # stales the frame instead of freezing gestures/voice/the classroom
+        # clock — see _CameraReader.
+        reader = _CameraReader(cam) if cam is not None else None
+
+        cursor_fps = 0.0
+        t0 = time.monotonic()
+        frame_idx = 0
+        tracked: list = []
+        camera_dead_at: float | None = None
+        while self._running.is_set():
+            now = time.monotonic()
+            dt = now - t0
+            t0 = now
+            if dt > 0.001:
+                cursor_fps = cursor_fps * 0.9 + (1.0 / dt) * 0.1
+            frame_idx += 1
+            every = self.session.settings.classroom.tracking_interval()
+
+            real_hands: list = []
+            if reader is not None:
+                frame, age = reader.latest()
+                if frame is not None and age < 4.0:
+                    camera_dead_at = None
+                    self._last_frame = frame
+                    if frame_idx % every == 0:
+                        tracked = self.tracker.detect(frame, cap_w, cap_h)
+                        env = self._env_quality.estimate(frame)
+                        if env is not None:
+                            self.session.set_environment(lighting=env.lighting)
+                    real_hands = list(tracked)
+                    self._emit_preview(frame)
+                else:
+                    if camera_dead_at is None:
+                        camera_dead_at = now
+                    elif now - camera_dead_at >= 4.0:
+                        self._fallback_from_camera()
+                        reader.stop()
+                        reader = None
+                        if cam is not None:
+                            cam.release()
+                        cam = None
+            elif self._demo_fallback:
+                real_hands = self._synthetic_hands(now)
+
+            hands = real_hands
+            if self._demo_fallback or not hands:
+                if not hands:
+                    hands = self._synthetic_hands(now)
+            self.session.set_environment(
+                hand_visible=bool(real_hands) or self._demo_fallback)
+
+            pointer_norm = None
+            if hands:
+                tip = hands[0].landmarks_norm[8]
+                pointer_norm = (float(tip[0]), float(tip[1]))
+            self.session.update_pointer(pointer_norm)
+
+            events = self.gesture_engine.update(hands, None, cap_w, cap_h)
+            for ev in events:
+                log = self.log_line
+                try:
+                    self.session.handle_gesture(ev)
+                except Exception:
+                    pass
+
+            self.session._fps = cursor_fps
+            self.session.tick(dt)
+            if dt >= 0.5:
+                self.log_line.emit(f"fps {cursor_fps:.1f} hands {len(hands)}")
+            # keep the loop gentle on CPU: ~30 fps (or ~15 in performance mode)
+            time.sleep(0.033 if every == 1 else 0.066)
+
+        if reader is not None:
+            reader.stop()
+        if cam is not None:
+            cam.release()
+        self.tracker.close()
+
+    def _synthetic_hands(self, now: float):
+        from .demo import synthetic_hand, moving_point
+        import math
+        t = now
+        g = "point"
+        if self.session.quiz.active and int(t) % 6 == 0:
+            g = "palm"
+        pos = moving_point(t)
+        return [synthetic_hand(g, pos)]
+
+    def _emit_preview(self, frame) -> None:
+        try:
+            h0, w0 = frame.shape[:2]
+            scale = self._preview_h / h0
+            import cv2
+            small = cv2.resize(frame, (int(w0 * scale), self._preview_h))
+            rgb = cv2.cvtColor(small, cv2.COLOR_BGR2RGB)
+            self.frame_ready.emit(rgb)
+        except Exception:
+            pass
 
 
 def make_session(mode: str = "real") -> ClassroomSession:

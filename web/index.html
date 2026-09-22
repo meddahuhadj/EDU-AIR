@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" dir="ltr">
 <head>
   <meta charset="UTF-8">
@@ -197,6 +197,84 @@
           <li class="stat reveal stat-3" style="--d:.14s"><span class="stat-num">1</span><span class="stat-label" data-i18n="stats.webcam">webcam</span></li>
           <li class="stat reveal stat-4" style="--d:.21s"><span class="stat-num">0</span><span class="stat-label" data-i18n="stats.touch">touch</span></li>
         </ul>
+      </div>
+    </section>
+
+    <!-- ============ EDU-AIR VS TNI COMPARISON ============ -->
+    <section class="section" id="tni-vs-eduair" aria-labelledby="tni-title">
+      <div class="container">
+        <div class="section-head reveal">
+          <p class="eyebrow">Comparison Matrix & ROI Calculator</p>
+          <h2 id="tni-title">L'Application <span class="grad-text">EDU-AIR</span> vs Tableau TNI Classique</h2>
+          <p class="lede">Découvrez pourquoi EDU-AIR Smart Surface surpasse les tableaux numériques interactifs physiques traditionnels tout en économisant jusqu'à 95% de votre budget équipement.</p>
+        </div>
+
+        <div class="tni-grid reveal">
+          <!-- Interactive ROI Calculator Card -->
+          <div class="tni-calc-card glass">
+            <h3>🧮 Calculateur d'Économies Établissement</h3>
+            <p>Estimez les économies réalisées en remplaçant les TNI physiques par la solution logicielle EDU-AIR.</p>
+            <div class="calc-inputs">
+              <label for="calc-rooms">Nombre de classes à équiper :</label>
+              <input type="range" id="calc-rooms" min="1" max="50" value="10" oninput="updateROICalculator(this.value)">
+              <span class="calc-val"><strong id="calc-rooms-val">10</strong> classes</span>
+            </div>
+            <div class="calc-results">
+              <div class="calc-res-item">
+                <span class="res-label">Coût TNI Physique (2 500 €/classe)</span>
+                <span class="res-num res-tni" id="calc-tni-cost">25 000 €</span>
+              </div>
+              <div class="calc-res-item">
+                <span class="res-label">Coût EDU-AIR (Logiciel + Webcam)</span>
+                <span class="res-num res-edu" id="calc-edu-cost">300 €</span>
+              </div>
+              <div class="calc-res-highlight">
+                <span>Économie Totale Réalisée :</span>
+                <strong id="calc-savings">24 700 € (98.8%)</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- Key Advantages Grid -->
+          <div class="tni-matrix-wrap glass">
+            <table class="tni-table" role="grid">
+              <thead>
+                <tr>
+                  <th>Critère</th>
+                  <th>📱 Application EDU-AIR</th>
+                  <th>📺 Tableau TNI / TBI</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Matériel Requis</strong></td>
+                  <td><span class="badge badge-green">0 € (PC + Webcam)</span></td>
+                  <td><span class="badge badge-red">2 000 €–8 000 €</span></td>
+                </tr>
+                <tr>
+                  <td><strong>Hygiène & Contact</strong></td>
+                  <td>100% Sans contact (Air Pointer)</td>
+                  <td>Contact direct / Stylos à batterie</td>
+                </tr>
+                <tr>
+                  <td><strong>Ergonomics & Fatigue</strong></td>
+                  <td>Mode Micro-gestes anti-fatigue</td>
+                  <td>Déplacements continus au mur</td>
+                </tr>
+                <tr>
+                  <td><strong>IA & Formes</strong></td>
+                  <td>Dessin auto + Voix Trilingue</td>
+                  <td>Tableau blanc basique</td>
+                </tr>
+                <tr>
+                  <td><strong>Export du Cours</strong></td>
+                  <td>1-Clic PNG / PDF automatique</td>
+                  <td>Capture manuelle complexe</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </section>
 

@@ -11,7 +11,7 @@ safety gate re-checks every one right before it runs.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 from typing import Optional
 
 from hadj_no_touch.gestures import gesture_engine as ge
@@ -38,20 +38,11 @@ SCROLL_DOWN = "SCROLL_DOWN"
 POINTER_ON = "POINTER_ON"
 POINTER_OFF = "POINTER_OFF"
 
-TOGGLE_WALL_MODE = "TOGGLE_WALL_MODE"
-
 ANNOTATION_DRAW = "ANNOTATION_DRAW"
 ANNOTATION_HIGHLIGHT = "ANNOTATION_HIGHLIGHT"
 ANNOTATION_ERASE = "ANNOTATION_ERASE"
 ANNOTATION_CLEAR = "ANNOTATION_CLEAR"
-
-BOARD_NEXT_PAGE = "BOARD_NEXT_PAGE"
-BOARD_PREV_PAGE = "BOARD_PREV_PAGE"
-BOARD_ADD_PAGE = "BOARD_ADD_PAGE"
-BOARD_CLEAR_PAGE = "BOARD_CLEAR_PAGE"
-BOARD_DELETE_PAGE = "BOARD_DELETE_PAGE"
-BOARD_BACKGROUND = "BOARD_BACKGROUND"         # params: name in blank|grid|lines
-BOARD_UNDO = "BOARD_UNDO"
+ANNOTATION_SHAPE = "ANNOTATION_SHAPE"
 
 QUIZ_START = "QUIZ_START"
 QUIZ_STOP = "QUIZ_STOP"
@@ -63,11 +54,8 @@ QUIZ_RESTART = "QUIZ_RESTART"
 
 TIMER_START = "TIMER_START"
 TIMER_STOP = "TIMER_STOP"
-
-PARTICIPATION_MARK = "PARTICIPATION_MARK"
-
-LESSON_NEXT = "LESSON_NEXT"
-LESSON_PREV = "LESSON_PREV"
+LESSON_SAVE = "LESSON_SAVE"
+MICRO_GESTURES_TOGGLE = "MICRO_GESTURES_TOGGLE"
 
 
 @dataclass
@@ -90,29 +78,17 @@ ACTION_DOMAIN: dict[str, str] = {
     PAUSE_PRESENTATION: "presentation", RESUME_PRESENTATION: "presentation",
     ZOOM_IN: "presentation",
     ZOOM_OUT: "presentation", SCROLL_UP: "presentation", SCROLL_DOWN: "presentation",
-    POINTER_ON: "pointer", POINTER_OFF: "pointer",
-    TOGGLE_WALL_MODE: "pointer",
+    POINTER_ON: "pointer", POINTER_OFF: "pointer", MICRO_GESTURES_TOGGLE: "pointer",
     ANNOTATION_DRAW: "annotation", ANNOTATION_HIGHLIGHT: "annotation",
     ANNOTATION_ERASE: "annotation", ANNOTATION_CLEAR: "annotation",
-    BOARD_NEXT_PAGE: "board", BOARD_PREV_PAGE: "board",
-    BOARD_ADD_PAGE: "board", BOARD_CLEAR_PAGE: "board",
-    BOARD_DELETE_PAGE: "board", BOARD_BACKGROUND: "board", BOARD_UNDO: "board",
+    ANNOTATION_SHAPE: "annotation", LESSON_SAVE: "annotation",
     QUIZ_START: "quiz", QUIZ_STOP: "quiz", QUIZ_NEXT: "quiz",
     QUIZ_PREV: "quiz", QUIZ_ANSWER: "quiz", QUIZ_REVEAL: "quiz",
     QUIZ_RESTART: "quiz",
     TIMER_START: "timer", TIMER_STOP: "timer",
-    PARTICIPATION_MARK: "participation",
-    LESSON_NEXT: "lesson", LESSON_PREV: "lesson",
 }
 
-# Safety toggles bypass confirmation prompts so a reflexive command always
-# lands immediately — TOGGLE_WALL_MODE joins pause/pointer here because
-# switching in or out of wall mode must never be stuck behind a "confirm?"
-# dialog while the teacher's hand is on the wall. PARTICIPATION_MARK joins
-# them for the same reason: a classroom tally is only useful if it never
-# waits on a confirmation dialog while the teacher moves on.
-SAFETY_TOGGLES = {PAUSE_PRESENTATION, RESUME_PRESENTATION, POINTER_ON, POINTER_OFF,
-                  TOGGLE_WALL_MODE, PARTICIPATION_MARK}
+SAFETY_TOGGLES = {PAUSE_PRESENTATION, RESUME_PRESENTATION, POINTER_ON, POINTER_OFF, MICRO_GESTURES_TOGGLE}
 
 
 # ---------------------------------------------------------------------------
@@ -127,16 +103,6 @@ GESTURE_ACTIONS: dict[str, str] = {
     ge.CIRCLE_CCW: ZOOM_OUT,
     ge.PALM_HOLD: PAUSE_PRESENTATION,
 }
-
-
-def board_background_from_text(text: str) -> str:
-    """Guess the requested board background skin from spoken text (EN/FR/AR)."""
-    t = text.lower()
-    if "quadr" in t or "grid" in t or "شبك" in t or "réseau" in t or "rooster" in t:
-        return "grid"
-    if "lign" in t or "line" in t or "règl" in t or "سطر" in t or "رجول" in t or "lijnen" in t:
-        return "lines"
-    return "blank"
 
 
 # Generic next/previous navigation intents from the HADJ catalogue. Bare
@@ -168,8 +134,6 @@ class ClassroomIntentEngine:
         params["language"] = result.language
         params["confidence"] = result.confidence
         params["generic_nav"] = result.intent in (GENERIC_NEXT + GENERIC_PREV)
-        if action == BOARD_BACKGROUND:
-            params["name"] = board_background_from_text(result.raw_text)
         self.last = ClassroomIntent(
             action=action,
             params=params,
@@ -198,31 +162,22 @@ class ClassroomIntentEngine:
             cvoice.ANSWER_LETTER: QUIZ_ANSWER,
             cvoice.POINTER_ON: POINTER_ON,
             cvoice.POINTER_OFF: POINTER_OFF,
-            cvoice.TOGGLE_WALL_MODE: TOGGLE_WALL_MODE,
             cvoice.DRAW: ANNOTATION_DRAW,
             cvoice.HIGHLIGHT: ANNOTATION_HIGHLIGHT,
             cvoice.ERASE_ANNOTATION: ANNOTATION_ERASE,
             cvoice.CLEAR_ANNOTATIONS: ANNOTATION_CLEAR,
-            cvoice.BOARD_NEXT_PAGE: BOARD_NEXT_PAGE,
-            cvoice.BOARD_PREV_PAGE: BOARD_PREV_PAGE,
-            cvoice.BOARD_ADD_PAGE: BOARD_ADD_PAGE,
-            cvoice.BOARD_CLEAR_PAGE: BOARD_CLEAR_PAGE,
-            cvoice.BOARD_DELETE_PAGE: BOARD_DELETE_PAGE,
-            cvoice.BOARD_BACKGROUND: BOARD_BACKGROUND,
-            cvoice.BOARD_UNDO: BOARD_UNDO,
+            cvoice.SET_DRAW_SHAPE: ANNOTATION_SHAPE,
+            cvoice.SAVE_LESSON: LESSON_SAVE,
+            cvoice.TOGGLE_MICRO_GESTURES: MICRO_GESTURES_TOGGLE,
             cvoice.PAUSE_PRESENTATION: PAUSE_PRESENTATION,
             cvoice.RESUME_PRESENTATION: RESUME_PRESENTATION,
             cvoice.NEXT_EXERCISE: NEXT_SLIDE,
             cvoice.START_TIMER: TIMER_START,
             cvoice.STOP_TIMER: TIMER_STOP,
-            cvoice.PARTICIPATION_MARK: PARTICIPATION_MARK,
-            cvoice.LESSON_NEXT: LESSON_NEXT,
-            cvoice.LESSON_PREV: LESSON_PREV,
             vc.GO_FORWARD: NEXT_SLIDE,
             vc.NEXT_PAGE: NEXT_SLIDE,
             vc.GO_BACK: PREV_SLIDE,
             vc.PREV_PAGE: PREV_SLIDE,
-            vc.UNDO: BOARD_UNDO,
         }
         return mapped.get(intent)
 
@@ -244,20 +199,15 @@ class ClassroomIntentEngine:
         return self.last
 
     # ---- context routing ---------------------------------------------------
-    def route(self, intent: ClassroomIntent, quiz_active: bool,
-              domain: str | None = None,
-              presentation_active: bool = False) -> Optional[ClassroomIntent]:
+    def route(self, intent: ClassroomIntent, quiz_active: bool) -> Optional[ClassroomIntent]:
         """Filter an intent based on the current classroom state.
 
         Rules:
           * safety toggles always pass (stop accidents, never blocked);
-          * while a quiz is running, non-quiz actions are diverted to the
-            background (ignored) except pause/stop of the quiz itself;
-          * pointer / annotation actions always pass;
-          * while the whiteboard (board) domain is active and no real
-            presentation is running, "next / previous" navigation (slide
-            gesture or generic voice nav) advances the board pages instead
-            of the slide deck.
+          * while a quiz is running, presentation/animation actions that are
+            not quiz-related are diverted to the background (ignored) except
+            pause/stop of the quiz itself;
+          * pointer / annotation actions always pass.
         """
         if intent.action in SAFETY_TOGGLES:
             return intent
@@ -268,14 +218,7 @@ class ClassroomIntentEngine:
             if intent.action in swap:
                 intent.action = swap[intent.action]
                 return intent
-        # Board domain: navigation meaning shifts from slides to board pages
-        # as long as no real presentation deck is actually controlling focus.
-        if (domain == "board" and not presentation_active
-                and intent.action in (NEXT_SLIDE, PREV_SLIDE)):
-            repl = {NEXT_SLIDE: BOARD_NEXT_PAGE, PREV_SLIDE: BOARD_PREV_PAGE}[intent.action]
-            return replace(intent, action=repl)
-        domain_name = ACTION_DOMAIN.get(intent.action, "general")
-        if quiz_active and domain_name in ("presentation", "annotation",
-                                           "board", "timer"):
+        domain = ACTION_DOMAIN.get(intent.action, "general")
+        if quiz_active and domain in ("presentation", "annotation", "timer"):
             return None
         return intent

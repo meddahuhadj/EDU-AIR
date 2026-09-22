@@ -16,8 +16,6 @@ Supported classroom voice control:
   "Draw", "Highlight", "Erase", "Clear annotations"
   "Show pointer / Hide pointer"
   "Start timer"
-  Board: "next page", "new page", "grid / ruled lines / blank page", "undo"
-  Lesson sequencer: "next step" / "previous step"
 
 Every phrase resolves to a canonical classroom intent. The classroom intent
 engine then maps it to an approved, registered classroom action (see
@@ -41,7 +39,6 @@ ANSWER_LETTER = "ANSWER_LETTER"
 REVEAL_ANSWER = "REVEAL_ANSWER"
 POINTER_ON = "POINTER_ON"
 POINTER_OFF = "POINTER_OFF"
-TOGGLE_WALL_MODE = "TOGGLE_WALL_MODE"
 ANNOTATE = "ANNOTATE"            # params: tool in draw|highlight|erase
 DRAW = "DRAW"
 HIGHLIGHT = "HIGHLIGHT"
@@ -52,18 +49,9 @@ RESUME_PRESENTATION = "RESUME_PRESENTATION"
 NEXT_EXERCISE = "NEXT_EXERCISE"
 START_TIMER = "START_TIMER"
 STOP_TIMER = "STOP_TIMER"
-PARTICIPATION_MARK = "PARTICIPATION_MARK"
-LESSON_NEXT = "LESSON_NEXT"
-LESSON_PREV = "LESSON_PREV"
-
-# --- interactive whiteboard (TNI) -------------------------------------------
-BOARD_NEXT_PAGE = "BOARD_NEXT_PAGE"
-BOARD_PREV_PAGE = "BOARD_PREV_PAGE"
-BOARD_ADD_PAGE = "BOARD_ADD_PAGE"
-BOARD_CLEAR_PAGE = "BOARD_CLEAR_PAGE"
-BOARD_DELETE_PAGE = "BOARD_DELETE_PAGE"
-BOARD_BACKGROUND = "BOARD_BACKGROUND"          # raw text scanned for the skin
-BOARD_UNDO = "BOARD_UNDO"
+SAVE_LESSON = "SAVE_LESSON"
+TOGGLE_MICRO_GESTURES = "TOGGLE_MICRO_GESTURES"
+SET_DRAW_SHAPE = "SET_DRAW_SHAPE"
 
 # Intent constants already defined by the HADJ voice catalogue that the
 # classroom reuses directly.
@@ -220,16 +208,6 @@ CLASSROOM_COMMANDS: list[dict] = [
     {"intent": POINTER_OFF, "langs": ["ar"],
      "patterns": [r"اخفاء\s+المؤشر|ايقاف\s+المؤشر"]},
 
-    # --- wall / touch mode -----------------------------------------------------
-    {"intent": TOGGLE_WALL_MODE, "langs": ["en"],
-     "patterns": [r"\b(?:wall|touch|smartboard)\s+mode\b",
-                  r"\bswitch\s+to\s+(?:the\s+)?(?:wall|touch)\s+mode\b"]},
-    {"intent": TOGGLE_WALL_MODE, "langs": ["fr"],
-     "patterns": [r"\bmode\s+mural\b", r"\bmode\s+tableau\b",
-                  r"\bpasse(?:r)?\s+(?:en|au)\s+mode\s+mural\b"]},
-    {"intent": TOGGLE_WALL_MODE, "langs": ["ar"],
-     "patterns": [r"وضع\s+الجدار|وضع\s+اللمس"]},
-
     # --- annotation tools -----------------------------------------------------
     {"intent": DRAW, "langs": ["en", "fr"],
      "patterns": [r"\bdraw(?:ing)?\s+mode\b", r"\bdessin\s+mode\b", r"\bdessiner\b"]},
@@ -257,80 +235,6 @@ CLASSROOM_COMMANDS: list[dict] = [
     {"intent": CLEAR_ANNOTATIONS, "langs": ["ar"],
      "patterns": [r"امسح\s+السبورخ|امسح\s+السبوره|مسح\s+الكل"]},
 
-    # --- interactive board (TNI) ----------------------------------------------
-    {"intent": BOARD_NEXT_PAGE, "langs": ["en"],
-     "patterns": [r"\b(?:next|following)\s+(?:board\s+)?page\b",
-                  r"\bnext\s+(?:tni\s+)?whiteboard\b", r"\bfollowing\s+sheet\b"]},
-    {"intent": BOARD_NEXT_PAGE, "langs": ["fr"],
-     "patterns": [r"\bpage\s+suivante\b", r"\b(?:tableau|panneau)\s+suivant\b"]},
-    {"intent": BOARD_NEXT_PAGE, "langs": ["ar"],
-     "patterns": [r"الصفحة\s+التالية|الصفحات\s+التاليه|التالي\s+في\s+السبوره"]},
-    {"intent": BOARD_NEXT_PAGE, "langs": ["nl"],
-     "patterns": [r"\bvolgende\s+pagina\b", r"\bvolgende\s+blad\b"]},
-
-    {"intent": BOARD_PREV_PAGE, "langs": ["en"],
-     "patterns": [r"\bprevious\s+(?:board\s+)?page\b",
-                  r"\bprevious\s+(?:tni\s+)?whiteboard\b", r"\bprevious\s+sheet\b"]},
-    {"intent": BOARD_PREV_PAGE, "langs": ["fr"],
-     "patterns": [r"\bpage\s+pr[ée]c[ée]dente\b"]},
-    {"intent": BOARD_PREV_PAGE, "langs": ["ar"],
-     "patterns": [r"الصفحة\s+السابقة|السابق\s+في\s+السبوره"]},
-    {"intent": BOARD_PREV_PAGE, "langs": ["nl"],
-     "patterns": [r"\bvorige\s+pagina\b", r"\bvorige\s+blad\b"]},
-
-    {"intent": BOARD_ADD_PAGE, "langs": ["en"],
-     "patterns": [r"\b(?:new|another)\s+(?:board\s+)?page\b",
-                  r"\badd\s+(?:a\s+|an\s+)?page\b", r"\bfresh\s+page\b"]},
-    {"intent": BOARD_ADD_PAGE, "langs": ["fr"],
-     "patterns": [r"\bnouvelle\s+page\b", r"\bnouvelle\s+feuille\b",
-                  r"\bajouter\s+(?:une\s+)?page\b"]},
-    {"intent": BOARD_ADD_PAGE, "langs": ["ar"],
-     "patterns": [r"صفحة\s+جديدة|ورقة\s+جديدة"]},
-    {"intent": BOARD_ADD_PAGE, "langs": ["nl"],
-     "patterns": [r"\bnieuwe\s+pagina\b", r"\bnieuw\s+blad\b"]},
-
-    {"intent": BOARD_CLEAR_PAGE, "langs": ["en"],
-     "patterns": [r"\bclear\s+(?:this|the)\s+page\b", r"\berase\s+(?:this|the)\s+page\b"]},
-    {"intent": BOARD_CLEAR_PAGE, "langs": ["fr"],
-     "patterns": [r"\befface(r)?\s+cette\s+page\b", r"\bvider\s+cette\s+page\b"]},
-    {"intent": BOARD_CLEAR_PAGE, "langs": ["ar"],
-     "patterns": [r"امسح\s+هذه\s+الصفحة|مسح\s+هذه\s+الصفحة"]},
-    {"intent": BOARD_CLEAR_PAGE, "langs": ["nl"],
-     "patterns": [r"\bwis\s+(?:deze|de)\s+pagina\b"]},
-
-    {"intent": BOARD_DELETE_PAGE, "langs": ["en"],
-     "patterns": [r"\bdelete\s+(?:this|the)\s+page\b", r"\bremove\s+(?:this|the)\s+page\b"]},
-    {"intent": BOARD_DELETE_PAGE, "langs": ["fr"],
-     "patterns": [r"\bsupprime\s+(?:cette|la)\s+page\b", r"\berase\s+(?:cette|la)\s+page\b"]},
-    {"intent": BOARD_DELETE_PAGE, "langs": ["ar"],
-     "patterns": [r"احذف\s+هذه\s+الصفحة|حذف\s+الصفحة"]},
-    {"intent": BOARD_DELETE_PAGE, "langs": ["nl"],
-     "patterns": [r"\bverwijder\s+(?:deze|de)\s+pagina\b"]},
-
-    {"intent": BOARD_BACKGROUND, "langs": ["en"],
-     "patterns": [r"\bgrid\s+(?:background\s+)?(?:on\s+)?(?:plea?se\s+page)?\b",
-                  r"\bruled\s+(?:lines|paper)\b",
-                  r"\b(?:empty|blank)\s+(?:page|whiteboard|board)\b"]},
-    {"intent": BOARD_BACKGROUND, "langs": ["fr"],
-     "patterns": [r"\bquadrill(?:age|é|e)\b", r"\blignes\s+r[ée]gl[ée]es\b",
-                  r"\bpage\s+(?:blanche|vide)\b", r"\bfond\s+quadrill[ée]\b"]},
-    {"intent": BOARD_BACKGROUND, "langs": ["ar"],
-     "patterns": [r"شبك|جدول|مسطره|سطر\s+مستقيم|صفحة\s+فارغه|خلفيه\s+شبكيه"]},
-    {"intent": BOARD_BACKGROUND, "langs": ["nl"],
-     "patterns": [r"\bruit\s+(?:blokjes|grid)\b", r"\blijnen\s+(?:papier)?\b",
-                  r"\blege\s+pagina\b"]},
-
-    {"intent": BOARD_UNDO, "langs": ["en"],
-     "patterns": [r"\bundo\b",
-                  r"\bundo\s+(?:the\s+(?:last\s+)?)?(?:stroke|drawing|annotation)\b"]},
-    {"intent": BOARD_UNDO, "langs": ["fr"],
-     "patterns": [r"\ban[nu]ul(?:e|er)\s+(?:le\s+)?dernier\s+tra(?:it|ç|ce)\b",
-                  r"\bannuler\s+le\s+dessin\b"]},
-    {"intent": BOARD_UNDO, "langs": ["ar"],
-     "patterns": [r"تراجع|ارجع\s+خطوه\s+واحده|الغاء\s+اخر\s+رسمه"]},
-    {"intent": BOARD_UNDO, "langs": ["nl"],
-     "patterns": [r"\bongedaan\s+maken\b", r"\bundo\b"]},
-
     # --- classroom timer ------------------------------------------------------
     {"intent": START_TIMER, "langs": ["en"],
      "patterns": [r"\b(?:start|begin|launch)\s+(?:a\s+|the\s+|this\s+)?(?:class|lesson)?\s*timer\b",
@@ -348,30 +252,31 @@ CLASSROOM_COMMANDS: list[dict] = [
     {"intent": STOP_TIMER, "langs": ["ar"],
      "patterns": [r"اوقف\s+المؤقت"]},
 
-    # --- participation tally --------------------------------------------------
-    {"intent": PARTICIPATION_MARK, "langs": ["en"],
-     "patterns": [r"\bparticipation\b",
-                  r"\b(?:mark|log|count)\s+(?:a\s+)?participation\b",
-                  r"\bgood\s+participation\b"]},
-    {"intent": PARTICIPATION_MARK, "langs": ["fr"],
-     "patterns": [r"\bparticipation\b",
-                  r"\b(?:note|marque)\s+(?:une\s+)?participation\b"]},
-    {"intent": PARTICIPATION_MARK, "langs": ["ar"],
-     "patterns": [r"سجل\s+مشاركه|مشاركه\s+جيده"]},
+    # --- lesson export / micro-gestures / shapes -------------------------------
+    {"intent": SAVE_LESSON, "langs": ["en"],
+     "patterns": [r"\bsave\s+(?:the\s+)?(?:lesson|course|notes|annotations|board)\b",
+                  r"\bexport\s+(?:the\s+)?lesson\b"]},
+    {"intent": SAVE_LESSON, "langs": ["fr"],
+     "patterns": [r"\bsauvegarder?\s+(?:le\s+)?(?:cours|tableau|notes)\b",
+                  r"\benregistrer?\s+le\s+cours\b"]},
+    {"intent": SAVE_LESSON, "langs": ["ar"],
+     "patterns": [r"احفظ\s+(?:الدرس|السبورة|الملاحظات)"]},
 
-    # --- lesson sequencer -------------------------------------------------------
-    {"intent": LESSON_NEXT, "langs": ["en"],
-     "patterns": [r"\bnext\s+step\b"]},
-    {"intent": LESSON_PREV, "langs": ["en"],
-     "patterns": [r"\b(?:previous|prior)\s+step\b"]},
-    {"intent": LESSON_NEXT, "langs": ["fr"],
-     "patterns": [r"\b[ée]tape\s+suivante\b"]},
-    {"intent": LESSON_PREV, "langs": ["fr"],
-     "patterns": [r"\b[ée]tape\s+pr[ée]c[ée]dente\b"]},
-    {"intent": LESSON_NEXT, "langs": ["ar"],
-     "patterns": [r"الخطوه\s+التاليه"]},
-    {"intent": LESSON_PREV, "langs": ["ar"],
-     "patterns": [r"الخطوه\s+السابقه"]},
+    {"intent": TOGGLE_MICRO_GESTURES, "langs": ["en"],
+     "patterns": [r"\b(?:toggle|enable|disable)\s+micro\s*gesture[s]?\s*(?:mode)?\b",
+                  r"\bmicro\s*gesture[s]?\s*mode\b"]},
+    {"intent": TOGGLE_MICRO_GESTURES, "langs": ["fr"],
+     "patterns": [r"\bmode\s+micro\s*gestes?\b",
+                  r"\bactiver?\s+micro\s*gestes?\b"]},
+    {"intent": TOGGLE_MICRO_GESTURES, "langs": ["ar"],
+     "patterns": [r"وضع\s+الإيماءات\s+المصغرة|إيماءات\s+مصغرة"]},
+
+    {"intent": SET_DRAW_SHAPE, "langs": ["en"],
+     "patterns": [r"\bdraw\s+shape[s]?\s*(?:mode)?\b", r"\bshape\s+tool\b"]},
+    {"intent": SET_DRAW_SHAPE, "langs": ["fr"],
+     "patterns": [r"\btracer?\s+(?:un\s+)?forme\b", r"\bmode\s+forme[s]?\b"]},
+    {"intent": SET_DRAW_SHAPE, "langs": ["ar"],
+     "patterns": [r"رسم\s+أشكال|وضع\s+الأشكال"]},
 
     # --- Dutch --------------------------------------------------------------
     {"intent": START_QUIZ, "langs": ["nl"],
@@ -409,8 +314,6 @@ CLASSROOM_COMMANDS: list[dict] = [
     {"intent": POINTER_OFF, "langs": ["nl"],
      "patterns": [r"\b(?:verberg|zet\s+uit)\s+(?:de\s+)?pointer\b",
                   r"\bpointer\s+uit\b"]},
-    {"intent": TOGGLE_WALL_MODE, "langs": ["nl"],
-     "patterns": [r"\bwand\s*modus\b", r"\baanraak\s*modus\b"]},
     {"intent": DRAW, "langs": ["nl"],
      "patterns": [r"\b(?:teken|tekening)\s+modus\b"]},
     {"intent": HIGHLIGHT, "langs": ["nl"],
@@ -425,12 +328,6 @@ CLASSROOM_COMMANDS: list[dict] = [
                   r"\bstart\s+(?:de\s+)?klok\b"]},
     {"intent": STOP_TIMER, "langs": ["nl"],
      "patterns": [r"\bstop\s+(?:de\s+)?timer\b", r"\bstop\s+(?:de\s+)?klok\b"]},
-    {"intent": PARTICIPATION_MARK, "langs": ["nl"],
-     "patterns": [r"\bparticipatie\b", r"\bnoteer\s+(?:een\s+)?participatie\b"]},
-    {"intent": LESSON_NEXT, "langs": ["nl"],
-     "patterns": [r"\bvolgende\s+stap\b"]},
-    {"intent": LESSON_PREV, "langs": ["nl"],
-     "patterns": [r"\bvorige\s+stap\b"]},
 ]
 
 

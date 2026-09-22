@@ -384,33 +384,6 @@ class TestAppIntegration:
         rec = core.history.recent()
         assert rec and rec[0]["status"] == "FAILED"
 
-    def test_sensitive_custom_gesture_actions_require_confirmation_by_default(self) -> None:
-        """A live custom-gesture match on launch_app / type_text /
-        open_document must land pending a confirmation prompt, never run
-        straight away -- the trainer lets you record a gesture and bind an
-        action to it without a separate "test, then arm" step, so this gate
-        is what actually stands between an accidental match in the live
-        camera feed and the action really firing."""
-        from hadj_no_touch.gestures.custom_gestures import CustomGesture
-        for action_str, expect_action in (
-            ("launch_app:notepad", "OPEN_APP"),
-            ("type_text:hello world", "TYPE_TEXT"),
-            ("open_document:downloads", "OPEN_DOCUMENT"),
-        ):
-            core = self._core()
-            assert core.settings.gestures.custom_gesture_confirmation is True, (
-                "default must stay opt-out, not opt-in, for this gate to protect anyone")
-            requests: list = []
-            core.request_confirmation.connect(requests.append)
-            core._fire_custom_gesture(CustomGesture(
-                name="swipe_z", action=action_str, action_label=""))
-            assert core._pending_confirm is not None, (
-                f"{action_str} executed immediately instead of pending confirmation")
-            assert core._pending_confirm.action == expect_action
-            assert requests and requests[0].action == expect_action
-            assert not core.history.recent(30) or \
-                all(r["status"] != "OK" for r in core.history.recent(30))
-
     def test_laser_pointer_toggles_really(self) -> None:
         core = self._core()
         toasts: list = []

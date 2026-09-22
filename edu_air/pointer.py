@@ -93,6 +93,32 @@ class OneEuroFilter:
         self.t_prev = None
 
 
+class MicroGestureMapper:
+    """Micro-gesture ROI Mapper.
+
+    Maps a compact hand movement ROI (e.g. chest-level 0.4 x 0.4 normalized area)
+    to full 1.0 x 1.0 screen coordinates. This reduces arm fatigue for teachers,
+    allowing full-screen control with small hand gestures.
+    """
+    def __init__(self, roi_center: tuple[float, float] = (0.5, 0.5),
+                 roi_size: tuple[float, float] = (0.4, 0.4), enabled: bool = False):
+        self.roi_center = roi_center
+        self.roi_size = roi_size
+        self.enabled = enabled
+
+    def map(self, norm_pt: tuple[float, float]) -> tuple[float, float]:
+        if not self.enabled:
+            return norm_pt
+        cx, cy = self.roi_center
+        sw, sh = max(0.05, self.roi_size[0]), max(0.05, self.roi_size[1])
+        min_x, max_x = cx - sw / 2.0, cx + sw / 2.0
+        min_y, max_y = cy - sh / 2.0, cy + sh / 2.0
+
+        nx = (norm_pt[0] - min_x) / sw
+        ny = (norm_pt[1] - min_y) / sh
+        return (_clip(nx), _clip(ny))
+
+
 class InteractivePointer:
     def __init__(self, screen_w: int = 1280, screen_h: int = 720,
                  settings: PointerSettings | None = None):
@@ -109,6 +135,7 @@ class InteractivePointer:
         self.mapping: Optional[Mapping] = None
         self.on_moved: Optional[Callable[[tuple[float, float]], None]] = None
         self._one_euro = OneEuroFilter(min_cutoff=1.2, beta=0.04)
+        self.micro_gesture_mapper = MicroGestureMapper()
 
     @property
     def _diag_px(self) -> float:
@@ -132,6 +159,8 @@ class InteractivePointer:
     def raw_to_screen(self, raw_norm: tuple[float, float]) -> tuple[float, float]:
         """Map normalized camera point to normalized screen point."""
         x, y = _clip(raw_norm[0]), _clip(raw_norm[1])
+        if self.micro_gesture_mapper and self.micro_gesture_mapper.enabled:
+            x, y = self.micro_gesture_mapper.map((x, y))
         s = self.settings
         if self.mapping is not None:
             try:
