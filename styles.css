@@ -1495,8 +1495,148 @@ html[dir="rtl"] .hud-val.tabnum { direction: ltr; unicode-bidi: isolate; }
   font-size: 0.82rem;
 }
 
-@media (max-width: 900px) {
-  .tni-grid {
-    grid-template-columns: 1fr;
+/* ---------- Typography & Contrast Refinements ---------- */
+:root {
+  --font: "Outfit", "Inter", system-ui, -apple-system, sans-serif;
+  --muted: #b8cced;
+  --text: #f0f4fd;
+}
+
+/* ---------- Navigation Dropdowns & Mobile Navigation ---------- */
+.nav-toggle {
+  display: none;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  flex-direction: column;
+  gap: 5px;
+}
+.nav-toggle span {
+  display: block; width: 24px; height: 2px;
+  background: var(--text); transition: transform 0.2s, opacity 0.2s;
+}
+
+.nav-dropdown { position: relative; }
+.nav-drop-trigger {
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 600;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+.nav-drop-trigger:hover { background: rgba(126, 195, 255, 0.12); }
+.nav-drop-menu {
+  position: absolute; top: 100%; left: 0;
+  background: var(--bg2); border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  min-width: 220px; padding: 0.5rem 0;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  display: none; flex-direction: column;
+  z-index: 100;
+}
+.nav-dropdown:hover .nav-drop-menu,
+.nav-dropdown:focus-within .nav-drop-menu { display: flex; }
+.nav-drop-menu a {
+  padding: 0.5rem 1.2rem;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+.nav-drop-menu a:hover { background: rgba(76, 201, 255, 0.15); color: var(--cyan); }
+
+@media (max-width: 860px) {
+  .nav-toggle { display: flex; }
+  .nav-links {
+    display: none;
+    width: 100%;
+    flex-direction: column;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--line);
+    padding: 1rem;
   }
+  .nav-links.nav-open { display: flex; }
+  .nav-drop-menu { position: static; box-shadow: none; border: none; padding-left: 1rem; }
+}
+
+/* ---------- Pedagogical Carousel ---------- */
+.pedago-carousel {
+  padding: 1.8rem;
+  margin-top: 1.5rem;
+}
+.carousel-nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 1rem;
+  margin-bottom: 1.5rem;
+}
+.carousel-indicator { font-size: 1.1rem; color: var(--cyan); }
+.carousel-slide { display: none; }
+.carousel-slide.active { display: block; animation: fadeIn 0.3s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.slide-badge {
+  display: inline-block;
+  background: rgba(76, 201, 255, 0.15);
+  color: var(--cyan);
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 0.8rem;
+}
+.slide-demo-box {
+  margin-top: 1.2rem;
+  background: rgba(0, 0, 0, 0.35);
+  padding: 1.2rem;
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--line);
+}
+.shape-preview, .molecule-view, .map-view, .quiz-view {
+  font-size: 1rem;
+  color: #e2eeff;
+  padding: 0.5rem;
+}
+
+/* ---------- Teacher Dashboard & Grids ---------- */
+.dash-grid, .curr-grid, .rgpd-grid, .pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+.dash-card, .curr-card, .rgpd-card, .price-card {
+  padding: 1.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.dash-card-head { display: flex; align-items: center; gap: 0.8rem; }
+.dash-ic, .rgpd-ic { font-size: 1.6rem; }
+.curr-badge {
+  color: var(--amber);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.price-card.price-featured {
+  border: 2px solid var(--cyan);
+  box-shadow: 0 0 20px rgba(76, 201, 255, 0.2);
+}
+.price-num {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: var(--cyan);
+}
+.per-yr { font-size: 1rem; color: var(--muted); font-weight: 400; }
+.price-features li {
+  padding-block: 0.3rem;
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+@media (max-width: 900px) {
+  .tni-grid { grid-template-columns: 1fr; }
 }

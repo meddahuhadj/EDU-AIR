@@ -35,13 +35,36 @@
         </span>
       </a>
 
-      <ul class="nav-links" role="list">
-        <li><a href="#how" data-i18n="nav.how">How it works</a></li>
-        <li><a href="#gestures" data-i18n="nav.gestures">Gestures</a></li>
-        <li><a href="#voice" data-i18n="nav.voice">Voice</a></li>
-        <li><a href="#modes" data-i18n="nav.modes">Modes</a></li>
-        <li><a href="#privacy" data-i18n="nav.privacy">Privacy</a></li>
-        <li><a href="#download" data-i18n="nav.download">Download</a></li>
+      <button type="button" class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation menu">
+        <span></span><span></span><span></span>
+      </button>
+
+      <ul class="nav-links" id="nav-links" role="list">
+        <li class="nav-dropdown">
+          <a href="#how" class="nav-drop-trigger">🚀 Démo & IA ▾</a>
+          <ul class="nav-drop-menu">
+            <li><a href="#how">01. Pipeline IA</a></li>
+            <li><a href="#gestures">02. Gestes Aériens</a></li>
+            <li><a href="#try">03. Démo Interactive</a></li>
+            <li><a href="#tni-vs-eduair">04. Matrix TNI vs EDU-AIR</a></li>
+          </ul>
+        </li>
+        <li class="nav-dropdown">
+          <a href="#teacher-dashboard" class="nav-drop-trigger">🎓 Espace Enseignant ▾</a>
+          <ul class="nav-drop-menu">
+            <li><a href="#teacher-dashboard">Tableau de Bord & Quiz</a></li>
+            <li><a href="#curriculum">Alignement Curriculaire</a></li>
+            <li><a href="#carousel-section">Carrousel Pédagogique</a></li>
+          </ul>
+        </li>
+        <li class="nav-dropdown">
+          <a href="#rgpd-security" class="nav-drop-trigger">🛡️ RGPD & Tarifs ▾</a>
+          <ul class="nav-drop-menu">
+            <li><a href="#rgpd-security">Protection Mineurs & RGPD</a></li>
+            <li><a href="#pricing">Tarifs Établissement</a></li>
+            <li><a href="#download">Télécharger EDU-AIR</a></li>
+          </ul>
+        </li>
       </ul>
 
       <div class="nav-actions">
@@ -117,9 +140,9 @@
              data-i18n-aria="hero.demoAria"
              aria-label="Live demo of the virtual interaction plane — your mouse stands in for the air-pointer">
           <div class="demo-topbar">
-            <span class="led"><i aria-hidden="true"></i><span data-i18n="hero.live">LIVE</span></span>
+            <span class="led"><i aria-hidden="true"></i><span id="cam-status-text">DEMO ANIMÉE</span></span>
             <span class="topbar-mid">HADJ-OS // TRACKING</span>
-            <span class="topbar-scale" data-i18n="hero.grid" aria-hidden="true">GRID 20PX</span>
+            <button type="button" class="btn btn-xs btn-primary" id="btn-toggle-cam">🎥 Activer WebCam (Optionnel)</button>
           </div>
 
           <div class="demo-wrap" id="demo-wrap">
@@ -140,9 +163,10 @@
             <div class="hud-cell"><span class="hud-label" data-i18n="demo.hud.x">X</span><span class="hud-val tabnum" id="hud-x">0.00</span></div>
             <div class="hud-cell"><span class="hud-label" data-i18n="demo.hud.y">Y</span><span class="hud-val tabnum" id="hud-y">0.00</span></div>
             <div class="hud-cell hud-wide"><span class="hud-label" data-i18n="demo.hud.conf">CONF</span>
-              <span class="hud-val tabnum" id="hud-conf">0.00</span>
+              <span class="hud-val tabnum" id="hud-conf">0.98</span>
               <span class="conf-bar" aria-hidden="true"><i id="hud-confbar"></i></span>
             </div>
+            <div class="hud-cell" id="hud-fps-cell" style="display: none;"><span class="hud-label">FPS</span><span class="hud-val tabnum" id="hud-fps">--</span></div>
             <div class="hud-cell"><span class="hud-label" data-i18n="demo.hud.clicks">CLICKS</span><span class="hud-val tabnum" id="hud-clicks">0</span></div>
           </div>
 
@@ -766,6 +790,221 @@
               shows: gesture or voice → intent engine → Windows control layer.</p>
             </div>
             <p class="fig-cap" data-i18n-html="try.figCap1">Wheel over this panel to scroll it. <strong>Space</strong> then wheel = big palm-mode steps.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ CARROUSEL PÉDAGOGIQUE ============ -->
+    <section class="section" id="carousel-section" aria-labelledby="carousel-title">
+      <div class="container">
+        <div class="section-head reveal">
+          <p class="eyebrow">Parcours & Modules Interactifs</p>
+          <h2 id="carousel-title">Carrousel Pédagogique <span class="grad-text">Prêt pour la Classe</span></h2>
+          <p class="lede">Explorez des cas d'usage réels adaptés aux programmes scolaires : Mathématiques, Sciences, Histoire-Géo et Quiz interactifs.</p>
+        </div>
+
+        <div class="pedago-carousel glass reveal" id="pedago-carousel">
+          <div class="carousel-nav-bar">
+            <button type="button" class="btn btn-ghost carousel-prev" id="car-prev" aria-label="Diapositive précédente">◀ Précédent</button>
+            <span class="carousel-indicator"><strong id="car-current">1</strong> / <strong>4</strong></span>
+            <button type="button" class="btn btn-ghost carousel-next" id="car-next" aria-label="Diapositive suivante">Suivant ▶</button>
+          </div>
+
+          <div class="carousel-slides">
+            <!-- Slide 1: Maths -->
+            <div class="carousel-slide active" data-slide="1">
+              <div class="slide-badge">📐 Mathématiques — Cycle 4 & Lycée</div>
+              <h3>Géométrie Dynamique & Reconnaissance de Formes</h3>
+              <p>L'enseignant ou l'élève trace à la main un cercle ou un triangle dans l'air. L'IA EDU-AIR convertit instantanément le tracé en une figure géométrique parfaite avec mesure des angles et calcul d'aire en temps réel.</p>
+              <div class="slide-demo-box">
+                <div class="shape-preview shape-circle">⭕ Cercle parfait ajusté (r = 4.2 cm, Aire = 55.4 cm²)</div>
+                <div class="shape-preview shape-rect">⬛ Rectangle calibré (a = 8 cm, b = 5 cm, P = 26 cm)</div>
+              </div>
+            </div>
+
+            <!-- Slide 2: Sciences -->
+            <div class="carousel-slide" data-slide="2">
+              <div class="slide-badge">🧪 Sciences & SVT — Collège & Lycée</div>
+              <h3>Manipulation 3D & Schémas Anatomiques</h3>
+              <p>Explorez les systèmes biologiques ou les molécules chimiques sans aucun contact direct. Tournez la molécule d'eau avec un geste de pince et zoomez à la voix (*"Zoomer sur le noyau"*).</p>
+              <div class="slide-demo-box">
+                <div class="molecule-view">🔬 Modèle Moléculaire : H₂O (Angle de liaison 104.5°) — Manipulation Gestuelle Active</div>
+              </div>
+            </div>
+
+            <!-- Slide 3: Histoire-Geo -->
+            <div class="carousel-slide" data-slide="3">
+              <div class="slide-badge">🗺️ Histoire-Géographie — Tous Cycles</div>
+              <h3>Cartographie Interactive & Repères Historiques</h3>
+              <p>Naviguez sur des cartes haute résolution par balayage de la main. Annoter les reliefs, surligner les axes de transport et basculer entre les époques historiques à la voix.</p>
+              <div class="slide-demo-box">
+                <div class="map-view">🗺️ Carte de l'Europe — Surlignage Aérien en Direct & Zoom Vocal</div>
+              </div>
+            </div>
+
+            <!-- Slide 4: Quiz -->
+            <div class="carousel-slide" data-slide="4">
+              <div class="slide-badge">📝 Quiz & Interaction Classe</div>
+              <h3>Quiz Vocal & Vote Interactif en Temps Réel</h3>
+              <p>Lancez un Quiz d'évaluation en 1 seconde à la voix (*"Démarrer le quiz"*). Les élèves répondent et le système affiche instantanément la répartition des réponses A / B / C / D.</p>
+              <div class="slide-demo-box">
+                <div class="quiz-view">
+                  <strong>Question : Quelle est la vitesse de la lumière ?</strong>
+                  <div class="quiz-opts">
+                    <span class="opt opt-a">A) 300 000 km/s (85% des votes)</span>
+                    <span class="opt">B) 150 000 km/s (10%)</span>
+                    <span class="opt">C) 1 000 000 km/s (5%)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ TABLEAU DE BORD ENSEIGNANT ============ -->
+    <section class="section" id="teacher-dashboard" aria-labelledby="dash-title">
+      <div class="container">
+        <div class="section-head reveal">
+          <p class="eyebrow">Outils Pédagogiques Enseignant</p>
+          <h2 id="dash-title">Tableau de Bord <span class="grad-text">Enseignant</span></h2>
+          <p class="lede">Pilotez vos séances de cours, suivez l'engagement des élèves et exportez vos supports annotés en un clic.</p>
+        </div>
+
+        <div class="dash-grid reveal">
+          <div class="dash-card glass">
+            <div class="dash-card-head">
+              <span class="dash-ic">📝</span>
+              <h3>Gestionnaire de Quiz & Votes</h3>
+            </div>
+            <p>Créez vos séries de questions QCM ou utilisez la banque de questions conforme aux programmes. Déclenchement vocal direct.</p>
+            <div class="dash-actions-demo">
+              <button type="button" class="btn btn-sm btn-primary">➕ Nouveau Quiz</button>
+              <button type="button" class="btn btn-sm btn-ghost">📊 Voir Résultats</button>
+            </div>
+          </div>
+
+          <div class="dash-card glass">
+            <div class="dash-card-head">
+              <span class="dash-ic">💾</span>
+              <h3>Historique & Exports de Cours</h3>
+            </div>
+            <p>Retrouvez toutes vos sessions annotées. Téléchargez le tableau blanc en PNG haute définition ou générez un compte-rendu PDF pour la classe.</p>
+            <div class="dash-actions-demo">
+              <button type="button" class="btn btn-sm btn-primary">📥 Exporter en PNG</button>
+              <button type="button" class="btn btn-sm btn-ghost">📁 Imprimer le PDF</button>
+            </div>
+          </div>
+
+          <div class="dash-card glass">
+            <div class="dash-card-head">
+              <span class="dash-ic">📈</span>
+              <h3>Engagement & Suivi de Classe</h3>
+            </div>
+            <p>Mesurez le taux de participation aux quiz et conservez des statistiques anonymisées pour adapter votre rythme de cours.</p>
+            <div class="dash-actions-demo">
+              <span class="badge badge-green">Taux moyen de réussite : 88%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ ALIGNEMENT CURRICULAIRE ============ -->
+    <section class="section" id="curriculum" aria-labelledby="curr-title">
+      <div class="container">
+        <div class="section-head reveal">
+          <p class="eyebrow">Programmes Scolaires Officiels</p>
+          <h2 id="curr-title">Alignement <span class="grad-text">Curriculaire</span></h2>
+          <p class="lede">EDU-AIR est conçu pour s'intégrer directement dans les séquences pédagogiques du Ministère de l'Éducation Nationale.</p>
+        </div>
+
+        <div class="curr-grid reveal">
+          <div class="curr-card glass">
+            <span class="curr-badge">Cycle 3 (CM1 - CM2 - 6ème)</span>
+            <h3>Géométrie de Base & Sciences</h3>
+            <p>Manipulation de figures planes, apprentissage des fractions visuelles et observation assistée de schémas vivants.</p>
+          </div>
+          <div class="curr-card glass">
+            <span class="curr-badge">Cycle 4 (5ème - 4ème - 3ème)</span>
+            <h3>Théorèmes, SVT & Physique</h3>
+            <p>Construction géométrique avancée (Thalès, Pythagore), schémas de circuits électriques et anatomie végétale/animale.</p>
+          </div>
+          <div class="curr-card glass">
+            <span class="curr-badge">Lycée (Seconde à Terminale)</span>
+            <h3>Fonctions, Chimie 3D & Langues</h3>
+            <p>Tracé de courbes mathématiques, modèles moléculaires 3D et pratique de la prise de parole en Anglais, Espagnol et Arabe.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ RGPD & PROTECTION MINEURS ============ -->
+    <section class="section" id="rgpd-security" aria-labelledby="rgpd-title">
+      <div class="container">
+        <div class="section-head reveal">
+          <p class="eyebrow">Sécurité & Souveraineté</p>
+          <h2 id="rgpd-title">Conformité <span class="grad-text">RGPD & Protection Mineurs</span></h2>
+          <p class="lede">Protection absolue des données des élèves et des enseignants. 100% On-Device, zéro fuite vidéo.</p>
+        </div>
+
+        <div class="rgpd-grid reveal">
+          <div class="rgpd-card glass">
+            <span class="rgpd-ic">🔒</span>
+            <h3>Traitement 100% Local</h3>
+            <p>Les modèles de vision par ordinateur (MediaPipe) s'exécutent entièrement en mémoire vive sur l'ordinateur de la classe. Aucun flux vidéo n'est envoyé vers des serveurs distants.</p>
+          </div>
+          <div class="rgpd-card glass">
+            <span class="rgpd-ic">🛡️</span>
+            <h3>Droit à l'Image des Mineurs</h3>
+            <p>Aucun enregistrement vidéo ni reconnaissance faciale nominative. L'application repère uniquement les 21 points de repère de la main pour bouger le pointeur.</p>
+          </div>
+          <div class="rgpd-card glass">
+            <span class="rgpd-ic">📜</span>
+            <h3>Conforme CNIL & Éducation Nationale</h3>
+            <p>Respecte strictement le RGPD et le cadre de référence pour la protection des données dans les établissements scolaires.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ TARIFS & MODÈLE ÉCONOMIQUE ============ -->
+    <section class="section" id="pricing" aria-labelledby="pricing-title">
+      <div class="container">
+        <div class="section-head reveal">
+          <p class="eyebrow">Modèle Économique Clair</p>
+          <h2 id="pricing-title">Tarifs & <span class="grad-text">Licence Établissement</span></h2>
+          <p class="lede">Une offre gratuite pour découvrir en classe et un abonnement établissement accessible.</p>
+        </div>
+
+        <div class="pricing-grid reveal">
+          <div class="price-card glass">
+            <span class="price-badge">Découverte Enseignant</span>
+            <div class="price-num">0 €</div>
+            <p class="price-sub">Pour 1 classe / 1 enseignant</p>
+            <ul class="price-features">
+              <li>✓ Contrôle gestuel sans contact</li>
+              <li>✓ Commandes vocales de base</li>
+              <li>✓ Tableau blanc interactif & formes</li>
+              <li>✓ Export PNG des notes</li>
+            </ul>
+            <a href="#download" class="btn btn-ghost">Tester Gratuite</a>
+          </div>
+
+          <div class="price-card glass price-featured">
+            <span class="price-badge badge-cyan">Établissement Pro</span>
+            <div class="price-num">299 € <span class="per-yr">/ an</span></div>
+            <p class="price-sub">Salles illimitées par établissement</p>
+            <ul class="price-features">
+              <li>✓ Salles de classe illimitées</li>
+              <li>✓ Tableau de bord enseignant complet</li>
+              <li>✓ Export PDF/PNG HD & Quiz illimités</li>
+              <li>✓ Alignement curriculaire complet</li>
+              <li>✓ Support technique & déploiement facile</li>
+            </ul>
+            <a href="#download" class="btn btn-primary">Équiper l'Établissement</a>
           </div>
         </div>
       </div>

@@ -646,6 +646,66 @@
     i18n.init();
   }
 
+  /* ---------- Mobile Navigation Toggle ---------- */
+
+  const navToggle = $("#nav-toggle");
+  const navLinks = $("#nav-links");
+  if (navToggle && navLinks) {
+    navToggle.addEventListener("click", () => {
+      navLinks.classList.toggle("nav-open");
+    });
+  }
+
+  /* ---------- Pedagogical Carousel ---------- */
+
+  let currentSlide = 1;
+  const totalSlides = 4;
+
+  const updateCarousel = (slideIndex) => {
+    currentSlide = ((slideIndex - 1 + totalSlides) % totalSlides) + 1;
+    $$(".carousel-slide").forEach((el) => {
+      const idx = parseInt(el.getAttribute("data-slide"), 10);
+      el.classList.toggle("active", idx === currentSlide);
+    });
+    const indicator = $("#car-current");
+    if (indicator) indicator.textContent = String(currentSlide);
+  };
+
+  const carPrev = $("#car-prev");
+  const carNext = $("#car-next");
+  if (carPrev) carPrev.addEventListener("click", () => updateCarousel(currentSlide - 1));
+  if (carNext) carNext.addEventListener("click", () => updateCarousel(currentSlide + 1));
+
+  /* ---------- Animated Camera Preview & FPS Visibility ---------- */
+
+  let camActive = false;
+  const btnCam = $("#btn-toggle-cam");
+  const camStatus = $("#cam-status-text");
+  const fpsCell = $("#hud-fps-cell");
+  const fpsVal = $("#hud-fps");
+
+  if (btnCam) {
+    btnCam.addEventListener("click", async () => {
+      if (!camActive) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          camActive = true;
+          if (btnCam) btnCam.textContent = "🛑 Arrêter WebCam";
+          if (camStatus) camStatus.textContent = "WEBCAM ACTIVE";
+          if (fpsCell) fpsCell.style.display = "flex";
+          if (fpsVal) fpsVal.textContent = "30 FPS";
+        } catch (err) {
+          alert("Aperçu caméra non disponible. Poursuite en mode démo animée sans contact.");
+        }
+      } else {
+        camActive = false;
+        if (btnCam) btnCam.textContent = "🎥 Activer WebCam (Optionnel)";
+        if (camStatus) camStatus.textContent = "DEMO ANIMÉE";
+        if (fpsCell) fpsCell.style.display = "none";
+      }
+    });
+  }
+
   /* ---------- Service worker ---------- */
 
   if ("serviceWorker" in navigator && /^https:|^localhost|^127\.0\.0\.1/.test(location.origin)) {

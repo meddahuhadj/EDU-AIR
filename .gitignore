@@ -30,3 +30,5 @@ Thumbs.db
 # Heavy local download assets
 web/downloads/
 edu_air_web/
+
+.vercel
