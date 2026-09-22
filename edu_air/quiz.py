@@ -64,13 +64,51 @@ DEFAULT_QUESTIONS: list[Question] = [
              note="Python is a widely-used programming language."),
 ]
 
+CURRICULUM_BANKS: dict[str, list[Question]] = {
+    "maths": [
+        Question("Quelle est la somme des angles d'un triangle ?",
+                 ["90°", "180°", "360°", "270°"], 1, note="Dans un triangle euclidien, la somme des angles vaut toujours 180°."),
+        Question("Si a = 5 et b = 12 dans un triangle rectangle, quelle est l'hypoténuse ?",
+                 ["13", "15", "17", "10"], 0, note="D'après le théorème de Pythagore : 5² + 12² = 25 + 144 = 169 = 13²."),
+        Question("Quelle est la dérivée de f(x) = x² ?",
+                 ["x", "2x", "x³", "2"], 1, note="La dérivée de x^n est n*x^(n-1). Pour x², c'est 2x."),
+    ],
+    "svt": [
+        Question("Quel organe est responsable de la circulation sanguine ?",
+                 ["Le Foie", "Le Poumon", "Le Cœur", "Le Cerveau"], 2, note="Le cœur propulse le sang dans l'organisme."),
+        Question("Quel gaz les plantes absorbent-elles lors de la photosynthèse ?",
+                 ["L'Oxygène", "Le Dioxyde de Carbone (CO₂)", "L'Azote", "L'Hélium"], 1, note="La photosynthèse consomme du CO₂ et rejette de l'O₂."),
+        Question("Où se situe l'ADN dans une cellule eucaryote ?",
+                 ["Le Noyau", "Le Cytoplasme", "La Membrane", "Le Ribosome"], 0, note="L'ADN se trouve concentré dans le noyau cellulaire."),
+    ],
+    "histoire_geo": [
+        Question("En quelle année s'est déroulée la Révolution Française ?",
+                 ["1789", "1914", "1815", "1492"], 0, note="1789 marque la prise de la Bastille et le début de la Révolution."),
+        Question("Quelle est la capitale de l'Australie ?",
+                 ["Sydney", "Melbourne", "Canberra", "Brisbane"], 2, note="Canberra est la capitale fédérale de l'Australie."),
+        Question("Quel océan sépare l'Europe de l'Amérique du Nord ?",
+                 ["Océan Pacifique", "Océan Atlantique", "Océan Indien", "Océan Arctique"], 1, note="L'Océan Atlantique sépare ces deux continents."),
+    ],
+    "english": [
+        Question("Which sentence is grammatically correct?",
+                 ["He go to school", "He goes to school", "He going school", "He gone to school"], 1, note="Third person singular takes '-s' in Present Simple."),
+        Question("What is the past tense of 'write'?",
+                 ["Writed", "Wrote", "Written", "Writing"], 1, note="'Write' is an irregular verb: write -> wrote -> written."),
+    ]
+}
+
 
 class QuestionBank:
-    """Loads/serves questions from a JSON file or the built-in set."""
+    """Loads/serves questions from a JSON file, subject presets or built-in set."""
 
     def __init__(self, questions: Optional[list[Question]] = None):
         self.questions: list[Question] = list(questions or DEFAULT_QUESTIONS)
         self._idx = 0
+
+    @classmethod
+    def load_subject(cls, subject: str) -> "QuestionBank":
+        bank_questions = CURRICULUM_BANKS.get(subject.lower(), DEFAULT_QUESTIONS)
+        return cls(bank_questions)
 
     @classmethod
     def load(cls, path: str | Path) -> "QuestionBank":

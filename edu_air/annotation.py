@@ -82,7 +82,7 @@ def fit_shape(stroke: Stroke) -> Stroke:
     if diag_box > 0.04 and dist_start_end < 0.4 * diag_box:
         aspect = w_box / h_box if h_box > 0 else 1.0
         # Circle / Ellipse
-        if 0.6 <= aspect <= 1.6:
+        if 0.65 <= aspect <= 1.5:
             cx = (min_x + max_x) / 2.0
             cy = (min_y + max_y) / 2.0
             rx = w_box / 2.0
@@ -102,6 +102,24 @@ def fit_shape(stroke: Stroke) -> Stroke:
                 highlight=stroke.highlight,
                 shape_type="circle"
             )
+        # Triangle vs Rectangle check based on top vertex vs flat top
+        top_pts = [p for p in pts if p[1] < min_y + 0.25 * h_box]
+        if len(top_pts) <= len(pts) * 0.2:
+            # Triangle: Top apex, bottom left, bottom right, close
+            fitted_pts = [
+                ((min_x + max_x) / 2.0, min_y),
+                (max_x, max_y),
+                (min_x, max_y),
+                ((min_x + max_x) / 2.0, min_y)
+            ]
+            return Stroke(
+                tool=stroke.tool,
+                color=stroke.color,
+                width=stroke.width,
+                points=fitted_pts,
+                highlight=stroke.highlight,
+                shape_type="triangle"
+            )
         else:
             # Rectangle
             fitted_pts = [
@@ -120,7 +138,7 @@ def fit_shape(stroke: Stroke) -> Stroke:
                 shape_type="rectangle"
             )
 
-    # Open line check: fit straight line between start and end
+    # Open line or Arrow check: fit straight line between start and end
     if diag_box > 0.05:
         fitted_pts = [start, end]
         return Stroke(
