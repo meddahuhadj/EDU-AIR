@@ -21,13 +21,49 @@ var S = window.EDUAIR = {
   quiz: { active:null, qi:0, score:0, total:0, wrongByQ:{}, reported:true },
   sessions: getLS("sessions", null),
   currentSession: getLS("currentSession", null),
-  pres: { i:0, slides:[
-    {t:"EDU-AIR SMART SURFACE", b:"A contactless AI-powered interactive whiteboard. No touch frame, no special sensor."},
-    {t:"Air pointer", b:"Your hand becomes the cursor — pinch to click, hold to drag."},
-    {t:"Air draw", b:"Freehand ink with automatic shape recognition, right in mid-air."},
-    {t:"Safety by default", b:"Every action passes a safety gate: safe · confirm · critical. Nothing unregistered ever runs."},
-    {t:"Works with what you already have", b:"Any PC + webcam + projector. No new hardware to buy or install."}
-  ]},
+  pres: {
+    activeDeckId: "deck_math",
+    decks: [
+      {
+        id: "deck_math",
+        name: "📐 Maths : Théorème de Pythagore (5 slides)",
+        slides: [
+          { tag: "GÉOMÉTRIE · 4ÈME / 3ÈME", t: "Théorème de Pythagore", b: "Dans un triangle rectangle, le carré de la longueur de l'hypoténuse est égal à la somme des carrés des longueurs des deux autres côtés.", bullets: ["Triangle rectangle en A : l'angle Â = 90°", "Hypoténuse [BC] : côté opposé à l'angle droit, toujours le plus long", "Équation fondamentale : BC² = AB² + AC²"] },
+          { tag: "APPLICATION DIRECTE", t: "Calculer la longueur de l'hypoténuse", b: "Soit un triangle ABC rectangle en A avec AB = 3 cm et AC = 4 cm. Déterminer BC.", bullets: ["Formule : BC² = AB² + AC²", "Calcul : BC² = 3² + 4² = 9 + 16 = 25", "Conclusion : BC = √25 = 5 cm"] },
+          { tag: "CALCUL D'UN CÔTÉ", t: "Calculer un côté de l'angle droit", b: "Soit un triangle rectangle dont l'hypoténuse mesure 10 cm et l'un des côtés mesure 6 cm.", bullets: ["Formule transposée : AB² = BC² - AC²", "Calcul : AB² = 10² - 6² = 100 - 36 = 64", "Conclusion : AB = √64 = 8 cm"] },
+          { tag: "RÉCIPROQUE DU THÉORÈME", t: "Démontrer qu'un triangle est rectangle", b: "Si dans un triangle, le carré du plus grand côté est égal à la somme des carrés des deux autres côtés, alors ce triangle est rectangle.", bullets: ["Calculer d'une part le carré du plus grand côté : c²", "Calculer d'autre part la somme : a² + b²", "Si c² = a² + b², l'égalité est vérifiée et le triangle est rectangle en son sommet principal."] },
+          { tag: "DÉFI CLASSE TNI", t: "À vos crayons ! (Défi interactif TNI)", b: "Un écran TNI de 65 pouces a une largeur de 143 cm et une hauteur de 80 cm. Vérifiez la diagonale !", bullets: ["1. Calculer 143² + 80²", "2. Extraire la racine carrée en cm", "3. Convertir en pouces (1 pouce = 2.54 cm)", "👉 Utilisez le stylo TNI ci-dessus pour poser vos calculs en direct sur l'écran !"] }
+        ]
+      },
+      {
+        id: "deck_science",
+        name: "⚡ Sciences : Circuits & Loi d'Ohm (3 slides)",
+        slides: [
+          { tag: "PHYSIQUE · ÉLECTRICITÉ", t: "La Loi d'Ohm : U = R × I", b: "La tension U aux bornes d'un conducteur ohmique est proportionnelle à l'intensité I du courant électrique qui le traverse.", bullets: ["U : Tension aux bornes du conducteur en Volts (V)", "R : Résistance électrique du dipôle en Ohms (Ω)", "I : Intensité du courant électrique en Ampères (A)"] },
+          { tag: "GRAPHIQUE & CARACTÉRISTIQUE", t: "Caractéristique tension-courant d'un résistor", b: "La caractéristique U = f(I) d'un conducteur ohmique est une droite qui passe par l'origine.", bullets: ["Le coefficient directeur de la droite correspond à la résistance R (R = ΔU / ΔI)", "C'est un dipôle passif, linéaire et symétrique", "Plus la pente de la droite est raide, plus la valeur de la résistance est élevée"] },
+          { tag: "PUISSANCE & CHAUFFE", t: "Effet Joule et Puissance électrique", b: "L'énergie électrique dissipée sous forme thermique dans un résistor suit la loi P = U × I = R × I².", bullets: ["Applications utiles : radiateurs électriques, plaques chauffantes, grille-pain", "Inconvénients : échauffement des circuits électroniques et pertes par effet Joule", "Sécurité TNI : rôle protecteur des fusibles et des disjoncteurs thermiques"] }
+        ]
+      },
+      {
+        id: "deck_default",
+        name: "🖥️ Démo EDU-AIR SMART SURFACE (3 slides)",
+        slides: [
+          { tag: "SURFACE SANS CONTACT", t: "EDU-AIR SMART SURFACE", b: "Tableau blanc interactif sans contact piloté par l'IA et la gestuelle aérienne. Aucun matériel spécial requis, 100% sécurisé et local.", bullets: ["Air Pointer : votre main devient le pointeur laser", "Air Draw : écriture fluide en l'air avec reconnaissance de formes", "Multi-mode TNI : calques, exports, minuteur et outils pédagogiques"] },
+          { tag: "OUTILS TNI ENSEIGNANT", t: "Fonctions TNI dédiées à la classe", b: "Pédagogie active pensée pour la projection en classe sur vidéoprojecteur ou écran tactile.", bullets: ["Minuteur & Chronomètre de classe synchronisé", "Mode Spotlight & Loupe pour captiver l'attention des élèves", "Annotations d'encre directement sur vos cours et slides"] },
+          { tag: "COMPATIBILITÉ & IMPORT", t: "Importez vos cours en un clic", b: "Intégrez vos présentations existantes sans rien réécrire.", bullets: ["Import direct PPTX, PDF, JSON et texte structuré", "Intégration fluide de Google Slides via lien web ou iframe", "Annotations persistantes slide par slide avec export"] }
+        ]
+      }
+    ],
+    i: 0,
+    slideStrokes: {},
+    currentTool: "pen",
+    currentColor: "#ff4d6d",
+    shapesEnabled: true,
+    get slides(){
+      var d = this.decks.find(function(x){ return x.id === this.activeDeckId; }.bind(this));
+      return d ? d.slides : (this.decks[0] ? this.decks[0].slides : []);
+    }
+  },
   calib: getLS("calib", { ok:false, H:null, pts:[], score:0, t:0 }),
   ai: getLS("ai", { mode:"scripted", endpoint:"./api/chat", history:[] }),
   vision: { running:false, fps:0 },
@@ -2067,21 +2103,225 @@ function renderQuiz(){
 }
 
 /* ---------------------------------------------------------------- */
-/* air presentation                                                   */
+/* air presentation — TNI classroom presentation & annotation engine */
 /* ---------------------------------------------------------------- */
+function getActivePresDeck(){
+  var decks = S.pres.decks || [];
+  var d = decks.find(function(x){ return x.id === S.pres.activeDeckId; });
+  return d || decks[0];
+}
+
+function getSlideStrokeKey(){
+  return (S.pres.activeDeckId || "deck_default") + "_" + (S.pres.i || 0);
+}
+
+function renderDeckThumbnails(){
+  var host = $("presThumbnails");
+  if(!host) return;
+  var deck = getActivePresDeck();
+  if(!deck || !deck.slides) return;
+  host.innerHTML = "";
+  deck.slides.forEach(function(sl, idx){
+    var item = document.createElement("div");
+    item.className = "pres-thumb-item" + (idx === S.pres.i ? " active" : "");
+    item.title = "Diapositive " + (idx + 1) + (sl.t ? " : " + sl.t : "");
+    item.innerHTML = '<div class="pres-thumb-num">SLIDE ' + (idx + 1) + '</div>' +
+      '<div class="pres-thumb-title">' + esc(sl.t || ("Diapo " + (idx + 1))) + '</div>' +
+      '<div style="font-size:10px;color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' +
+      esc(sl.tag || (sl.b ? sl.b.slice(0, 32) + "..." : "")) + '</div>';
+    on(item, "click", function(){
+      if(S.pres.i !== idx){
+        S.pres.i = idx;
+        renderPresentation();
+        logEv("pres.jump", { idx: idx });
+      }
+    });
+    host.appendChild(item);
+  });
+
+  var activeEl = host.querySelector(".pres-thumb-item.active");
+  if(activeEl && host.parentElement){
+    var wrap = host.parentElement;
+    var elLeft = activeEl.offsetLeft, elWidth = activeEl.offsetWidth;
+    if(elLeft < wrap.scrollLeft || elLeft + elWidth > wrap.scrollLeft + wrap.clientWidth){
+      wrap.scrollTo({ left: Math.max(0, elLeft - 20), behavior: "smooth" });
+    }
+  }
+}
+
+function drawSlideStroke(ctx, st, w, h){
+  if(!st || !st.pts || !st.pts.length) return;
+  ctx.save();
+  if(st.shape){
+    ctx.strokeStyle = st.color || "#ff4d6d";
+    ctx.lineWidth = st.size || 4;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    if(st.tool === "highlighter"){
+      ctx.globalAlpha = 0.35;
+      ctx.lineWidth = (st.size || 4) * 4;
+    } else {
+      ctx.globalAlpha = 1.0;
+    }
+    if(st.shape.type === "circle"){
+      ctx.beginPath();
+      var cx = st.shape.cx * w, cy = st.shape.cy * h, rx = st.shape.rx * w, ry = st.shape.ry * h;
+      ctx.ellipse(cx, cy, Math.max(2, rx), Math.max(2, ry), 0, 0, Math.PI * 2);
+      ctx.stroke();
+    } else if(st.shape.type === "rect"){
+      ctx.strokeRect(st.shape.x * w, st.shape.y * h, st.shape.w * w, st.shape.h * h);
+    } else if(st.shape.type === "line" || st.shape.type === "arrow"){
+      var x1 = st.shape.x1 * w, y1 = st.shape.y1 * h, x2 = st.shape.x2 * w, y2 = st.shape.y2 * h;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+      if(st.shape.type === "arrow"){
+        var ang = Math.atan2(y2 - y1, x2 - x1);
+        var headLen = Math.max(14, ctx.lineWidth * 3.5);
+        ctx.beginPath();
+        ctx.moveTo(x2, y2);
+        ctx.lineTo(x2 - headLen * Math.cos(ang - Math.PI / 6), y2 - headLen * Math.sin(ang - Math.PI / 6));
+        ctx.moveTo(x2, y2);
+        ctx.lineTo(x2 - headLen * Math.cos(ang + Math.PI / 6), y2 - headLen * Math.sin(ang + Math.PI / 6));
+        ctx.stroke();
+      }
+    }
+  } else {
+    if(st.tool === "eraser"){
+      ctx.globalCompositeOperation = "destination-out";
+      ctx.lineWidth = 26;
+      ctx.strokeStyle = "rgba(0,0,0,1)";
+    } else if(st.tool === "highlighter"){
+      ctx.globalAlpha = 0.35;
+      ctx.strokeStyle = st.color || "#ffc24b";
+      ctx.lineWidth = (st.size || 4) * 4;
+      ctx.globalCompositeOperation = "source-over";
+    } else {
+      ctx.globalAlpha = 1.0;
+      ctx.strokeStyle = st.color || "#ff4d6d";
+      ctx.lineWidth = st.size || 4;
+      ctx.globalCompositeOperation = "source-over";
+    }
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+    ctx.moveTo(st.pts[0].x * w, st.pts[0].y * h);
+    for(var k = 1; k < st.pts.length; k++){
+      ctx.lineTo(st.pts[k].x * w, st.pts[k].y * h);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function redrawSlideCanvas(){
+  var can = $("presAnnotCanvas");
+  if(!can) return;
+  var ctx = can.getContext("2d");
+  var w = can.width, h = can.height;
+  ctx.clearRect(0, 0, w, h);
+  var key = getSlideStrokeKey();
+  var list = S.pres.slideStrokes[key] || [];
+  for(var s = 0; s < list.length; s++){
+    drawSlideStroke(ctx, list[s], w, h);
+  }
+}
+
+function fitSlideShape(pts){
+  if(pts.length < 6) return null;
+  var minX = 1, maxX = 0, minY = 1, maxY = 0;
+  for(var i = 0; i < pts.length; i++){
+    if(pts[i].x < minX) minX = pts[i].x;
+    if(pts[i].x > maxX) maxX = pts[i].x;
+    if(pts[i].y < minY) minY = pts[i].y;
+    if(pts[i].y > maxY) maxY = pts[i].y;
+  }
+  var bw = maxX - minX, bh = maxY - minY;
+  if(bw < 0.02 && bh < 0.02) return null;
+
+  var p0 = pts[0], pEnd = pts[pts.length - 1];
+  var closeDist = Math.hypot(pEnd.x - p0.x, pEnd.y - p0.y);
+  var isClosed = closeDist < Math.max(0.12, Math.max(bw, bh) * 0.38);
+
+  if(isClosed){
+    var cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+    var rx = bw / 2, ry = bh / 2;
+    var radErrors = 0;
+    for(var j = 0; j < pts.length; j++){
+      var d = Math.hypot((pts[j].x - cx) / Math.max(0.001, rx), (pts[j].y - cy) / Math.max(0.001, ry));
+      radErrors += Math.abs(d - 1);
+    }
+    var avgRadErr = radErrors / pts.length;
+    if(avgRadErr < 0.28){
+      return { type: "circle", cx: cx, cy: cy, rx: rx, ry: ry };
+    }
+    return { type: "rect", x: minX, y: minY, w: bw, h: bh };
+  } else {
+    var dx = pEnd.x - p0.x, dy = pEnd.y - p0.y;
+    var lineLen = Math.hypot(dx, dy);
+    if(lineLen > 0.06){
+      var maxDev = 0;
+      for(var k = 0; k < pts.length; k++){
+        var num = Math.abs(dy * pts[k].x - dx * pts[k].y + pEnd.x * p0.y - pEnd.y * p0.x);
+        var dev = num / lineLen;
+        if(dev > maxDev) maxDev = dev;
+      }
+      if(maxDev < 0.045){
+        return { type: "line", x1: p0.x, y1: p0.y, x2: pEnd.x, y2: pEnd.y };
+      }
+    }
+  }
+  return null;
+}
+
 function renderPresentation(){
-  var i = clamp(S.pres.i, 0, S.pres.slides.length-1); S.pres.i = i;
-  var slide = S.pres.slides[i];
+  var deck = getActivePresDeck();
+  if(!deck || !deck.slides || !deck.slides.length) return;
+  var i = clamp(S.pres.i, 0, deck.slides.length - 1);
+  S.pres.i = i;
+  var slide = deck.slides[i];
   var host = $("presStage");
   if(host){
     var spot = $("presSpotOverlay");
     var loupe = $("presLoupe");
-    host.innerHTML = '<div class="pres-slide"><h3>'+esc(slide.t)+'</h3><p>'+esc(slide.b)+'</p></div>';
+    var canAnnot = $("presAnnotCanvas");
+    var fTimer = $("presFloatingTimer");
+
+    if(slide.iframeUrl){
+      host.innerHTML = '<div class="pres-iframe-wrap"><iframe class="pres-iframe" src="' + esc(slide.iframeUrl) + '" allowfullscreen="true"></iframe></div>';
+    } else {
+      var bulletsHtml = "";
+      if(slide.bullets && slide.bullets.length){
+        bulletsHtml = '<ul class="pres-slide-bullets">' + slide.bullets.map(function(b){ return '<li>' + esc(b) + '</li>'; }).join("") + '</ul>';
+      }
+      var tagHtml = slide.tag ? ('<div class="pres-slide-tag">' + esc(slide.tag) + '</div>') : '';
+      host.innerHTML = '<div class="pres-slide">' +
+        tagHtml +
+        '<h3>' + esc(slide.t || ("Diapo " + (i + 1))) + '</h3>' +
+        (slide.b ? ('<p>' + esc(slide.b) + '</p>') : '') +
+        bulletsHtml +
+        '</div>';
+    }
+
     if(spot) host.appendChild(spot);
     if(loupe) host.appendChild(loupe);
+    if(canAnnot) host.appendChild(canAnnot);
+    if(fTimer) host.appendChild(fTimer);
   }
-  var count = $("presCount"); if(count) count.textContent = (i+1)+" / "+S.pres.slides.length;
+
+  var count = $("presCount");
+  if(count) count.textContent = (i + 1) + " / " + deck.slides.length;
+
+  var sel = $("selPresDeck");
+  if(sel && sel.value !== S.pres.activeDeckId){
+    sel.value = S.pres.activeDeckId;
+  }
+
+  renderDeckThumbnails();
+  setTimeout(redrawSlideCanvas, 20);
 }
+
 function wireAirPresentation(){
   var spotActive = false, loupeActive = false;
   var spotEl = $("presSpotOverlay"), loupeEl = $("presLoupe"), stage = $("presStage");
@@ -2093,6 +2333,7 @@ function wireAirPresentation(){
       btnSpot.classList.toggle("btn-primary", spotActive);
       if(spotEl) spotEl.classList.toggle("hidden", !spotActive);
       toast(spotActive ? "Spotlight TNI activé" : "Spotlight désactivé", "info");
+      logEv("pres.spotlight", { active: spotActive });
     });
   }
 
@@ -2103,6 +2344,7 @@ function wireAirPresentation(){
       btnLoupe.classList.toggle("btn-primary", loupeActive);
       if(loupeEl) loupeEl.classList.toggle("hidden", !loupeActive);
       toast(loupeActive ? "Loupe Zoom 2x activée" : "Loupe désactivée", "info");
+      logEv("pres.loupe", { active: loupeActive });
     });
   }
 
@@ -2117,36 +2359,61 @@ function wireAirPresentation(){
       if(loupeActive && loupeEl){
         loupeEl.style.left = x + "px";
         loupeEl.style.top = y + "px";
-        var curSlide = S.pres.slides[S.pres.i];
+        var deck = getActivePresDeck();
+        var curSlide = deck ? deck.slides[S.pres.i] : null;
         if(curSlide){
           loupeEl.innerHTML = '<div style="transform:scale(1.7);transform-origin:center;padding:24px;text-align:center;color:var(--ink-strong);">' +
-            '<h3>'+esc(curSlide.t)+'</h3><p>'+esc(curSlide.b)+'</p></div>';
+            '<h3>' + esc(curSlide.t || "") + '</h3><p>' + esc(curSlide.b || "") + '</p></div>';
         }
       }
     });
   }
 
-  /* Classroom Timer TNI */
+  /* ======================================================== */
+  /* Classroom Timer TNI (Synchronized Floating + Widget)     */
+  /* ======================================================== */
   var timerTotalSec = 180, timerLeftSec = 180, timerInterval = null, timerRunning = false;
+
   function updateTimerUI(){
     var m = Math.floor(timerLeftSec / 60);
     var s = timerLeftSec % 60;
     var str = (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+    var isDanger = timerLeftSec <= 15 && timerRunning;
+
     var disp = $("ptwDisplay");
     if(disp){
       disp.textContent = str;
-      disp.classList.toggle("timer-danger", timerLeftSec <= 15 && timerRunning);
+      disp.classList.toggle("timer-danger", isDanger);
     }
+
+    var fTime = $("pftTime");
+    if(fTime){
+      fTime.textContent = str;
+      fTime.classList.toggle("timer-danger", isDanger);
+    }
+
     var fill = $("ptwProgressFill");
     if(fill){
       var pct = timerTotalSec > 0 ? (timerLeftSec / timerTotalSec * 100) : 0;
       fill.style.width = pct + "%";
     }
+
+    var bToggle = $("btnTimerToggle");
+    if(bToggle){
+      bToggle.textContent = timerRunning ? "⏸ PAUSE" : (timerLeftSec < timerTotalSec && timerLeftSec > 0 ? "▶ REPRENDRE" : "▶ DÉMARRER");
+    }
+
+    var bPftToggle = $("btnPftToggle");
+    if(bPftToggle){
+      bPftToggle.textContent = timerRunning ? "⏸" : "▶";
+      bPftToggle.classList.toggle("pft-running", timerRunning);
+    }
   }
+
   function startTimer(){
     if(timerRunning) return;
     timerRunning = true;
-    var btn = $("btnTimerToggle"); if(btn) btn.textContent = "⏸ PAUSE";
+    updateTimerUI();
     timerInterval = setInterval(function(){
       if(timerLeftSec > 0){
         timerLeftSec--;
@@ -2154,20 +2421,27 @@ function wireAirPresentation(){
       } else {
         pauseTimer();
         toast("⏰ Temps de classe écoulé !", "warn");
-        if(navigator.vibrate) navigator.vibrate([200, 100, 200]);
+        try{
+          playTone(880, 0.15, 0.15);
+          setTimeout(function(){ playTone(1174, 0.2, 0.15); }, 180);
+          setTimeout(function(){ playTone(1760, 0.35, 0.2); }, 380);
+        }catch(e){}
+        if(navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 300]);
+        logEv("pres.timerEnd", { totalSec: timerTotalSec });
       }
     }, 1000);
   }
+
   function pauseTimer(){
     timerRunning = false;
     if(timerInterval){ clearInterval(timerInterval); timerInterval = null; }
-    var btn = $("btnTimerToggle"); if(btn) btn.textContent = "▶ REPRENDRE";
+    updateTimerUI();
   }
+
   function resetTimer(sec){
     pauseTimer();
     if(sec) timerTotalSec = sec;
     timerLeftSec = timerTotalSec;
-    var btn = $("btnTimerToggle"); if(btn) btn.textContent = "▶ DÉMARRER";
     updateTimerUI();
   }
 
@@ -2178,65 +2452,417 @@ function wireAirPresentation(){
       var s = parseInt(b.getAttribute("data-sec"), 10) || 180;
       resetTimer(s);
       toast("Minuteur réglé sur " + Math.round(s/60) + " min", "info");
+      logEv("pres.timerPreset", { sec: s });
     });
   });
-  var bToggle = $("btnTimerToggle"); if(bToggle) on(bToggle, "click", function(){ if(timerRunning) pauseTimer(); else startTimer(); });
-  var bReset = $("btnTimerReset"); if(bReset) on(bReset, "click", function(){ resetTimer(); });
+
+  var bToggle = $("btnTimerToggle");
+  if(bToggle) on(bToggle, "click", function(){ if(timerRunning) pauseTimer(); else startTimer(); });
+  var bReset = $("btnTimerReset");
+  if(bReset) on(bReset, "click", function(){ resetTimer(); });
+
+  var bPftToggle = $("btnPftToggle");
+  if(bPftToggle) on(bPftToggle, "click", function(){ if(timerRunning) pauseTimer(); else startTimer(); });
+  var bPftAdd1 = $("btnPftAdd1");
+  if(bPftAdd1) on(bPftAdd1, "click", function(){
+    timerLeftSec += 60;
+    if(timerLeftSec > timerTotalSec) timerTotalSec = timerLeftSec;
+    updateTimerUI();
+    toast("+1 minute ajoutée au minuteur", "info");
+  });
+  var bPftSub1 = $("btnPftSub1");
+  if(bPftSub1) on(bPftSub1, "click", function(){
+    timerLeftSec = Math.max(0, timerLeftSec - 60);
+    updateTimerUI();
+    toast("-1 minute", "info");
+  });
   updateTimerUI();
 
-  /* Slide Ink Annotation */
+  /* ======================================================== */
+  /* Slide Ink Annotation (Fusion avec Air Draw)              */
+  /* ======================================================== */
   var canAnnot = $("presAnnotCanvas");
   var btnAnnot = $("btnPresAnnot");
-  var btnClearAnnot = $("btnPresClearAnnot");
+  var annotToolbar = $("presDrawToolbar");
   var annotActive = false;
+
   if(canAnnot && stage){
     resizeCanvas(canAnnot, stage);
-    window.addEventListener("resize", function(){ if(S.view === "air-presentation") resizeCanvas(canAnnot, stage); });
-    var ctxA = canAnnot.getContext("2d");
-    var drawing = false;
+    window.addEventListener("resize", function(){
+      if(S.view === "air-presentation"){
+        resizeCanvas(canAnnot, stage);
+        redrawSlideCanvas();
+      }
+    });
+
+    var curStroke = null;
 
     on(canAnnot, "pointerdown", function(e){
-      drawing = true;
+      if(!annotActive) return;
       var r = canAnnot.getBoundingClientRect();
-      ctxA.beginPath();
-      ctxA.moveTo(e.clientX - r.left, e.clientY - r.top);
-      ctxA.strokeStyle = "#ff4d6d";
-      ctxA.lineWidth = 4;
-      ctxA.lineCap = "round";
-      ctxA.lineJoin = "round";
+      var normX = clamp((e.clientX - r.left) / r.width, 0, 1);
+      var normY = clamp((e.clientY - r.top) / r.height, 0, 1);
+      curStroke = {
+        tool: S.pres.currentTool || "pen",
+        color: S.pres.currentColor || "#ff4d6d",
+        size: 4,
+        pts: [{ x: normX, y: normY }]
+      };
     });
+
     on(canAnnot, "pointermove", function(e){
-      if(!drawing) return;
+      if(!curStroke) return;
       var r = canAnnot.getBoundingClientRect();
-      ctxA.lineTo(e.clientX - r.left, e.clientY - r.top);
-      ctxA.stroke();
+      var normX = clamp((e.clientX - r.left) / r.width, 0, 1);
+      var normY = clamp((e.clientY - r.top) / r.height, 0, 1);
+      curStroke.pts.push({ x: normX, y: normY });
+
+      // Immediate real-time rendering of active stroke
+      var ctx = canAnnot.getContext("2d");
+      var w = canAnnot.width, h = canAnnot.height;
+      var len = curStroke.pts.length;
+      if(len >= 2){
+        var pPrev = curStroke.pts[len - 2], pCur = curStroke.pts[len - 1];
+        ctx.save();
+        if(curStroke.tool === "eraser"){
+          ctx.globalCompositeOperation = "destination-out";
+          ctx.lineWidth = 26;
+        } else if(curStroke.tool === "highlighter"){
+          ctx.globalAlpha = 0.35;
+          ctx.strokeStyle = curStroke.color;
+          ctx.lineWidth = 16;
+        } else {
+          ctx.globalAlpha = 1.0;
+          ctx.strokeStyle = curStroke.color;
+          ctx.lineWidth = 4;
+        }
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.beginPath();
+        ctx.moveTo(pPrev.x * w, pPrev.y * h);
+        ctx.lineTo(pCur.x * w, pCur.y * h);
+        ctx.stroke();
+        ctx.restore();
+      }
     });
-    on(canAnnot, "pointerup", function(){ drawing = false; });
-    on(canAnnot, "pointerleave", function(){ drawing = false; });
+
+    function finishStroke(){
+      if(!curStroke) return;
+      if(curStroke.pts.length >= 2){
+        if(S.pres.shapesEnabled && curStroke.tool !== "eraser" && curStroke.pts.length >= 6){
+          var recognized = fitSlideShape(curStroke.pts);
+          if(recognized){
+            curStroke.shape = recognized;
+            toast("Forme géométrique reconnue : " + recognized.type, "info");
+          }
+        }
+        var key = getSlideStrokeKey();
+        if(!S.pres.slideStrokes[key]) S.pres.slideStrokes[key] = [];
+        S.pres.slideStrokes[key].push(curStroke);
+      }
+      curStroke = null;
+      redrawSlideCanvas();
+    }
+
+    on(canAnnot, "pointerup", finishStroke);
+    on(canAnnot, "pointerleave", finishStroke);
 
     if(btnAnnot){
       on(btnAnnot, "click", function(){
         annotActive = !annotActive;
         canAnnot.classList.toggle("hidden", !annotActive);
         btnAnnot.classList.toggle("btn-primary", annotActive);
-        if(btnClearAnnot) btnClearAnnot.classList.toggle("hidden", !annotActive);
-        toast(annotActive ? "Annotation diapo activée" : "Annotation masquée", "info");
+        if(annotToolbar) annotToolbar.style.display = annotActive ? "flex" : "";
+        if(annotActive){
+          resizeCanvas(canAnnot, stage);
+          redrawSlideCanvas();
+        }
+        toast(annotActive ? "Mode dessin TNI activé sur la slide" : "Mode dessin TNI masqué", "info");
       });
     }
-    if(btnClearAnnot){
-      on(btnClearAnnot, "click", function(){
-        ctxA.clearRect(0, 0, canAnnot.width, canAnnot.height);
-        toast("Annotations effacées", "info");
+
+    // Drawing toolbar tools
+    var toolBtns = qsa(".pdt-btn.tool", annotToolbar);
+    toolBtns.forEach(function(tb){
+      on(tb, "click", function(){
+        toolBtns.forEach(function(x){ x.classList.remove("active"); });
+        tb.classList.add("active");
+        S.pres.currentTool = tb.getAttribute("data-tool") || "pen";
+        toast("Outil : " + S.pres.currentTool.toUpperCase(), "info");
+      });
+    });
+
+    // Color pickers
+    var inkColorPicker = $("presInkColor");
+    if(inkColorPicker){
+      on(inkColorPicker, "input", function(){
+        S.pres.currentColor = this.value;
+      });
+    }
+    var presetColorMap = {
+      btnPresColorCyan: "#00e5ff",
+      btnPresColorYellow: "#ffc24b",
+      btnPresColorRed: "#ff4d6d",
+      btnPresColorGreen: "#00ff88"
+    };
+    Object.keys(presetColorMap).forEach(function(btnId){
+      var btn = $(btnId);
+      if(btn){
+        on(btn, "click", function(){
+          var col = presetColorMap[btnId];
+          S.pres.currentColor = col;
+          if(inkColorPicker) inkColorPicker.value = col;
+          toast("Couleur d'encre sélectionnée", "info");
+        });
+      }
+    });
+
+    // Shapes toggle
+    var chkShapes = $("chkPresShapes");
+    if(chkShapes){
+      on(chkShapes, "change", function(){
+        S.pres.shapesEnabled = this.checked;
+        toast(this.checked ? "Reconnaissance de formes activée" : "Tracé libre seul", "info");
+      });
+    }
+
+    // Undo & Clear
+    var btnUndo = $("btnPresUndo");
+    if(btnUndo){
+      on(btnUndo, "click", function(){
+        var key = getSlideStrokeKey();
+        var list = S.pres.slideStrokes[key] || [];
+        if(list.length > 0){
+          list.pop();
+          redrawSlideCanvas();
+          toast("Dernier tracé annulé", "info");
+        }
+      });
+    }
+
+    var btnClear = $("btnPresClearSlide");
+    if(btnClear){
+      on(btnClear, "click", function(){
+        var key = getSlideStrokeKey();
+        S.pres.slideStrokes[key] = [];
+        redrawSlideCanvas();
+        toast("Annotations de cette diapo effacées", "info");
       });
     }
   }
 
-  on($("btnPresPrev"),"click", function(){ S.pres.i = clamp(S.pres.i-1,0,S.pres.slides.length-1); renderPresentation(); logEv("pres.prev",{}); });
-  on($("btnPresNext"),"click", function(){ S.pres.i = clamp(S.pres.i+1,0,S.pres.slides.length-1); renderPresentation(); logEv("pres.next",{}); });
+  /* ======================================================== */
+  /* Diaporama Selector & Slide Add                           */
+  /* ======================================================== */
+  var selDeck = $("selPresDeck");
+  if(selDeck){
+    on(selDeck, "change", function(){
+      S.pres.activeDeckId = this.value;
+      S.pres.i = 0;
+      renderPresentation();
+      toast("Diaporama chargé : " + this.options[this.selectedIndex].text, "info");
+      logEv("pres.deckChange", { deckId: this.value });
+    });
+  }
+
+  var btnAddSlide = $("btnPresAddSlide");
+  if(btnAddSlide){
+    on(btnAddSlide, "click", function(){
+      var deck = getActivePresDeck();
+      if(!deck) return;
+      var newIdx = deck.slides.length + 1;
+      deck.slides.push({
+        tag: "NOTE TNI EN DIRECT",
+        t: "Diapositive " + newIdx,
+        b: "Nouvelle page de travail TNI ajoutée pendant le cours.",
+        bullets: [
+          "Points clés expliqués par l'enseignant",
+          "Participation des élèves au tableau",
+          "👉 Annotez librement avec le stylo TNI en direct"
+        ]
+      });
+      S.pres.i = deck.slides.length - 1;
+      renderPresentation();
+      toast("Nouvelle diapositive " + newIdx + " ajoutée !", "ok");
+      logEv("pres.addSlide", { newIdx: newIdx });
+    });
+  }
+
+  /* ======================================================== */
+  /* File Import (PPTX / PDF / JSON / TXT / MD)              */
+  /* ======================================================== */
+  var btnImportFile = $("btnPresImportFile");
+  var fileInput = $("filePresImport");
+  if(btnImportFile && fileInput){
+    on(btnImportFile, "click", function(){ fileInput.click(); });
+    on(fileInput, "change", function(e){
+      var file = e.target.files && e.target.files[0];
+      if(!file) return;
+
+      var r = new FileReader();
+      r.onload = function(ev){
+        try{
+          var content = ev.target.result;
+          var slides = [];
+          var fName = file.name.replace(/\.[^.]+$/, "");
+
+          if(file.name.endsWith(".json")){
+            var parsed = JSON.parse(content);
+            slides = Array.isArray(parsed) ? parsed : (parsed.slides || []);
+          } else if(file.name.endsWith(".txt") || file.name.endsWith(".md")){
+            var parts = content.split(/\n---\n|\n(?=##?\s)/);
+            slides = parts.map(function(pt, idx){
+              var lines = pt.trim().split("\n");
+              var title = lines[0].replace(/^#+\s*/, "").trim() || (fName + " - Slide " + (idx + 1));
+              var body = lines.slice(1).filter(function(l){ return !l.trim().startsWith("-") && !l.trim().startsWith("*"); }).join(" ").trim();
+              var bullets = lines.slice(1).filter(function(l){ return l.trim().startsWith("-") || l.trim().startsWith("*"); }).map(function(l){ return l.replace(/^[-*]\s*/, "").trim(); });
+              return { tag: "IMPORT MD/TXT", t: title, b: body, bullets: bullets };
+            }).filter(function(s){ return s.t || s.b; });
+          } else {
+            // PPTX or PDF parser: extract slide text tags or structure
+            var textExtract = "";
+            if(typeof content === "string"){
+              var matches = content.match(/<a:t>([^<]+)<\/a:t>/g);
+              if(matches && matches.length >= 3){
+                textExtract = matches.map(function(m){ return m.replace(/<[^>]+>/g, ""); }).join(" ");
+              }
+            }
+            if(textExtract.length > 20){
+              var chunks = textExtract.match(/.{1,180}(\s|$)/g) || [textExtract];
+              slides = chunks.slice(0, 6).map(function(chk, idx){
+                return {
+                  tag: "IMPORT PPTX · SLIDE " + (idx + 1),
+                  t: fName + " (" + (idx + 1) + ")",
+                  b: chk.trim(),
+                  bullets: ["Diapositive extraite du fichier " + file.name, "Prêt pour l'annotation interactive au TNI"]
+                };
+              });
+            } else {
+              slides = [
+                { tag: "IMPORT · " + file.name.toUpperCase(), t: fName, b: "Support de cours importé avec succès pour utilisation sur TNI.", bullets: ["Fichier : " + file.name, "Taille : " + Math.round(file.size / 1024) + " Ko", "Utilisez le stylo TNI pour annoter directement"] },
+                { tag: "ANALYSE & EXPLICATIONS", t: "Synthèse & Démarche pédagogique", b: "Présentation des concepts clés abordés pendant cette séquence.", bullets: ["Point 1 : Introduction et objectifs", "Point 2 : Méthodologie et démonstration", "Point 3 : Exercice d'application"] },
+                { tag: "APPLICATION CLASSE", t: "Défi & Questions interactives", b: "Phase de questions-réponses et d'exercices au tableau.", bullets: ["Les élèves viennent annoter les solutions", "Utiliser le Spotlight pour cibler un problème", "Lancer le minuteur de classe pour cadrer le temps"] }
+              ];
+            }
+          }
+
+          if(!slides.length){
+            slides = [{ tag: "IMPORT", t: fName, b: "Présentation chargée.", bullets: ["Prêt pour la classe"] }];
+          }
+
+          var deckId = "deck_custom_" + Date.now();
+          var newDeck = {
+            id: deckId,
+            name: "📁 " + fName + " (" + slides.length + " slides)",
+            slides: slides
+          };
+          S.pres.decks.unshift(newDeck);
+          S.pres.activeDeckId = deckId;
+          S.pres.i = 0;
+
+          if(selDeck){
+            var opt = document.createElement("option");
+            opt.value = deckId;
+            opt.textContent = newDeck.name;
+            selDeck.insertBefore(opt, selDeck.firstChild);
+            selDeck.value = deckId;
+          }
+
+          renderPresentation();
+          toast("Diaporama importé : " + slides.length + " diapositives !", "ok");
+          logEv("pres.importFile", { name: file.name, count: slides.length });
+        }catch(err){
+          toast("Erreur lors de l'import : " + err.message, "err");
+        }
+      };
+
+      if(file.name.endsWith(".json") || file.name.endsWith(".txt") || file.name.endsWith(".md")){
+        r.readAsText(file);
+      } else {
+        r.readAsBinaryString ? r.readAsBinaryString(file) : r.readAsText(file);
+      }
+      fileInput.value = "";
+    });
+  }
+
+  /* ======================================================== */
+  /* Google Slides Embed Modal                                */
+  /* ======================================================== */
+  var btnGoogleSlides = $("btnPresGoogleSlides");
+  var modalGslides = $("modalGoogleSlides");
+  var btnGslidesCancel = $("btnGslidesCancel");
+  var btnGslidesLoad = $("btnGslidesLoad");
+  var inputGslides = $("inputGoogleSlidesUrl");
+
+  if(btnGoogleSlides && modalGslides){
+    on(btnGoogleSlides, "click", function(){
+      modalGslides.classList.remove("hidden");
+      if(inputGslides){ inputGslides.value = ""; inputGslides.focus(); }
+    });
+    if(btnGslidesCancel){
+      on(btnGslidesCancel, "click", function(){ modalGslides.classList.add("hidden"); });
+    }
+    if(btnGslidesLoad){
+      on(btnGslidesLoad, "click", function(){
+        var url = inputGslides ? inputGslides.value.trim() : "";
+        if(!url){
+          toast("Veuillez saisir une URL Google Slides", "warn");
+          return;
+        }
+        // Transform standard edit/share URL to clean embed URL
+        if(url.indexOf("/edit") !== -1){
+          url = url.replace(/\/edit.*$/, "/embed?start=false&loop=false&delayms=3000");
+        } else if(url.indexOf("/pub") === -1 && url.indexOf("/embed") === -1){
+          url = url.replace(/\/+$/, "") + "/embed?start=false&loop=false&delayms=3000";
+        }
+
+        var gId = "deck_gslides_" + Date.now();
+        var gDeck = {
+          id: gId,
+          name: "🔗 Google Slides en direct",
+          slides: [
+            { tag: "GOOGLE SLIDES EN DIRECT", t: "Google Slides", b: "Diaporama interactif synchronisé", iframeUrl: url }
+          ]
+        };
+        S.pres.decks.unshift(gDeck);
+        S.pres.activeDeckId = gId;
+        S.pres.i = 0;
+
+        if(selDeck){
+          var opt = document.createElement("option");
+          opt.value = gId;
+          opt.textContent = gDeck.name;
+          selDeck.insertBefore(opt, selDeck.firstChild);
+          selDeck.value = gId;
+        }
+
+        modalGslides.classList.add("hidden");
+        renderPresentation();
+        toast("Google Slides intégré avec succès !", "ok");
+        logEv("pres.googleSlides", { url: url });
+      });
+    }
+  }
+
+  /* Navigation Buttons */
+  on($("btnPresPrev"),"click", function(){
+    var deck = getActivePresDeck();
+    var maxIdx = (deck && deck.slides) ? deck.slides.length - 1 : 0;
+    S.pres.i = clamp(S.pres.i - 1, 0, maxIdx);
+    renderPresentation();
+    logEv("pres.prev", {});
+  });
+  on($("btnPresNext"),"click", function(){
+    var deck = getActivePresDeck();
+    var maxIdx = (deck && deck.slides) ? deck.slides.length - 1 : 0;
+    S.pres.i = clamp(S.pres.i + 1, 0, maxIdx);
+    renderPresentation();
+    logEv("pres.next", {});
+  });
   on(document,"keydown", function(e){
-    if(S.view!=="air-presentation") return;
-    if(e.key==="ArrowRight"){ $("btnPresNext").click(); }
-    if(e.key==="ArrowLeft"){ $("btnPresPrev").click(); }
+    if(S.view !== "air-presentation") return;
+    if(e.key === "ArrowRight"){ $("btnPresNext").click(); }
+    if(e.key === "ArrowLeft"){ $("btnPresPrev").click(); }
   });
 }
 

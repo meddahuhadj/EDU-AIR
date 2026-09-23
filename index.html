@@ -330,19 +330,80 @@
       <div class="panel">
         <h2 data-i18n-html="presentation.title">AIR PRESENTATION</h2>
         <p class="lede" data-i18n-html="presentation.lede">Deliver presentations without touching a thing — swipe in air to change slides.</p>
+        
+        <!-- Diaporama Selector & Import Bar -->
+        <div class="pres-deck-bar row row-between row-center-v row-wrap" style="margin-bottom:12px;gap:8px;">
+          <div class="row row-center-v" style="gap:8px;flex-wrap:wrap;">
+            <label style="font-size:12px;font-weight:700;color:var(--cy);">📊 DIAPORAMA :</label>
+            <select id="selPresDeck" class="sb-select" style="max-width:320px;">
+              <option value="deck_math">📐 Maths : Théorème de Pythagore (5 slides)</option>
+              <option value="deck_science">⚡ Sciences : Circuits & Loi d'Ohm (3 slides)</option>
+              <option value="deck_default" selected>🖥️ Démo EDU-AIR SMART SURFACE (3 slides)</option>
+            </select>
+            <button type="button" class="btn btn-sm" id="btnPresAddSlide" title="Ajouter une diapositive à ce diaporama">➕ Ajouter slide</button>
+          </div>
+          <div class="row row-center-v" style="gap:8px;flex-wrap:wrap;">
+            <button type="button" class="btn btn-sm btn-primary" id="btnPresImportFile" title="Importer une présentation PPTX, PDF, JSON ou texte">📁 IMPORTER PPTX / PDF</button>
+            <input type="file" id="filePresImport" class="hidden" accept=".pptx,.pdf,.json,.txt,.md" />
+            <button type="button" class="btn btn-sm" id="btnPresGoogleSlides" title="Intégrer une présentation Google Slides via URL">🔗 GOOGLE SLIDES</button>
+          </div>
+        </div>
+
+        <!-- Toolbar TNI Annotations Slide (Fusion avec Air Draw) -->
+        <div class="pres-draw-toolbar" id="presDrawToolbar">
+          <div class="pdt-group">
+            <span class="pdt-label">🎨 ANNOTATION :</span>
+            <button type="button" class="pdt-btn tool active" data-tool="pen" id="btnPresToolPen" title="Stylo TNI"><span class="ico">✏️</span> STYLO</button>
+            <button type="button" class="pdt-btn tool" data-tool="highlighter" id="btnPresToolHighlighter" title="Surligneur fluo"><span class="ico">🖊️</span> SURLIGNEUR</button>
+            <button type="button" class="pdt-btn tool" data-tool="eraser" id="btnPresToolEraser" title="Gomme"><span class="ico">❌</span> GOMME</button>
+          </div>
+          <div class="pdt-group">
+            <input type="color" id="presInkColor" value="#ff4d6d" title="Couleur de tracé" class="pdt-color-picker" />
+            <button type="button" class="pdt-btn sml" id="btnPresColorCyan" style="color:#00e5ff;font-weight:900;">●</button>
+            <button type="button" class="pdt-btn sml" id="btnPresColorYellow" style="color:#ffc24b;font-weight:900;">●</button>
+            <button type="button" class="pdt-btn sml" id="btnPresColorRed" style="color:#ff4d6d;font-weight:900;">●</button>
+            <button type="button" class="pdt-btn sml" id="btnPresColorGreen" style="color:#00ff88;font-weight:900;">●</button>
+            <label class="pdt-btn sml"><input type="checkbox" id="chkPresShapes" checked /> <span>📐 SHAPES</span></label>
+          </div>
+          <div class="pdt-group">
+            <button type="button" class="pdt-btn sml" id="btnPresUndo" title="Annuler le dernier tracé">↩ Annuler</button>
+            <button type="button" class="pdt-btn sml" id="btnPresClearSlide" title="Effacer l'encre de cette slide">🗑️ Effacer</button>
+          </div>
+        </div>
+
         <div class="pres-stage" id="presStage">
           <div class="pres-spot-overlay hidden" id="presSpotOverlay" aria-hidden="true"></div>
           <div class="pres-loupe hidden" id="presLoupe" aria-hidden="true"></div>
           <canvas id="presAnnotCanvas" class="pres-annot-canvas hidden" aria-label="Slide ink annotation"></canvas>
+          
+          <!-- Floating In-Slide Classroom Timer -->
+          <div class="pres-floating-timer" id="presFloatingTimer" title="Minuteur flottant (visible en direct sur la diapositive)">
+            <span class="pft-ico">⏱️</span>
+            <span class="pft-time" id="pftTime">03:00</span>
+            <div class="pft-quick-btns">
+              <button type="button" class="pft-btn" id="btnPftSub1" title="-1 minute">-1m</button>
+              <button type="button" class="pft-btn" id="btnPftAdd1" title="+1 minute">+1m</button>
+              <button type="button" class="pft-btn pft-btn-play" id="btnPftToggle" title="Démarrer / Pause">▶</button>
+            </div>
+          </div>
         </div>
-        <div class="row row-center row-wrap">
-          <button class="btn" id="btnPresPrev" data-i18n-html="presentation.prev">PREV</button>
-          <span class="pres-count" id="presCount">1 / 1</span>
-          <button class="btn" id="btnPresNext" data-i18n-html="presentation.next">NEXT</button>
-          <button class="btn" id="btnPresSpot" title="Focaliser l'attention sur un détail du document (TNI)">🔦 SPOTLIGHT</button>
-          <button class="btn" id="btnPresLoupe" title="Zoomer sur une zone avec une loupe virtuelle">🔍 LOUPE ZOOM</button>
-          <button class="btn" id="btnPresAnnot" title="Annoter / dessiner sur la diapositive en direct">✏️ ANNOTER</button>
-          <button class="btn btn-sm hidden" id="btnPresClearAnnot" title="Effacer les annotations">🧹 Effacer</button>
+
+        <div class="row row-between row-center-v row-wrap pres-nav-row" style="margin-top:10px;gap:10px;">
+          <div class="row row-center-v" style="gap:8px;">
+            <button class="btn btn-sm" id="btnPresPrev" data-i18n-html="presentation.prev">◀ PRÉCÉDENT</button>
+            <span class="pres-count" id="presCount" style="font-family:var(--font-mono);font-size:14px;font-weight:800;color:var(--cy);padding:0 8px;">1 / 1</span>
+            <button class="btn btn-sm" id="btnPresNext" data-i18n-html="presentation.next">SUIVANT ▶</button>
+          </div>
+          <div class="row row-center-v" style="gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-sm" id="btnPresSpot" title="Focaliser l'attention sur un détail du document (TNI)">🔦 SPOTLIGHT</button>
+            <button class="btn btn-sm" id="btnPresLoupe" title="Zoomer sur une zone avec une loupe virtuelle">🔍 LOUPE ZOOM</button>
+            <button class="btn btn-sm btn-primary" id="btnPresAnnot" title="Activer / Masquer le mode annotation">✏️ DESSIN TNI</button>
+          </div>
+        </div>
+
+        <!-- Slide Thumbnails Strip -->
+        <div class="pres-thumbnails-wrap" id="presThumbnailsWrap">
+          <div class="pres-thumbnails" id="presThumbnails"></div>
         </div>
 
         <!-- ============ MINUTEUR DE CLASSE TNI ============ -->
@@ -541,6 +602,22 @@
     <div class="row row-center">
       <button class="btn btn-primary" id="btnDemoCam" data-i18n-html="demo.cam">USE MY CAMERA (REAL GESTURES)</button>
       <button class="btn" id="btnDemoGo" data-i18n-html="demo.go">SIMULATE (KEYBOARD/MOUSE)</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop hidden" id="modalGoogleSlides" role="dialog" aria-modal="true" aria-labelledby="gslidesModalTitle">
+  <div class="modal" style="max-width:540px;">
+    <h3 id="gslidesModalTitle">🔗 Intégrer une présentation Google Slides</h3>
+    <p class="lede">Collez l'URL de votre diaporama Google Slides (lien de partage ou lien d'intégration web).</p>
+    <div style="margin:16px 0;">
+      <label style="display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:var(--cy);">URL Google Slides :</label>
+      <input type="url" id="inputGoogleSlidesUrl" class="sb-input" style="width:100%;box-sizing:border-box;padding:8px 12px;font-size:13px;" placeholder="https://docs.google.com/presentation/d/.../pub?start=false..." />
+      <div style="font-size:11px;color:var(--ink-dim);margin-top:6px;">Astuce : Dans Google Slides ➔ Fichier ➔ Partager ➔ Publier sur le web ➔ Copier le lien.</div>
+    </div>
+    <div class="row row-between" style="margin-top:20px;">
+      <button type="button" class="btn" id="btnGslidesCancel">Annuler</button>
+      <button type="button" class="btn btn-primary" id="btnGslidesLoad">CHARGER LE DIAPORAMA</button>
     </div>
   </div>
 </div>

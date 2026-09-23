@@ -613,4 +613,46 @@ body.theme-light .navitem[data-state="warn"]{color:var(--amber)}
 .vvc-word-en{font-size:13px; font-weight:700; color:var(--amber);}
 .vvc-phonetic{font-size:11px; color:var(--ink-dim); font-style:italic;}
 
+/* =============================================================
+   AIR PRESENTATION — SUITE TNI AVANCÉE
+   ============================================================= */
+/* Floating in-slide timer */
+.pres-floating-timer{position:absolute; top:14px; right:14px; z-index:10; background:rgba(5,9,20,.88); border:1.5px solid var(--line-strong); border-radius:8px; padding:6px 12px; display:flex; align-items:center; gap:8px; box-shadow:0 6px 18px rgba(0,0,0,.6); backdrop-filter:blur(6px);}
+.pft-ico{font-size:16px;}
+.pft-time{font-family:var(--font-mono); font-size:18px; font-weight:900; color:var(--cy); letter-spacing:1px;}
+.pft-quick-btns{display:flex; gap:4px; align-items:center;}
+.pft-btn{background:rgba(255,255,255,.08); color:var(--ink-strong); border:1px solid rgba(255,255,255,.15); border-radius:4px; font-family:var(--font-mono); font-size:10px; font-weight:800; padding:2px 6px; cursor:pointer;}
+.pft-btn:hover{background:var(--cy); color:#05070d;}
+.pft-btn-play{background:var(--amber); color:#05070d; font-weight:900;}
+
+/* Presentation Draw Toolbar */
+.pres-draw-toolbar{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 12px; background:rgba(9,15,30,.92); border:1px solid var(--line-strong); border-radius:8px; margin-bottom:10px; flex-wrap:wrap;}
+.pdt-group{display:flex; align-items:center; gap:6px; flex-wrap:wrap;}
+.pdt-label{font-family:var(--font-display); font-size:11px; font-weight:800; color:var(--amber); letter-spacing:.08em;}
+.pdt-btn{background:var(--bg2); color:var(--ink); border:1px solid var(--line); border-radius:6px; font-family:var(--font-display); font-size:11px; font-weight:700; padding:5px 10px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:all .15s;}
+.pdt-btn:hover{color:var(--cy); border-color:var(--cy);}
+.pdt-btn.active{background:rgba(0,229,255,.15); color:var(--cy); border-color:var(--cy); box-shadow:0 0 8px rgba(0,229,255,.3);}
+.pdt-btn.sml{padding:4px 8px; font-size:12px;}
+.pdt-color-picker{width:28px; height:28px; padding:0; border:1px solid var(--line); border-radius:6px; background:transparent; cursor:pointer; outline:none;}
+
+/* Slide Thumbnails */
+.pres-thumbnails-wrap{margin-top:14px; overflow-x:auto; padding-bottom:6px;}
+.pres-thumbnails{display:flex; gap:10px;}
+.pres-thumb-item{flex:0 0 140px; height:80px; background:var(--bg2); border:1.5px solid var(--line); border-radius:6px; padding:8px; display:flex; flex-direction:column; justify-content:space-between; cursor:pointer; transition:all .15s; overflow:hidden;}
+.pres-thumb-item:hover{border-color:var(--cy); transform:scale(1.03);}
+.pres-thumb-item.active{border-color:var(--cy); box-shadow:0 0 12px rgba(0,229,255,.35); background:rgba(0,229,255,.06);}
+.pres-thumb-num{font-family:var(--font-mono); font-size:10px; font-weight:800; color:var(--cy);}
+.pres-thumb-title{font-size:11px; font-weight:700; color:var(--ink-strong); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+
+/* Rich Slide Elements */
+.pres-slide{display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%; padding:28px 48px; text-align:center; position:relative;}
+.pres-slide h3{font-size:26px; font-weight:900; color:var(--ink-strong); margin:0 0 14px 0;}
+.pres-slide p{font-size:15px; color:var(--ink-dim); max-width:800px; margin:0 0 16px 0; line-height:1.6;}
+.pres-slide-tag{display:inline-block; font-family:var(--font-display); font-size:10px; font-weight:800; padding:3px 8px; border-radius:4px; background:rgba(0,229,255,.15); color:var(--cy); border:1px solid rgba(0,229,255,.3); margin-bottom:12px;}
+.pres-slide-bullets{text-align:left; max-width:760px; margin:0 auto; padding-left:20px; color:var(--ink); font-size:14px;}
+.pres-slide-bullets li{margin-bottom:8px; line-height:1.5;}
+.pres-iframe-wrap{width:100%; height:100%; border:none; display:flex;}
+.pres-iframe{width:100%; height:100%; border:none; border-radius:4px;}
+
+
 
