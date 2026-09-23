@@ -117,11 +117,41 @@
             <button class="btbtn" id="btnUndo" title="Undo" aria-label="Undo"><span class="ico">&#8617;</span></button>
             <button class="btbtn" id="btnRedo" title="Redo" aria-label="Redo"><span class="ico">&#8618;</span></button>
           </div>
+          <div class="bt-group bt-layers" id="boardLayersGroup" role="group" aria-label="Calques TNI">
+            <span class="bt-layer-tag">📑 CALQUES</span>
+            <div class="layer-pill" id="pillBg" data-layer="bg">
+              <button type="button" class="layer-vis-btn" id="btnVisBg" title="Afficher/Masquer Fond" aria-label="Visibilité Fond">👁️</button>
+              <button type="button" class="layer-sel-btn" id="btnSelBg" title="Calque Fond">FOND</button>
+              <select id="selBgType" class="layer-select" title="Modèle de fond">
+                <option value="none">Vierge</option>
+                <option value="grid" selected>Quadrillage</option>
+                <option value="seyes">Séyès</option>
+                <option value="axis">Axes (x,y)</option>
+              </select>
+            </div>
+            <div class="layer-pill active" id="pillDraw" data-layer="draw">
+              <button type="button" class="layer-vis-btn" id="btnVisDraw" title="Afficher/Masquer Encre" aria-label="Visibilité Encre">👁️</button>
+              <button type="button" class="layer-sel-btn" id="btnSelDraw" title="Calque Encre">ENCRE</button>
+            </div>
+            <div class="layer-pill" id="pillGeo" data-layer="geo">
+              <button type="button" class="layer-vis-btn" id="btnVisGeo" title="Afficher/Masquer Géométrie" aria-label="Visibilité Géométrie">👁️</button>
+              <button type="button" class="layer-sel-btn" id="btnSelGeo" title="Calque Géométrie">GÉOMÉTRIE</button>
+            </div>
+          </div>
           <div class="bt-group">
             <input type="color" id="inkColor" value="#00e5ff" title="Color" aria-label="Color" />
             <label class="btbtn sml"><input type="checkbox" id="chkShapes" checked /> <span data-i18n-html="smart.shapes">SHAPES</span></label>
             <label class="btbtn sml"><input type="checkbox" id="chkHaptics" checked /> <span data-i18n-html="smart.haptics">HAPTICS</span></label>
-            <button class="btbtn sml" id="btnSaveBoard" title="Save" aria-label="Save"><span class="ico">&#9947;</span><span class="lbl" data-i18n-html="smart.save">SAVE</span></button>
+            <div class="export-dropdown-wrap">
+              <button class="btbtn sml" id="btnSaveBoard" title="Save SVG" aria-label="Save"><span class="ico">&#9947;</span><span class="lbl" data-i18n-html="smart.save">SAVE</span></button>
+              <button class="btbtn sml btn-tni-export" id="btnExportTniMenu" title="Export TNI Pédagogique"><span class="ico">📤</span><span class="lbl">EXPORT TNI ▾</span></button>
+              <div class="export-menu hidden" id="exportTniMenu">
+                <button type="button" class="exp-item" id="btnExpPdf"><span class="exp-ico">📄</span><span class="exp-txt"><strong>PDF Pédagogique Annoté</strong><small>Feuille de cours A4 paysage prête à imprimer</small></span></button>
+                <button type="button" class="exp-item" id="btnExpOpenBoard"><span class="exp-ico">📦</span><span class="exp-txt"><strong>OpenBoard (.ubz / SVG)</strong><small>Tableau interactif TNI compatible OpenBoard</small></span></button>
+                <button type="button" class="exp-item" id="btnExpPng4k"><span class="exp-ico">🖼️</span><span class="exp-txt"><strong>Image HD 4K (TNI)</strong><small>Rendu ultra-net 3840×2160 pour rétroprojection</small></span></button>
+                <button type="button" class="exp-item" id="btnExpSvgLayers"><span class="exp-ico">📐</span><span class="exp-txt"><strong>SVG Vectoriel Multi-Calques</strong><small>Fichier source avec groupes de calques</small></span></button>
+              </div>
+            </div>
             <span class="bt-note" id="boardHint"></span>
           </div>
         </div>
@@ -257,6 +287,7 @@
         <p class="lede" data-i18n-html="calibration.lede">Map your camera to the projection surface for pixel-perfect touch.</p>
         <div class="row row-center">
           <button class="btn btn-primary" id="btnCalibStart" data-i18n-html="calibration.start">START CALIBRATION</button>
+          <button class="btn" id="btnCalibTniQuick" style="background:linear-gradient(90deg,#00e5ff,#ffc24b);color:#05070d;font-weight:800;border:none;">⚡ TNI RAPIDE 5s (4 COINS)</button>
           <button class="btn" id="btnCalibReset" data-i18n-html="calibration.reset">RESET</button>
         </div>
         <div class="calib-canvas-wrap" id="calibWrap"><canvas id="canvasCalib" aria-label="Calibration view"></canvas></div>
@@ -316,6 +347,7 @@
     <p class="calib-guide" id="calibGuide"></p>
     <div class="row row-center">
       <button class="btn btn-primary" id="btnCalibBegin" data-i18n-html="calibration.begin">BEGIN</button>
+      <button class="btn" id="btnCalibModalTni" style="background:linear-gradient(90deg,#00e5ff,#ffc24b);color:#05070d;font-weight:800;border:none;">⚡ TNI RAPIDE 5s</button>
       <button class="btn" id="btnCalibAuto" data-i18n-html="calibration.auto">AUTO</button>
       <button class="btn" id="btnCalibClose" data-i18n-html="calibration.close">CLOSE</button>
       <span class="score" id="calibScoreModal">SCORE 0%</span>

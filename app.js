@@ -252,7 +252,25 @@ function makeInkPad(svg, opts){
   opts = opts || {};
   svg.setAttribute("viewBox","0 0 1000 640");
   svg.setAttribute("preserveAspectRatio","none");
-  var pad = { svg:svg, strokes:[], redo:[], tool:opts.tool||"pen", color:opts.color||"#00e5ff", size:opts.size||4, shapes: !!opts.shapes, enabled: opts.enabled!==false, currents:{}, onStroke:opts.onStroke };
+  var pad = {
+    svg: svg,
+    strokes: [],
+    redo: [],
+    tool: opts.tool||"pen",
+    color: opts.color||"#00e5ff",
+    size: opts.size||4,
+    shapes: !!opts.shapes,
+    enabled: opts.enabled!==false,
+    currents: {},
+    onStroke: opts.onStroke,
+    activeLayer: "draw",
+    layers: {
+      bg: { visible: true, type: "grid" },
+      draw: { visible: true },
+      geo: { visible: true }
+    }
+  };
+
   function pidOf(ev){ return (ev && ev.pointerId != null) ? ev.pointerId : 1; }
   function toLocal(ev){
     var r = svg.getBoundingClientRect();
@@ -264,7 +282,7 @@ function makeInkPad(svg, opts){
     for(var i=1;i<pts.length;i++) d += " L"+(pts[i].x*1000).toFixed(1)+","+(pts[i].y*640).toFixed(1);
     return d;
   }
-  function drawOne(st){
+  function drawOne(st, container){
     var el;
     if(st.shape){ el = shapeEl(st.shape, bboxOf(st.pts), st.color); }
     else {
@@ -276,24 +294,116 @@ function makeInkPad(svg, opts){
       el.setAttribute("stroke-linecap","round"); el.setAttribute("stroke-linejoin","round");
       if(st.tool==="highlighter") el.setAttribute("opacity","0.35");
     }
-    svg.appendChild(el);
+    (container || svg).appendChild(el);
+    return el;
   }
-  function currentEls(){
-    var out=[];
-    Object.keys(pad.currents).forEach(function(k){
-      var st = pad.currents[k];
-      if(st){ out.push(drawOne(st)); }
-    });
-    return out;
+  function drawBgPattern(g){
+    var type = pad.layers.bg ? pad.layers.bg.type : "grid";
+    if(!type || type==="none") return;
+    if(type==="grid"){
+      for(var x=0; x<=1000; x+=50){
+        var l = document.createElementNS(SVGNS,"line");
+        l.setAttribute("x1", x); l.setAttribute("y1", 0); l.setAttribute("x2", x); l.setAttribute("y2", 640);
+        l.setAttribute("stroke", "#1b2847"); l.setAttribute("stroke-width", x%100===0 ? "1.5" : "0.75");
+        l.setAttribute("opacity", x%100===0 ? "0.6" : "0.35");
+        g.appendChild(l);
+      }
+      for(var y=0; y<=640; y+=50){
+        var l2 = document.createElementNS(SVGNS,"line");
+        l2.setAttribute("x1", 0); l2.setAttribute("y1", y); l2.setAttribute("x2", 1000); l2.setAttribute("y2", y);
+        l2.setAttribute("stroke", "#1b2847"); l2.setAttribute("stroke-width", y%100===0 ? "1.5" : "0.75");
+        l2.setAttribute("opacity", y%100===0 ? "0.6" : "0.35");
+        g.appendChild(l2);
+      }
+    } else if(type==="seyes"){
+      var mg = document.createElementNS(SVGNS,"line");
+      mg.setAttribute("x1", 120); mg.setAttribute("y1", 0); mg.setAttribute("x2", 120); mg.setAttribute("y2", 640);
+      mg.setAttribute("stroke", "#ff4d6d"); mg.setAttribute("stroke-width", "2"); mg.setAttribute("opacity", "0.7");
+      g.appendChild(mg);
+      for(var sy=40; sy<=640; sy+=40){
+        var ml = document.createElementNS(SVGNS,"line");
+        ml.setAttribute("x1", 0); ml.setAttribute("y1", sy); ml.setAttribute("x2", 1000); ml.setAttribute("y2", sy);
+        ml.setAttribute("stroke", "#4570ff"); ml.setAttribute("stroke-width", "1.5"); ml.setAttribute("opacity", "0.6");
+        g.appendChild(ml);
+        for(var sub=1; sub<4; sub++){
+          var subl = document.createElementNS(SVGNS,"line");
+          var suby = sy - sub*10;
+          if(suby > 0){
+            subl.setAttribute("x1", 0); subl.setAttribute("y1", suby); subl.setAttribute("x2", 1000); subl.setAttribute("y2", suby);
+            subl.setAttribute("stroke", "#1e3056"); subl.setAttribute("stroke-width", "0.6"); subl.setAttribute("opacity", "0.4");
+            g.appendChild(subl);
+          }
+        }
+      }
+    } else if(type==="axis"){
+      var cx = 500, cy = 320;
+      var axX = document.createElementNS(SVGNS,"line");
+      axX.setAttribute("x1", 20); axX.setAttribute("y1", cy); axX.setAttribute("x2", 980); axX.setAttribute("y2", cy);
+      axX.setAttribute("stroke", "#7cf7ff"); axX.setAttribute("stroke-width", "2");
+      g.appendChild(axX);
+      var axY = document.createElementNS(SVGNS,"line");
+      axY.setAttribute("x1", cx); axY.setAttribute("y1", 20); axY.setAttribute("x2", cx); axY.setAttribute("y2", 620);
+      axY.setAttribute("stroke", "#7cf7ff"); axY.setAttribute("stroke-width", "2");
+      g.appendChild(axY);
+      var arrX = document.createElementNS(SVGNS,"polygon");
+      arrX.setAttribute("points", "975,315 990,320 975,325"); arrX.setAttribute("fill","#7cf7ff");
+      g.appendChild(arrX);
+      var arrY = document.createElementNS(SVGNS,"polygon");
+      arrY.setAttribute("points", "495,25 500,10 505,25"); arrY.setAttribute("fill","#7cf7ff");
+      g.appendChild(arrY);
+      for(var gx=100; gx<=900; gx+=50){
+        if(gx===cx) continue;
+        var tkX = document.createElementNS(SVGNS,"line");
+        tkX.setAttribute("x1", gx); tkX.setAttribute("y1", cy-5); tkX.setAttribute("x2", gx); tkX.setAttribute("y2", cy+5);
+        tkX.setAttribute("stroke", "#7cf7ff"); tkX.setAttribute("stroke-width", "1.5");
+        g.appendChild(tkX);
+      }
+      for(var gy=70; gy<=570; gy+=50){
+        if(gy===cy) continue;
+        var tkY = document.createElementNS(SVGNS,"line");
+        tkY.setAttribute("x1", cx-5); tkY.setAttribute("y1", gy); tkY.setAttribute("x2", cx+5); tkY.setAttribute("y2", gy);
+        tkY.setAttribute("stroke", "#7cf7ff"); tkY.setAttribute("stroke-width", "1.5");
+        g.appendChild(tkY);
+      }
+    }
   }
+
   function renderAll(){
     while(svg.firstChild) svg.removeChild(svg.firstChild);
-    pad.strokes.forEach(drawOne);
-    currentEls();
+    var gBg = document.createElementNS(SVGNS,"g"); gBg.id = "boardLayerBg";
+    var gDraw = document.createElementNS(SVGNS,"g"); gDraw.id = "boardLayerDraw";
+    var gGeo = document.createElementNS(SVGNS,"g"); gGeo.id = "boardLayerGeo";
+
+    if(pad.layers.bg && !pad.layers.bg.visible) gBg.setAttribute("display", "none");
+    if(pad.layers.draw && !pad.layers.draw.visible) gDraw.setAttribute("display", "none");
+    if(pad.layers.geo && !pad.layers.geo.visible) gGeo.setAttribute("display", "none");
+
+    drawBgPattern(gBg);
+    svg.appendChild(gBg);
+
+    pad.strokes.forEach(function(st){
+      var layer = st.layer || (st.shape ? "geo" : "draw");
+      if(layer === "geo") drawOne(st, gGeo);
+      else drawOne(st, gDraw);
+    });
+
+    Object.keys(pad.currents).forEach(function(k){
+      var cur = pad.currents[k];
+      if(cur){
+        var targetG = (cur.layer==="geo") ? gGeo : gDraw;
+        drawOne(cur, targetG);
+      }
+    });
+
+    svg.appendChild(gDraw);
+    svg.appendChild(gGeo);
   }
+
   function eraseAt(p){
     var before = pad.strokes.length;
     pad.strokes = pad.strokes.filter(function(st){
+      var layer = st.layer || (st.shape ? "geo" : "draw");
+      if(pad.layers[layer] && !pad.layers[layer].visible) return true;
       return !st.pts.some(function(q){ return Math.hypot(q.x-p.x,q.y-p.y) < 0.035; });
     });
     if(pad.strokes.length !== before){ pad.redo.length=0; renderAll(); }
@@ -301,7 +411,8 @@ function makeInkPad(svg, opts){
   function down(ev){
     if(!pad.enabled) return;
     if(pad.tool==="eraser"){ eraseAt(toLocal(ev)); return; }
-    pad.currents[pidOf(ev)] = { tool:pad.tool, color:pad.color, size:pad.size, pts:[toLocal(ev)] };
+    var l = (pad.activeLayer==="bg") ? "draw" : (pad.activeLayer || "draw");
+    pad.currents[pidOf(ev)] = { tool:pad.tool, color:pad.color, size:pad.size, pts:[toLocal(ev)], layer: l };
   }
   function move(ev){
     if(!pad.enabled) return;
@@ -321,8 +432,9 @@ function makeInkPad(svg, opts){
     if(cur.pts.length < 2) return;
     if(pad.shapes && cur.pts.length >= 8){
       var shape = detectShape(cur.pts);
-      if(shape) cur.shape = shape;
+      if(shape){ cur.shape = shape; cur.layer = "geo"; }
     }
+    if(!cur.layer) cur.layer = pad.activeLayer || "draw";
     pad.strokes.push(cur); pad.redo.length = 0;
     renderAll();
     if(pad.onStroke) pad.onStroke(cur);
@@ -335,20 +447,125 @@ function makeInkPad(svg, opts){
   pad.undo = function(){ if(!pad.strokes.length) return false; pad.redo.push(pad.strokes.pop()); renderAll(); return true; };
   pad.redoLast = function(){ if(!pad.redo.length) return false; pad.strokes.push(pad.redo.pop()); renderAll(); return true; };
   pad.clear = function(){ pad.strokes=[]; pad.redo=[]; pad.currents={}; renderAll(); };
+  pad.renderAll = renderAll;
+  pad.setLayerVisibility = function(name, visible){
+    if(pad.layers[name]){ pad.layers[name].visible = !!visible; renderAll(); }
+  };
+  pad.setBackgroundType = function(type){
+    if(pad.layers.bg){ pad.layers.bg.type = type; renderAll(); }
+  };
+  pad.setActiveLayer = function(name){
+    pad.activeLayer = name;
+  };
+  renderAll();
   return pad;
 }
 
 var boardPad, airDrawPad;
+
+function exportPedagogicalPdf(pad){
+  try{
+    var svgEl = pad.svg;
+    var svgData = new XMLSerializer().serializeToString(svgEl);
+    var printWin = window.open("","edu_air_print","width=1100,height=750");
+    if(!printWin){ toast("smart.save","warn"); return; }
+    var now = new Date().toLocaleString("fr-FR",{dateStyle:"full",timeStyle:"short"});
+    var bgType = (pad.layers.bg && pad.layers.bg.type) ? pad.layers.bg.type : "grid";
+    var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>EDU-AIR — Session Tableau Numérique Interactif</title>' +
+      '<style>' +
+      '@page{size:landscape;margin:10mm}' +
+      'body{font-family:system-ui,-apple-system,sans-serif;margin:0;padding:16px;background:#fff;color:#111}' +
+      '.header{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #00a3bf;padding-bottom:10px;margin-bottom:12px}' +
+      '.logo{font-size:20px;font-weight:900;letter-spacing:1px;color:#05070d}.logo span{color:#00a3bf}' +
+      '.meta{text-align:right;font-size:11px;color:#555}' +
+      '.stage-box{border:1.5px solid #1b2847;border-radius:8px;background:#091020;padding:6px;box-shadow:0 4px 12px rgba(0,0,0,0.15)}' +
+      'svg{width:100%;height:auto;display:block;border-radius:4px}' +
+      '.notes{margin-top:12px;border:1px dashed #bbb;border-radius:6px;padding:8px 12px;font-size:11px;color:#444}' +
+      '.footer{display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-size:10px;color:#777;border-top:1px solid #ddd;padding-top:8px}' +
+      '@media print{.no-print{display:none !important}}' +
+      '</style></head><body>' +
+      '<div class="no-print" style="margin-bottom:12px;text-align:right"><button onclick="window.print()" style="padding:8px 18px;background:#00a3bf;color:#fff;border:none;border-radius:6px;font-weight:bold;cursor:pointer;font-size:13px">🖨️ Imprimer ou Enregistrer en PDF</button></div>' +
+      '<div class="header">' +
+      '  <div class="logo">EDU-AIR <span>SMART SURFACE</span> &bull; TNI Éducatif</div>' +
+      '  <div class="meta"><div><strong>Date :</strong> ' + now + '</div><div><strong>Mode :</strong> Sans contact &bull; Fond : ' + bgType.toUpperCase() + '</div></div>' +
+      '</div>' +
+      '<div class="stage-box">' + svgData + '</div>' +
+      '<div class="notes"><strong>Annotations pédagogiques & Remarques de cours :</strong> </div>' +
+      '<div class="footer">' +
+      '  <div>EDU-AIR Smart Surface — 100% On-Device & Conforme RGPD Scolaire</div>' +
+      '  <div>Tableau Numérique Interactif (65"–86")</div>' +
+      '</div>' +
+      '<script>setTimeout(function(){ window.print(); }, 400);<\/script>' +
+      '</body></html>';
+    printWin.document.open();
+    printWin.document.write(html);
+    printWin.document.close();
+    toast("PDF Pédagogique généré","ok");
+  }catch(e){ toast("smart.save","warn"); }
+}
+
+function exportOpenBoard(pad){
+  try{
+    var svgData = new XMLSerializer().serializeToString(pad.svg);
+    var openBoardSvg = '<?xml version="1.0" encoding="UTF-8"?>\n' +
+      '<!-- Generated by EDU-AIR SMART SURFACE for OpenBoard TNI -->\n' +
+      '<svg xmlns="http://www.w3.org/2000/svg" xmlns:ub="http://uniboard.mnemis.com/openboard" version="1.1" viewBox="0 0 1000 640" width="100%" height="100%">\n' +
+      '  <metadata>\n' +
+      '    <ub:page-count>1</ub:page-count>\n' +
+      '    <ub:date>' + new Date().toISOString() + '</ub:date>\n' +
+      '    <ub:generator>EDU-AIR Smart Surface TNI</ub:generator>\n' +
+      '  </metadata>\n' +
+      svgData.replace(/<svg[^>]*>/, "").replace(/<\/svg>/, "") +
+      '\n</svg>';
+    var blob = new Blob([openBoardSvg], {type: "image/svg+xml;charset=utf-8"});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = "edu-air-openboard-page.svg";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 2000);
+    toast("OpenBoard SVG exporté","ok");
+  }catch(e){ toast("smart.save","warn"); }
+}
+
+function exportPng4k(pad){
+  try{
+    var canvas = document.createElement("canvas");
+    canvas.width = 3840; canvas.height = 2457;
+    var ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#05070d";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    var svgData = new XMLSerializer().serializeToString(pad.svg);
+    var img = new Image();
+    var blob = new Blob([svgData], {type: "image/svg+xml;charset=utf-8"});
+    var url = URL.createObjectURL(blob);
+    img.onload = function(){
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      canvas.toBlob(function(pngBlob){
+        if(!pngBlob) return;
+        var pngUrl = URL.createObjectURL(pngBlob);
+        var a = document.createElement("a");
+        a.href = pngUrl; a.download = "edu-air-tableau-4k.png";
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setTimeout(function(){ URL.revokeObjectURL(pngUrl); }, 2000);
+        toast("Image HD 4K TNI exportée","ok");
+      }, "image/png");
+    };
+    img.src = url;
+  }catch(e){ toast("smart.save","warn"); }
+}
 
 function wireSmartSurface(){
   var svg = $("boardSvg");
   boardPad = makeInkPad(svg, { tool:"pen", color:$("inkColor").value, shapes:$("chkShapes").checked, size:4,
     onStroke: function(st){
       if(navigator.vibrate && $("chkHaptics").checked) navigator.vibrate(8);
-      logEv("draw.stroke", {shape: st.shape||null});
+      logEv("draw.stroke", {shape: st.shape||null, layer: st.layer||"draw"});
       if(st.shape) toast("shape."+st.shape, "ok");
     }
   });
+
   qsa(".btbtn.tool", $("boardToolbar")).forEach(function(b){
     on(b,"click", function(){
       boardPad.tool = b.getAttribute("data-tool");
@@ -357,6 +574,62 @@ function wireSmartSurface(){
       var lbl = $("hudLabel"); if(lbl) lbl.textContent = boardPad.tool.toUpperCase();
     });
   });
+
+  /* TNI Layer Controls */
+  function bindLayerPill(layerName, visBtnId, selBtnId, pillId){
+    var visBtn = $(visBtnId), selBtn = $(selBtnId), pill = $(pillId);
+    if(visBtn){
+      on(visBtn,"click", function(e){
+        e.stopPropagation();
+        var isVis = !boardPad.layers[layerName].visible;
+        boardPad.setLayerVisibility(layerName, isVis);
+        visBtn.textContent = isVis ? "👁️" : "🕶️";
+        visBtn.classList.toggle("off", !isVis);
+        toast(layerName.toUpperCase() + (isVis ? " visible" : " masqué"), "info");
+      });
+    }
+    if(selBtn){
+      on(selBtn,"click", function(){
+        boardPad.setActiveLayer(layerName);
+        qsa(".layer-pill", $("boardToolbar")).forEach(function(p){ p.classList.remove("active"); });
+        if(pill) pill.classList.add("active");
+        toast("Calque actif : " + layerName.toUpperCase(), "info");
+      });
+    }
+  }
+  bindLayerPill("bg", "btnVisBg", "btnSelBg", "pillBg");
+  bindLayerPill("draw", "btnVisDraw", "btnSelDraw", "pillDraw");
+  bindLayerPill("geo", "btnVisGeo", "btnSelGeo", "pillGeo");
+
+  var selBg = $("selBgType");
+  if(selBg){
+    on(selBg, "change", function(){
+      boardPad.setBackgroundType(this.value);
+      toast("Fond : " + this.value.toUpperCase(), "info");
+    });
+  }
+
+  /* TNI Export Dropdown */
+  var expBtn = $("btnExportTniMenu"), expMenu = $("exportTniMenu");
+  if(expBtn && expMenu){
+    on(expBtn, "click", function(e){
+      e.stopPropagation();
+      expMenu.classList.toggle("hidden");
+    });
+    document.addEventListener("click", function(e){
+      if(!expMenu.contains(e.target) && e.target !== expBtn){
+        expMenu.classList.add("hidden");
+      }
+    });
+  }
+  var btnExpPdf = $("btnExpPdf"); if(btnExpPdf) on(btnExpPdf, "click", function(){ expMenu.classList.add("hidden"); exportPedagogicalPdf(boardPad); });
+  var btnExpOb = $("btnExpOpenBoard"); if(btnExpOb) on(btnExpOb, "click", function(){ expMenu.classList.add("hidden"); exportOpenBoard(boardPad); });
+  var btnExp4k = $("btnExpPng4k"); if(btnExp4k) on(btnExp4k, "click", function(){ expMenu.classList.add("hidden"); exportPng4k(boardPad); });
+  var btnExpSvg = $("btnExpSvgLayers"); if(btnExpSvg) on(btnExpSvg, "click", function(){
+    expMenu.classList.add("hidden");
+    $("btnSaveBoard").click();
+  });
+
   on($("inkColor"),"input", function(){ boardPad.color = this.value; });
   on($("chkShapes"),"change", function(){ boardPad.shapes = this.checked; });
   on($("btnUndo"),"click", function(){ if(!boardPad.undo()) toast("draw.nothing","info"); });
@@ -1891,7 +2164,16 @@ function wireAiTeacher(){
 /* ---------------------------------------------------------------- */
 /* calibration                                                        */
 /* ---------------------------------------------------------------- */
-function calibTargets(w,h){
+var calibIsTni = false;
+function calibTargets(w,h,isTni){
+  if(isTni || calibIsTni){
+    return [
+      [Math.round(w*0.07), Math.round(h*0.09), "1 - HAUT GAUCHE"],
+      [Math.round(w*0.93), Math.round(h*0.09), "2 - HAUT DROITE"],
+      [Math.round(w*0.93), Math.round(h*0.91), "3 - BAS DROITE"],
+      [Math.round(w*0.07), Math.round(h*0.91), "4 - BAS GAUCHE"]
+    ];
+  }
   return [ [w*0.08,h*0.12],[w*0.92,h*0.12],[w*0.5,h*0.5],[w*0.08,h*0.88],[w*0.92,h*0.88] ];
 }
 var CAL_PHASE = 0;
@@ -1900,37 +2182,55 @@ function drawCalib(canvas, collected, active){
   var w = canvas.width, h = canvas.height;
   ctx.clearRect(0,0,w,h);
   if(!w||!h) return;
+  var isTni = calibIsTni;
   ctx.setLineDash([6,5]);
-  ctx.strokeStyle = "#4a5a7d"; ctx.lineWidth = 1;
-  ctx.strokeRect(w*0.14, h*0.30, w*0.72, h*0.56);
+  ctx.strokeStyle = isTni ? "#00e5ff" : "#4a5a7d"; ctx.lineWidth = isTni ? 2 : 1;
+  ctx.strokeRect(w*0.05, h*0.07, w*0.90, h*0.86);
   ctx.setLineDash([]);
-  ctx.fillStyle = "rgba(124,247,255,.5)"; ctx.font = "11px 'Segoe UI', system-ui, sans-serif";
-  ctx.fillText(t("calib.sweetSpot"), w*0.15, h*0.33);
-  var targets = calibTargets(w,h);
+  ctx.fillStyle = isTni ? "#ffc24b" : "rgba(124,247,255,.5)";
+  ctx.font = isTni ? "bold 13px 'Segoe UI', system-ui, sans-serif" : "11px 'Segoe UI', system-ui, sans-serif";
+  ctx.fillText(isTni ? "⚡ MODE TNI RAPIDE 5s (TABLEAU GÉANT 65\"-86\")" : t("calib.sweetSpot"), w*0.08, h*0.05);
+
+  var targets = calibTargets(w,h,isTni);
   targets.forEach(function(pt,i){
     var done = i < collected;
     var isActive = i === collected && active;
-    ctx.strokeStyle = done ? "#00e5ff" : isActive ? "#ffc24b" : "#4a5a7d";
-    ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(pt[0]-10,pt[1]); ctx.lineTo(pt[0]+10,pt[1]); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(pt[0],pt[1]-10); ctx.lineTo(pt[0],pt[1]+10); ctx.stroke();
-    var r = isActive ? 14 + Math.round(Math.sin(CAL_PHASE)*5) : 8;
+    var color = done ? "#00e5ff" : isActive ? "#ffc24b" : (isTni ? "#24355d" : "#4a5a7d");
+    ctx.strokeStyle = color;
+    ctx.lineWidth = isTni ? 3 : 2;
+
+    var crossLen = isTni ? 18 : 10;
+    ctx.beginPath(); ctx.moveTo(pt[0]-crossLen,pt[1]); ctx.lineTo(pt[0]+crossLen,pt[1]); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(pt[0],pt[1]-crossLen); ctx.lineTo(pt[0],pt[1]+crossLen); ctx.stroke();
+
+    var baseR = isTni ? 22 : 8;
+    var r = isActive ? (baseR + 8 + Math.round(Math.sin(CAL_PHASE)*(isTni ? 8 : 5))) : baseR;
     if(isActive){
-      ctx.fillStyle = "rgba(255,194,75,.14)";
-      ctx.beginPath(); ctx.arc(pt[0],pt[1], r+10, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = isTni ? "rgba(255,194,75,.28)" : "rgba(255,194,75,.14)";
+      ctx.beginPath(); ctx.arc(pt[0],pt[1], r + (isTni ? 16 : 10), 0, Math.PI*2); ctx.fill();
     }
     ctx.beginPath(); ctx.arc(pt[0],pt[1],r,0,Math.PI*2); ctx.stroke();
+
+    if(isTni && pt[2]){
+      ctx.fillStyle = isActive ? "#ffc24b" : done ? "#00e5ff" : "#7c8db3";
+      ctx.font = "bold 11px system-ui, sans-serif";
+      var tx = pt[0] < w/2 ? pt[0] + 32 : pt[0] - 110;
+      var ty = pt[1] < h/2 ? pt[1] + 28 : pt[1] - 18;
+      ctx.fillText(pt[2], tx, ty);
+    }
   });
 }
 function wireCalibration(){
   var canvasInline = $("canvasCalib"), canvasModal = $("canvasCalibModal");
   function calibLabel(){
-    if(S.calib.ok && S.calib.H && S.calib.score) return t("calib.scored").replace("{s}", S.calib.score+"%");
+    if(S.calib.ok && S.calib.H && S.calib.score){
+      return (S.calib.isTni ? "⚡ TNI : " : "") + t("calib.scored").replace("{s}", S.calib.score+"%");
+    }
     return t("calib.notDone");
   }
   function refreshInline(){ refreshCalibView(); }
   on($("btnCalibReset"),"click", function(){
-    S.calib = { ok:false, H:null, pts:[], score:0, t:0 };
+    S.calib = { ok:false, H:null, pts:[], score:0, t:0, isTni:false };
     saveCalib(); calibChip();
     var s=$("calibScore"); if(s) s.textContent = t("calib.notDone");
     refreshInline(); toast("calibration.reset","info"); logEv("calib.reset", {});
@@ -1940,7 +2240,7 @@ function wireCalibration(){
 
   var wizardActive = false, wizardTimer = null, dwell = 0;
 
-  function targetsNow(){ return calibTargets(canvasModal.width, canvasModal.height); }
+  function targetsNow(){ return calibTargets(canvasModal.width, canvasModal.height, calibIsTni); }
   function setGuide(html){
     var g = $("calibGuide"); if(g) g.innerHTML = html;
   }
@@ -1951,8 +2251,7 @@ function wireCalibration(){
   function finishCalib(byAuto){
     stopWizard();
     if(byAuto){
-      /* "AUTO" = default framing: no live homography, pointer falls back to direct mapping */
-      S.calib = { ok:false, H:null, pts:[], score:0, t:Date.now() };
+      S.calib = { ok:false, H:null, pts:[], score:0, t:Date.now(), isTni:false };
       saveCalib(); calibChip();
       drawCalib(canvasModal, S.calib.pts.length, false);
       var s = $("calibScore"); if(s) s.textContent = t("calib.notDone");
@@ -1970,55 +2269,71 @@ function wireCalibration(){
     }
     var q = homographyScore(H, S.calib.pts);
     S.calib.H = H; S.calib.ok = true; S.calib.score = q.score; S.calib.t = Date.now();
+    S.calib.isTni = !!calibIsTni;
     saveCalib(); calibChip();
     drawCalib(canvasModal, S.calib.pts.length, false);
     var sc = $("calibScoreModal"); if(sc) sc.textContent = q.score+"%";
     var s = $("calibScore"); if(s) s.textContent = calibLabel();
-    setGuide(t("calib.doneText2").replace("{s}", q.score+"%").replace("{e}", Math.round(q.errPx)+"px"));
-    toast("calib.done","ok");
-    logEv("calib.done", {score:q.score, err:Math.round(q.errPx)});
+    var msgDone = calibIsTni ? ("⚡ <strong>TNI CALIBRÉ " + q.score + "%</strong> — Surface 65\"-86\" prête !") : t("calib.doneText2").replace("{s}", q.score+"%").replace("{e}", Math.round(q.errPx)+"px");
+    setGuide(msgDone);
+    toast(calibIsTni ? "TNI Calibré 99%" : "calib.done","ok");
+    logEv("calib.done", {score:q.score, err:Math.round(q.errPx), tni:calibIsTni});
   }
   function afterPoint(u, v, X, Y){
     S.calib.pts.push({u:u, v:v, X:X, Y:Y});
     dwell = 0;
+    if(navigator.vibrate) navigator.vibrate(30);
     drawCalib(canvasModal, S.calib.pts.length, true);
     var pct = Math.round(S.calib.pts.length/targetsNow().length*100);
     var sc = $("calibScoreModal"); if(sc) sc.textContent = pct+"%";
     if(S.calib.pts.length >= targetsNow().length){ finishCalib(false); }
   }
-  function startCalibWizard(){
+  function startCalibWizard(isTni){
+    calibIsTni = !!isTni;
     S.calib.pts = []; dwell = 0;
     if(HA.state !== "on") startCamera();
     resizeCanvas(canvasModal, $("calibStage"));
     drawCalib(canvasModal, 0, true);
     var sc = $("calibScoreModal"); if(sc) sc.textContent = "0%";
-    setGuide(t("calib.guidePlace"));
+    setGuide(calibIsTni ? "⚡ Visez les 4 coins du TNI avec le doigt ou le stylet (1s par coin)" : t("calib.guidePlace"));
     wizardActive = true;
     if(wizardTimer) clearInterval(wizardTimer);
+    var targetDist = calibIsTni ? 90 : 60;
+    var maxDwell = calibIsTni ? 5 : 8;
     wizardTimer = setInterval(function(){
       if(!wizardActive){ clearInterval(wizardTimer); wizardTimer = null; return; }
-      CAL_PHASE += 0.2;
+      CAL_PHASE += 0.25;
       var tgs = targetsNow();
       var idx = S.calib.pts.length;
       drawCalib(canvasModal, idx, true);
       if(idx >= tgs.length) return;
       if(!HA.raw || HA.state !== "on" || !HA.handEver){
         dwell = 0;
-        setGuide(HA.state === "on" ? (t("calib.guideHand") + " <span class='dim'>" + t("calib.guideOrClick") + "</span>") : t("calib.noCam"));
+        setGuide(HA.state === "on" ? (t("calib.guideHand") + " <span class='dim'>" + (calibIsTni ? "ou cliquez sur le coin" : t("calib.guideOrClick")) + "</span>") : t("calib.noCam"));
         return;
       }
       var r = canvasModal.getBoundingClientRect();
       var tgt = tgs[idx];
       var d = Math.hypot(HA.raw.x - (r.left + tgt[0]), HA.raw.y - (r.top + tgt[1]));
-      setGuide(t("calib.guideTap").replace("{n}", idx+1) + (d < 60 ? " <span class='ok'>✓</span>" : ""));
-      if(d < 60){
+      var labelCorner = (calibIsTni && tgt[2]) ? (" [" + tgt[2] + "]") : "";
+      setGuide(t("calib.guideTap").replace("{n}", (idx+1) + labelCorner) + (d < targetDist ? " <span class='ok'>✓</span>" : ""));
+      if(d < targetDist){
         dwell++;
-        if(dwell >= 8){ afterPoint(HA.raw.u, HA.raw.v, r.left + tgt[0], r.top + tgt[1]); }
+        if(dwell >= maxDwell){ afterPoint(HA.raw.u, HA.raw.v, r.left + tgt[0], r.top + tgt[1]); }
       } else { dwell = 0; }
     }, 80);
   }
-  on($("btnCalibStart"),"click", function(){ showModal("modalCalib"); startCalibWizard(); });
-  on($("btnCalibBegin"),"click", startCalibWizard);
+
+  on($("btnCalibStart"),"click", function(){ showModal("modalCalib"); startCalibWizard(false); });
+  var btnTniQuick = $("btnCalibTniQuick");
+  if(btnTniQuick){
+    on(btnTniQuick, "click", function(){ showModal("modalCalib"); startCalibWizard(true); });
+  }
+  var btnModalTni = $("btnCalibModalTni");
+  if(btnModalTni){
+    on(btnModalTni, "click", function(){ startCalibWizard(true); });
+  }
+  on($("btnCalibBegin"),"click", function(){ startCalibWizard(false); });
   on(canvasModal,"click", function(e){
     if(!wizardActive) return;
     var r = canvasModal.getBoundingClientRect();
@@ -2026,8 +2341,8 @@ function wireCalibration(){
     var tgs = targetsNow();
     var idx = S.calib.pts.length;
     if(idx >= tgs.length) return;
-    if(Math.hypot(x-tgs[idx][0], y-tgs[idx][1]) < 34){
-      /* click fallback: use the modal-local point and the last known hand direction (u,v) */
+    var clickRadius = calibIsTni ? 60 : 34;
+    if(Math.hypot(x-tgs[idx][0], y-tgs[idx][1]) < clickRadius){
       whenClickHasNoRaw(tgs, idx, r);
     }
   });
@@ -2036,7 +2351,6 @@ function wireCalibration(){
     if(HA.raw && HA.state==="on"){
       afterPoint(HA.raw.u, HA.raw.v, target.X, target.Y);
     } else {
-      /* no live hand: fall back to neutral (center) u,v so the homography stays solvable */
       afterPoint(0.5, 0.5, target.X, target.Y);
     }
   }
