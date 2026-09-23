@@ -69,6 +69,9 @@ var DICT = {
     "shape.circle":"Circle","shape.line":"Line","shape.triangle":"Triangle","shape.square":"Square","shape.pentagon":"Pentagon",
     "pointer.on":"Pointer on","pointer.off":"Pointer off","offline.on":"Offline mode on — cached","offline.off":"Online","pwa.install":"Use your browser menu → Install app",
     "draw.off":"Air draw off","vision.stop":"Air vision stopped",
+    "draw.traceHit":"Nice trace!","draw.traceMiss":"Not quite — try again","draw.traceLede":"Trace the guide shape — a matching stroke scores a point.",
+    "pointer.test":"Precision test","pointer.precision":"Precision","pointer.reaction":"Reaction time","pointer.testDone":"Test complete",
+    "history.all":"All","history.empty":"No events yet.","history.cleared":"History cleared","history.search":"Search…","history.export":"Export CSV",
     "quiz.correct":"Correct!","quiz.wrong":"Wrong","quiz.finished":"Quiz finished","quiz.question":"Question","quiz.startFirst":"Create a quiz first","quiz.created":"Quiz created",
     "calib.point":"Point","calib.done":"Calibration complete","calib.score":"Score"
   },
@@ -132,6 +135,9 @@ var DICT = {
     "shape.circle":"Cercle","shape.line":"Ligne","shape.triangle":"Triangle","shape.square":"Carré","shape.pentagon":"Pentagone",
     "pointer.on":"Pointeur activé","pointer.off":"Pointeur désactivé","offline.on":"Mode hors-ligne activé — en cache","offline.off":"En ligne","pwa.install":"Utilisez le menu du navigateur → Installer l'application",
     "draw.off":"Dessin air désactivé","vision.stop":"Vision air arrêtée",
+    "draw.traceHit":"Bien tracé !","draw.traceMiss":"Pas tout à fait — réessaie","draw.traceLede":"Trace la forme guide — un trait correspondant marque un point.",
+    "pointer.test":"Test de précision","pointer.precision":"Précision","pointer.reaction":"Temps de réaction","pointer.testDone":"Test terminé",
+    "history.all":"Tout","history.empty":"Aucun événement pour l'instant.","history.cleared":"Historique effacé","history.search":"Rechercher…","history.export":"Exporter en CSV",
     "quiz.correct":"Correct !","quiz.wrong":"Faux","quiz.finished":"Quiz terminé","quiz.question":"Question","quiz.startFirst":"Créez d'abord un quiz","quiz.created":"Quiz créé",
     "calib.point":"Point","calib.done":"Calibrage terminé","calib.score":"Score"
   },
@@ -195,6 +201,9 @@ var DICT = {
     "shape.circle":"دائرة","shape.line":"خط","shape.triangle":"مثلث","shape.square":"مربع","shape.pentagon":"خماسي",
     "pointer.on":"المؤشر مفعّل","pointer.off":"المؤشر معطّل","offline.on":"وضع عدم الاتصال مفعّل — مخزَّن مؤقتًا","offline.off":"متصل","pwa.install":"استخدم قائمة المتصفح ← تثبيت التطبيق",
     "draw.off":"رسم الهواء معطّل","vision.stop":"توقفت رؤية الهواء",
+    "draw.traceHit":"رسم رائع!","draw.traceMiss":"ليس تمامًا — حاول مجددًا","draw.traceLede":"تتبّع الشكل الدليل — الخط المطابق يسجّل نقطة.",
+    "pointer.test":"اختبار الدقة","pointer.precision":"الدقة","pointer.reaction":"زمن الاستجابة","pointer.testDone":"اكتمل الاختبار",
+    "history.all":"الكل","history.empty":"لا أحداث بعد.","history.cleared":"تم مسح السجل","history.search":"بحث…","history.export":"تصدير CSV",
     "quiz.correct":"إجابة صحيحة!","quiz.wrong":"إجابة خاطئة","quiz.finished":"انتهى الاختبار","quiz.question":"سؤال","quiz.startFirst":"أنشئ اختبارًا أولًا","quiz.created":"تم إنشاء الاختبار",
     "calib.point":"نقطة","calib.done":"اكتملت المعايرة","calib.score":"النتيجة"
   },
@@ -259,6 +268,9 @@ var DICT = {
     "shape.circle":"Cirkel","shape.line":"Lijn","shape.triangle":"Driehoek","shape.square":"Vierkant","shape.pentagon":"Vijfhoek",
     "pointer.on":"Aanwijzer aan","pointer.off":"Aanwijzer uit","offline.on":"Offline modus aan — gecachet","offline.off":"Online","pwa.install":"Gebruik browsermenu → App installeren",
     "draw.off":"Lucht-ontwerp uit","vision.stop":"Lucht-visie gestopt",
+    "draw.traceHit":"Mooi getraceerd!","draw.traceMiss":"Niet helemaal — probeer opnieuw","draw.traceLede":"Volg de gidsvorm — een passende streek levert een punt op.",
+    "pointer.test":"Precisietest","pointer.precision":"Precisie","pointer.reaction":"Reactietijd","pointer.testDone":"Test voltooid",
+    "history.all":"Alles","history.empty":"Nog geen gebeurtenissen.","history.cleared":"Geschiedenis gewist","history.search":"Zoeken…","history.export":"CSV exporteren",
     "quiz.correct":"Correct!","quiz.wrong":"Fout","quiz.finished":"Quiz voltooid","quiz.question":"Vraag","quiz.startFirst":"Maak eerst een quiz","quiz.created":"Quiz gemaakt",
     "calib.point":"Punt","calib.done":"Kalibratie voltooid","calib.score":"Score"
   }

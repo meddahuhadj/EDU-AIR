@@ -1166,6 +1166,45 @@ function wireSessions(){
 /* air pointer                                                        */
 /* ---------------------------------------------------------------- */
 var pointerEnabled = false, pointerCursor = null;
+var PTR_TEST = { active:false, i:0, total:8, dists:[], times:[], t0:0, target:null };
+function avg(a){ return a.length ? a.reduce(function(x,y){ return x+y; },0)/a.length : 0; }
+function ptrSpawnTarget(){
+  var stage = $("ptrStage");
+  if(!PTR_TEST.target){
+    PTR_TEST.target = document.createElement("div");
+    PTR_TEST.target.className = "ptr-target";
+    stage.appendChild(PTR_TEST.target);
+  }
+  var x = 12 + Math.random()*76, y = 12 + Math.random()*76;
+  PTR_TEST.target.style.left = x+"%"; PTR_TEST.target.style.top = y+"%";
+  PTR_TEST.target.classList.remove("hidden");
+  PTR_TEST.t0 = performance.now();
+  var pg = $("ptrTestProgress"); if(pg) pg.textContent = (PTR_TEST.i+1)+" / "+PTR_TEST.total;
+}
+function ptrStartTest(){
+  if(!pointerEnabled){ toast("pointer.off","warn"); return; }
+  PTR_TEST.active = true; PTR_TEST.i = 0; PTR_TEST.dists = []; PTR_TEST.times = [];
+  var b=$("btnPtrTest"); if(b) b.setAttribute("data-state","on");
+  var out=$("ptrTestReadout"); if(out) out.innerHTML = "";
+  ptrSpawnTarget();
+  logEv("pointer.test.start", {});
+}
+function ptrEndTest(){
+  PTR_TEST.active = false;
+  if(PTR_TEST.target) PTR_TEST.target.classList.add("hidden");
+  var b=$("btnPtrTest"); if(b) b.setAttribute("data-state","off");
+  var pg=$("ptrTestProgress"); if(pg) pg.textContent = "";
+  var avgDist = avg(PTR_TEST.dists), avgTime = avg(PTR_TEST.times);
+  var precision = Math.max(0, Math.min(100, Math.round(100 - avgDist*2.2)));
+  var out = $("ptrTestReadout");
+  if(out){
+    out.innerHTML =
+      '<div class="stat"><div class="num">'+precision+'%</div><div class="lbl">'+esc(t("pointer.precision"))+'</div></div>'+
+      '<div class="stat"><div class="num">'+Math.round(avgTime)+'ms</div><div class="lbl">'+esc(t("pointer.reaction"))+'</div></div>';
+  }
+  toast("pointer.testDone","ok");
+  logEv("pointer.test.done", {precision:precision, avgTime:Math.round(avgTime)});
+}
 function wireAirPointer(){
   var stage = $("ptrStage");
   pointerCursor = document.createElement("div");
@@ -1193,18 +1232,73 @@ function wireAirPointer(){
     toast("air.tap","ok");
     logEv("pointer.tap", {});
   });
+  on($("btnPtrTest"),"click", function(){
+    if(PTR_TEST.active){ ptrEndTest(); } else { ptrStartTest(); }
+  });
+  on(stage,"click", function(e){
+    if(!PTR_TEST.active || !PTR_TEST.target) return;
+    var r = stage.getBoundingClientRect();
+    var cx = ((e.clientX-r.left)/r.width)*100, cy = ((e.clientY-r.top)/r.height)*100;
+    var tx = parseFloat(PTR_TEST.target.style.left), ty = parseFloat(PTR_TEST.target.style.top);
+    PTR_TEST.dists.push(Math.hypot(cx-tx, cy-ty));
+    PTR_TEST.times.push(performance.now() - PTR_TEST.t0);
+    PTR_TEST.i++;
+    if(PTR_TEST.i >= PTR_TEST.total) ptrEndTest(); else ptrSpawnTarget();
+  });
 }
 
 /* ---------------------------------------------------------------- */
 /* air draw                                                           */
 /* ---------------------------------------------------------------- */
+var TRACE = { shape:"circle", hits:0, total:0 };
+function traceDrawGuide(){
+  var host = $("drawStage"); if(!host) return;
+  var old = $("traceGuide"); if(old) old.parentNode.removeChild(old);
+  var svg = document.createElementNS(SVGNS,"svg");
+  svg.setAttribute("id","traceGuide"); svg.setAttribute("class","trace-guide");
+  svg.setAttribute("viewBox","0 0 1000 640"); svg.setAttribute("preserveAspectRatio","none");
+  var el;
+  if(TRACE.shape==="circle"){
+    el=document.createElementNS(SVGNS,"ellipse");
+    el.setAttribute("cx","500"); el.setAttribute("cy","320"); el.setAttribute("rx","220"); el.setAttribute("ry","220");
+  } else if(TRACE.shape==="square"){
+    el=document.createElementNS(SVGNS,"rect");
+    el.setAttribute("x","280"); el.setAttribute("y","100"); el.setAttribute("width","440"); el.setAttribute("height","440");
+  } else if(TRACE.shape==="triangle"){
+    el=document.createElementNS(SVGNS,"polygon");
+    el.setAttribute("points","500,80 720,540 280,540");
+  } else {
+    el=document.createElementNS(SVGNS,"line");
+    el.setAttribute("x1","150"); el.setAttribute("y1","320"); el.setAttribute("x2","850"); el.setAttribute("y2","320");
+  }
+  el.setAttribute("fill","none"); el.setAttribute("stroke","rgba(255,255,255,.28)");
+  el.setAttribute("stroke-width","4"); el.setAttribute("stroke-dasharray","10 10");
+  svg.appendChild(el);
+  host.insertBefore(svg, host.firstChild);
+}
 function wireAirDraw(){
   var host = $("drawStage");
   var svg = document.createElementNS(SVGNS,"svg");
   svg.setAttribute("class","board-svg");
   host.appendChild(svg);
   airDrawPad = makeInkPad(svg, { tool:"pen", color:"#ffc24b", shapes:true, size:4, enabled:false,
-    onStroke: function(st){ logEv("airdraw.stroke", {shape:st.shape||null}); if(st.shape) toast("shape."+st.shape,"ok"); }
+    onStroke: function(st){
+      logEv("airdraw.stroke", {shape:st.shape||null});
+      TRACE.total++;
+      if(st.shape && st.shape === TRACE.shape){ TRACE.hits++; toast("draw.traceHit","ok"); }
+      else if(st.shape){ toast("draw.traceMiss","warn"); }
+      var el=$("traceScore"); if(el) el.textContent = TRACE.hits+"/"+TRACE.total;
+    }
+  });
+  traceDrawGuide();
+  qsa(".btbtn[data-shape]", $("traceShapes")).forEach(function(b){
+    on(b,"click", function(){
+      qsa(".btbtn[data-shape]", $("traceShapes")).forEach(function(x){ x.classList.remove("active"); });
+      b.classList.add("active");
+      TRACE.shape = b.getAttribute("data-shape");
+      traceDrawGuide();
+      logEv("draw.traceShape", {shape:TRACE.shape});
+    });
   });
   on($("btnDrawEnable"),"click", function(){
     airDrawPad.enabled = !airDrawPad.enabled;
@@ -4088,13 +4182,64 @@ function wireCalibration(){
 /* ---------------------------------------------------------------- */
 /* history                                                            */
 /* ---------------------------------------------------------------- */
+function histCategory(kind){ return kind.split(".")[0]; }
 function renderHistory(){
   var host = $("histList"); if(!host) return;
-  var items = S.log.slice().reverse().slice(0,80);
+  var filterSel = $("histFilter");
+  var cat = "all";
+  if(filterSel){
+    var cats = {}; S.log.forEach(function(e){ cats[histCategory(e.kind)] = true; });
+    var catList = Object.keys(cats).sort();
+    var prevVal = filterSel.value || "all";
+    filterSel.innerHTML = '<option value="all">'+esc(t("history.all"))+'</option>' +
+      catList.map(function(c){ return '<option value="'+esc(c)+'">'+esc(c)+'</option>'; }).join("");
+    filterSel.value = (prevVal==="all" || catList.indexOf(prevVal)>=0) ? prevVal : "all";
+    cat = filterSel.value;
+  }
+  var search = ($("histSearch") && $("histSearch").value || "").toLowerCase().trim();
+  var items = S.log.slice().reverse().filter(function(e){
+    if(cat !== "all" && histCategory(e.kind) !== cat) return false;
+    if(search && e.kind.toLowerCase().indexOf(search) < 0) return false;
+    return true;
+  }).slice(0,150);
+
+  var summary = $("histSummary");
+  if(summary) summary.textContent = items.length + " / " + S.log.length;
+
   host.innerHTML = items.map(function(it){
     var label = it.kind.replace(/\./g," ").replace(/^\w/, function(c){ return c.toUpperCase(); });
-    return '<div class="hist-row"><span class="h-time">'+fmtTime(it.t)+'</span><span class="h-kind">'+esc(label)+'</span></div>';
-  }).join("") || '<p class="lede">—</p>';
+    return '<div class="hist-row"><span class="h-time">'+fmtTime(it.t)+'</span><span class="h-cat">'+esc(histCategory(it.kind))+'</span><span class="h-kind">'+esc(label)+'</span></div>';
+  }).join("") || '<p class="lede">'+esc(t("history.empty"))+'</p>';
+}
+function exportHistoryCSV(){
+  if(!S.log.length){ toast("dash.noData","warn"); return; }
+  var head = ["time","category","kind","detail"];
+  var rows = S.log.map(function(e){
+    return [new Date(e.t).toLocaleString(), histCategory(e.kind), e.kind, JSON.stringify(e.detail||{})];
+  });
+  var csv = head.join(",")+"\n"+rows.map(function(r){
+    return r.map(function(c){ c=String(c==null?"":c); return '"'+c.replace(/"/g,'""')+'"'; }).join(",");
+  }).join("\n");
+  var url = URL.createObjectURL(new Blob(["﻿"+csv], {type:"text/csv;charset=utf-8"}));
+  var a = document.createElement("a");
+  a.href = url; a.download = "eduair-history-"+new Date().toISOString().slice(0,10)+".csv";
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+  toast("dash.exported","ok");
+  logEv("history.export", {rows:S.log.length});
+}
+function wireHistory(){
+  on($("histFilter"),"change", function(){ renderHistory(); });
+  on($("histSearch"),"input", function(){ renderHistory(); });
+  on($("btnHistExport"),"click", exportHistoryCSV);
+  on($("btnHistClear"),"click", function(){
+    confirmDanger("danger.body", function(){
+      S.log = [];
+      logEv("history.clear", {});
+      renderHistory();
+      toast("history.cleared","info");
+    });
+  });
 }
 
 /* ---------------------------------------------------------------- */
@@ -4452,6 +4597,7 @@ function boot(){
   wireAirPresentation();
   wireAiTeacher();
   wireCalibration();
+  wireHistory();
   wireDangerModal();
   wireDemoModal();
   wireCamera();

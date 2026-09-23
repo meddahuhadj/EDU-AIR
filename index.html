@@ -202,7 +202,10 @@
         <div class="row row-center">
           <button class="btn btn-primary" id="btnPtrEnable" data-i18n-html="pointer.enable">ENABLE AIR POINTER</button>
           <button class="btn" id="btnPtrClick" data-i18n-html="pointer.click">SIMULATE CLICK</button>
+          <button class="btn" id="btnPtrTest" data-state="off" data-i18n-html="pointer.test">PRECISION TEST</button>
+          <span class="ptr-progress" id="ptrTestProgress"></span>
         </div>
+        <div class="stat-grid ptr-test-grid" id="ptrTestReadout"></div>
       </div>
     </section>
 
@@ -210,10 +213,18 @@
       <div class="panel">
         <h2 data-i18n-html="draw.title">AIR DRAW</h2>
         <p class="lede" data-i18n-html="draw.lede">Draw in the air — your hand is the pen. Smart ink recognizes shapes automatically.</p>
+        <p class="lede trace-lede" data-i18n-html="draw.traceLede">Trace the guide shape — a matching stroke scores a point.</p>
+        <div class="row row-wrap" id="traceShapes">
+          <button class="btbtn sml active" data-shape="circle" data-i18n-html="shape.circle">Circle</button>
+          <button class="btbtn sml" data-shape="square" data-i18n-html="shape.square">Square</button>
+          <button class="btbtn sml" data-shape="triangle" data-i18n-html="shape.triangle">Triangle</button>
+          <button class="btbtn sml" data-shape="line" data-i18n-html="shape.line">Line</button>
+        </div>
         <div class="draw-stage" id="drawStage"></div>
         <div class="row row-center">
           <button class="btn btn-primary" id="btnDrawEnable" data-i18n-html="draw.enable">ENABLE AIR DRAW</button>
           <span class="btbtn sml" id="drawAimDot" data-state="off"><span data-i18n-html="draw.aim">AIM</span></span>
+          <span class="trace-score" id="traceScore">0/0</span>
         </div>
       </div>
     </section>
@@ -489,6 +500,13 @@
       <div class="panel">
         <h2 data-i18n-html="history.title">HISTORY</h2>
         <p class="lede" data-i18n-html="history.lede">Every stroke, every quiz, every session — your audit trail.</p>
+        <div class="row row-wrap hist-toolbar" id="histToolbar">
+          <select class="sel" id="histFilter"></select>
+          <input type="text" class="txt hist-search" id="histSearch" data-i18n-placeholder-key="history.search" placeholder="Search…" />
+          <span class="hist-summary" id="histSummary"></span>
+          <button class="btn small" id="btnHistExport" data-i18n-html="history.export">EXPORT CSV</button>
+          <button class="btn small btn-danger" id="btnHistClear" data-i18n-html="history.clear">CLEAR HISTORY</button>
+        </div>
         <div class="hist-list" id="histList"></div>
       </div>
     </section>

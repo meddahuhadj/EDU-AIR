@@ -303,8 +303,11 @@ label{font-size:12px; color:var(--ink-dim)}
   background:radial-gradient(600px 300px at 50% 30%, rgba(0,229,255,.06), transparent 60%), var(--bg2);
   margin-bottom:16px; overflow:hidden; touch-action:none; cursor:crosshair;
 }
-.draw-stage svg{width:100%; height:100%; display:block}
+.draw-stage svg{position:absolute; inset:0; width:100%; height:100%; display:block}
+.draw-stage .trace-guide{pointer-events:none}
 .draw-stage.aim-on{outline:2px dashed var(--amber); outline-offset:-2px}
+.trace-lede{margin-top:-10px}
+.trace-score{font-family:var(--font-mono); color:var(--cy); font-weight:700}
 .air-cursor{
   position:absolute; width:22px; height:22px; margin:-11px 0 0 -11px; border-radius:50%;
   background:radial-gradient(circle, rgba(0,229,255,.9), rgba(0,229,255,0) 70%);
@@ -313,6 +316,15 @@ label{font-size:12px; color:var(--ink-dim)}
 }
 .air-cursor.hidden{display:none}
 .air-cursor.tap{transform:scale(1.6); transition:transform .18s ease}
+.ptr-target{
+  position:absolute; width:34px; height:34px; margin:-17px 0 0 -17px; border-radius:50%;
+  border:2px solid var(--amber); background:rgba(255,194,75,.15);
+  box-shadow:0 0 0 4px rgba(255,194,75,.15); animation:targetPulse 1s ease-in-out infinite;
+}
+.ptr-target.hidden{display:none}
+@keyframes targetPulse{50%{transform:scale(1.12)}}
+.ptr-progress{font-family:var(--font-mono); color:var(--ink-dim); font-size:12px}
+.ptr-test-grid:empty{display:none}
 
 /* =============================================================
    AIR 3D
@@ -424,9 +436,14 @@ label{font-size:12px; color:var(--ink-dim)}
 /* =============================================================
    HISTORY
    ============================================================= */
+.hist-toolbar{align-items:center; margin-bottom:14px}
+.hist-toolbar .sel{width:auto; min-width:120px}
+.hist-search{width:auto; min-width:160px; flex:1}
+.hist-summary{font-family:var(--font-mono); color:var(--ink-faint); font-size:12px; white-space:nowrap}
 .hist-list{display:flex; flex-direction:column; gap:6px}
-.hist-row{display:flex; gap:14px; padding:9px 12px; border-radius:8px; background:var(--bg2); border:1px solid var(--line); font-size:12px}
+.hist-row{display:flex; gap:14px; align-items:center; padding:9px 12px; border-radius:8px; background:var(--bg2); border:1px solid var(--line); font-size:12px}
 .h-time{font-family:var(--font-mono); color:var(--ink-faint); min-width:64px}
+.h-cat{font-family:var(--font-display); font-weight:700; letter-spacing:.08em; font-size:10px; color:var(--cy); text-transform:uppercase; min-width:64px}
 .h-kind{color:var(--ink)}
 
 /* =============================================================
