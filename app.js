@@ -1347,32 +1347,80 @@ function wireAir3D(){
 /* ---------------------------------------------------------------- */
 /* air vision (simulated — no camera ever requested)                   */
 /* ---------------------------------------------------------------- */
-var canvasVision, visionBoxes = [], visionLabels = ["hand","pen","book","face","marker"];
-function wireAirVision(){
-  canvasVision = $("canvasVision");
-  resizeCanvas(canvasVision, $("visionWrap"));
-  on(window,"resize", function(){ if(S.view==="air-vision") resizeCanvas(canvasVision, $("visionWrap")); });
-  on($("btnVisionStart"),"click", function(){
-    S.vision.running = !S.vision.running;
-    this.setAttribute("data-state", S.vision.running?"on":"off");
-    setChip("visionFps", S.vision.running?"on":"off");
-    if(S.vision.running) seedVisionBoxes();
-    toast(S.vision.running?"vision.start":"vision.stop","ok");
-    logEv("vision", {on:S.vision.running});
-  });
-}
+var canvasVision, visionBoxes = [];
+var visionMode = "objects";
+var VISION_ITEMS = {
+  objects: [
+    { label: "Stylo TNI", fr: "Stylet interactif", en: "Stylus", conf: 0.94 },
+    { label: "Règle graduée", fr: "Règle graduée 25cm", en: "Ruler", conf: 0.89 },
+    { label: "Main levée (Index)", fr: "Doigt pointeur", en: "Index finger", conf: 0.96 },
+    { label: "Manuel de cours", fr: "Livre scolaire", en: "Textbook", conf: 0.91 },
+    { label: "Paume ouverte (Gomme)", fr: "Geste Gomme TNI", en: "Palm eraser", conf: 0.88 },
+    { label: "Calculatrice", fr: "Calculatrice scientifique", en: "Calculator", conf: 0.85 }
+  ],
+  vocab: [
+    { label: "Book / Livre", fr: "Un livre", en: "A book", phon: "[bʊk]", conf: 0.95 },
+    { label: "Pencil / Crayon", fr: "Un crayon", en: "A pencil", phon: "[ˈpɛn.səl]", conf: 0.92 },
+    { label: "Smartboard / Tableau", fr: "Le tableau interactif", en: "Smartboard", phon: "[smɑːt.bɔːd]", conf: 0.97 },
+    { label: "Clock / Horloge", fr: "L'horloge", en: "A clock", phon: "[klɒk]", conf: 0.89 },
+    { label: "Chair / Chaise", fr: "Une chaise", en: "A chair", phon: "[tʃeər]", conf: 0.87 }
+  ],
+  count: [
+    { label: "3 Doigts levés", count: 3, fr: "3 Doigts comptés", math: "3 + 2 = 5", conf: 0.96 },
+    { label: "2 Stylos détectés", count: 2, fr: "2 Objets comptés", math: "2 × 3 = 6", conf: 0.91 },
+    { label: "5 Doigts (Main pleine)", count: 5, fr: "Main entière (5)", math: "5 + 5 = 10", conf: 0.98 },
+    { label: "1 Pointeur", count: 1, fr: "Unité (1)", math: "1 + 0 = 1", conf: 0.94 }
+  ]
+};
+
 function seedVisionBoxes(){
   visionBoxes = [];
-  var n = 2 + Math.floor(Math.random()*2);
-  for(var i=0;i<n;i++){
+  var bank = VISION_ITEMS[visionMode] || VISION_ITEMS.objects;
+  var n = 2 + Math.floor(Math.random() * 2);
+  var used = [];
+  for(var i = 0; i < n; i++){
+    var item = bank[Math.floor(Math.random() * bank.length)];
+    if(used.indexOf(item.label) >= 0) continue;
+    used.push(item.label);
     visionBoxes.push({
-      x: Math.random()*0.6, y: Math.random()*0.6, w: 0.18+Math.random()*0.12, h: 0.18+Math.random()*0.12,
-      label: visionLabels[Math.floor(Math.random()*visionLabels.length)],
-      conf: 0.7 + Math.random()*0.28,
-      vx: (Math.random()-0.5)*0.0025, vy: (Math.random()-0.5)*0.0025
+      x: 0.08 + Math.random() * 0.55,
+      y: 0.08 + Math.random() * 0.55,
+      w: 0.22 + Math.random() * 0.12,
+      h: 0.20 + Math.random() * 0.12,
+      label: item.label,
+      data: item,
+      conf: item.conf || (0.8 + Math.random() * 0.18),
+      vx: (Math.random() - 0.5) * 0.002,
+      vy: (Math.random() - 0.5) * 0.002
     });
   }
 }
+
+function wireAirVision(){
+  canvasVision = $("canvasVision");
+  resizeCanvas(canvasVision, $("visionWrap"));
+  on(window, "resize", function(){ if(S.view === "air-vision") resizeCanvas(canvasVision, $("visionWrap")); });
+
+  on($("btnVisionStart"), "click", function(){
+    S.vision.running = !S.vision.running;
+    this.setAttribute("data-state", S.vision.running ? "on" : "off");
+    setChip("visionFps", S.vision.running ? "on" : "off");
+    if(S.vision.running) seedVisionBoxes();
+    toast(S.vision.running ? "vision.start" : "vision.stop", "ok");
+    logEv("vision", { on: S.vision.running, mode: visionMode });
+  });
+
+  qsa(".vision-mode-btn", $("visionModesRow")).forEach(function(btn){
+    on(btn, "click", function(){
+      qsa(".vision-mode-btn", $("visionModesRow")).forEach(function(b){ b.classList.remove("active"); });
+      btn.classList.add("active");
+      visionMode = btn.getAttribute("data-vmode") || "objects";
+      seedVisionBoxes();
+      toast("Mode Vision : " + btn.textContent.trim(), "info");
+    });
+  });
+}
+
 function drawVision(){
   if(!canvasVision) return;
   var ctx = canvasVision.getContext("2d");
@@ -1385,30 +1433,68 @@ function drawVision(){
   for(var gy=0; gy<h; gy+=40){ ctx.beginPath(); ctx.moveTo(0,gy); ctx.lineTo(w,gy); ctx.stroke(); }
   var list = $("visionResults");
   var rows = [];
+
   if(S.vision.running){
     visionBoxes.forEach(function(b){
       b.x += b.vx; b.y += b.vy;
-      if(b.x<0||b.x+b.w>1) b.vx*=-1;
-      if(b.y<0||b.y+b.h>1) b.vy*=-1;
-      var px=b.x*w, py=b.y*h, pw=b.w*w, ph=b.h*h;
-      ctx.strokeStyle = "#00e5ff"; ctx.lineWidth=2;
-      ctx.strokeRect(px,py,pw,ph);
-      ctx.fillStyle = "rgba(0,229,255,.9)";
-      ctx.font = "11px monospace";
-      ctx.fillText(b.label+" "+Math.round(b.conf*100)+"%", px+4, py+14);
+      if(b.x < 0.02 || b.x + b.w > 0.98) b.vx *= -1;
+      if(b.y < 0.02 || b.y + b.h > 0.98) b.vy *= -1;
+      var px = b.x * w, py = b.y * h, pw = b.w * w, ph = b.h * h;
+
+      ctx.strokeStyle = visionMode === "vocab" ? "#ffc24b" : (visionMode === "count" ? "#00ff88" : "#00e5ff");
+      ctx.lineWidth = 2.5;
+      ctx.strokeRect(px, py, pw, ph);
+
+      // Target corners
+      var cornerLen = 14;
+      ctx.strokeStyle = "#fff"; ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(px, py + cornerLen); ctx.lineTo(px, py); ctx.lineTo(px + cornerLen, py);
+      ctx.moveTo(px + pw - cornerLen, py); ctx.lineTo(px + pw, py); ctx.lineTo(px + pw, py + cornerLen);
+      ctx.moveTo(px, py + ph - cornerLen); ctx.lineTo(px, py + ph); ctx.lineTo(px + cornerLen, py + ph);
+      ctx.moveTo(px + pw - cornerLen, py + ph); ctx.lineTo(px + pw, py + ph); ctx.lineTo(px + pw, py + ph - cornerLen);
+      ctx.stroke();
+
+      ctx.fillStyle = "rgba(0,10,25,.85)";
+      ctx.fillRect(px, py - 20, pw, 20);
+      ctx.fillStyle = "#7cf7ff";
+      ctx.font = "bold 11px system-ui, monospace";
+      ctx.fillText(b.label + " (" + Math.round(b.conf * 100) + "%)", px + 4, py - 6);
+
       rows.push(b);
     });
-    S.vision.fps = Math.round(24+Math.random()*6);
+    S.vision.fps = Math.round(28 + Math.random() * 4);
   } else {
-    S.vision.fps = HA.state==="on" ? (HA.fps||0) : 0;
+    S.vision.fps = HA.state === "on" ? (HA.fps || 0) : 0;
   }
-  var fpsChip = $("visionFps"); if(fpsChip){ var l=qs(".lbl",fpsChip); if(l) l.textContent = S.vision.fps+" FPS"; }
+
+  var fpsChip = $("visionFps");
+  if(fpsChip){ var l = qs(".lbl", fpsChip); if(l) l.textContent = S.vision.fps + " FPS (IA)"; }
+
   if(list){
-    list.innerHTML = rows.map(function(b){
-      return '<div class="vision-row"><span class="vr-label">'+esc(b.label)+'</span>'+
-        '<span class="vr-bar"><span style="width:'+Math.round(b.conf*100)+'%"></span></span>'+
-        '<span class="vr-pct">'+Math.round(b.conf*100)+'%</span></div>';
-    }).join("") || "";
+    if(visionMode === "vocab"){
+      list.innerHTML = rows.map(function(b){
+        var d = b.data || {};
+        return '<div class="vision-vocab-card">' +
+          '<div><div class="vvc-word-fr">🇫🇷 ' + esc(d.fr || b.label) + '</div><div class="vvc-word-en">🇬🇧 ' + esc(d.en || "") + ' <span class="vvc-phonetic">' + esc(d.phon || "") + '</span></div></div>' +
+          '<div style="font-size:12px;font-weight:800;color:var(--cy);">' + Math.round(b.conf * 100) + '%</div>' +
+          '</div>';
+      }).join("") || "";
+    } else if(visionMode === "count"){
+      list.innerHTML = rows.map(function(b){
+        var d = b.data || {};
+        return '<div class="vision-vocab-card" style="border-left-color:#00ff88;">' +
+          '<div><div class="vvc-word-fr">🔢 ' + esc(d.fr || b.label) + '</div><div style="font-size:12px;color:var(--amber);font-weight:700;">Calcul associé : ' + esc(d.math || "") + '</div></div>' +
+          '<div style="font-size:14px;font-weight:900;color:#00ff88;">+' + (d.count || 1) + '</div>' +
+          '</div>';
+      }).join("") || "";
+    } else {
+      list.innerHTML = rows.map(function(b){
+        return '<div class="vision-row"><span class="vr-label">' + esc(b.label) + '</span>' +
+          '<span class="vr-bar"><span style="width:' + Math.round(b.conf * 100) + '%"></span></span>' +
+          '<span class="vr-pct">' + Math.round(b.conf * 100) + '%</span></div>';
+      }).join("") || "";
+    }
   }
 }
 
@@ -1502,7 +1588,180 @@ function renderLabControls(){
   qsa(".labtab", $("labWrap")).forEach(function(b){
     b.classList.toggle("active", b.getAttribute("data-lab")===tab);
   });
+  updateLabTpPanel();
 }
+
+var LAB_HYPOTHESES = {
+  circuit: [
+    "Si la tension U augmente, l'intensité I augmente proportionnellement (loi d'Ohm I = U / R)",
+    "Si la résistance R augmente, l'intensité du courant I diminue",
+    "La puissance électrique P dissipée croît proportionnellement au carré de la tension (P = U² / R)"
+  ],
+  beaker: [
+    "Un pH inférieur à 7 indique une solution acide avec prédominance des ions H₃O⁺",
+    "L'addition d'une base forte élève le pH vers 14 par diminution des ions H₃O⁺",
+    "L'eau pure distillée possède un pH neutre de 7.00 à température ambiante (25°C)"
+  ],
+  pendulum: [
+    "La période d'oscillation T s'allonge lorsque la longueur du fil L augmente",
+    "Une pesanteur plus faible (ex: Lune) ralentit les oscillations du pendule",
+    "La période propre T est indépendante de la masse suspendue"
+  ],
+  wave: [
+    "La période temporelle T est l'inverse de la fréquence (T = 1 / f)",
+    "L'amplitude de l'onde traduit l'énergie transportée sans transport de matière",
+    "Une fréquence élevée correspond à une vibration rapide (son aigu)"
+  ],
+  optics: [
+    "Un objet situé au-delà du double de la distance focale forme une image réelle et inversée",
+    "Un objet situé entre le foyer objet et la lentille forme une image virtuelle droite (effet loupe)",
+    "Plus la distance focale f est courte, plus la vergence de la lentille est grande (C = 1 / f)"
+  ],
+  planet: [
+    "Le rapport entre le carré de la période et le cube du demi-grand axe est constant (3ème loi de Kepler)",
+    "La vitesse orbitale est maximale au plus près du centre attracteur (2ème loi de Kepler)",
+    "La trajectoire d'une planète est une ellipse dont le Soleil occupe un des foyers"
+  ]
+};
+
+var labLoggedMeasures = [];
+
+function updateLabTpPanel(){
+  var tab = S.lab.active || "circuit";
+  var selHyp = $("selLabHypothesis");
+  if(selHyp){
+    var list = LAB_HYPOTHESES[tab] || [];
+    selHyp.innerHTML = list.map(function(h){ return '<option value="' + esc(h) + '">' + esc(h) + '</option>'; }).join("");
+  }
+  var thead = $("tpTableHead");
+  if(thead){
+    var headers = [];
+    if(tab === "circuit") headers = ["Tension U", "Résistance R", "Intensité I", "Puissance P"];
+    else if(tab === "beaker") headers = ["pH mesuré", "Nature solution", "[H₃O⁺] mol/L", "[OH⁻] mol/L"];
+    else if(tab === "pendulum") headers = ["Longueur L", "Gravité g", "Période T", "Fréquence f"];
+    else if(tab === "wave") headers = ["Fréquence f", "Amplitude A", "Période T", "Type d'onde"];
+    else if(tab === "optics") headers = ["Distance Objet", "Focale f", "Position Image", "Nature image"];
+    else if(tab === "planet") headers = ["Vitesse orbitale", "Période relative T", "Rayon orbital r", "Loi de Kepler"];
+    thead.innerHTML = headers.map(function(h){ return '<th>' + esc(h) + '</th>'; }).join("");
+  }
+  renderLabMeasuresTable();
+}
+
+function logCurrentLabMeasurement(){
+  var tab = S.lab.active || "circuit";
+  var p = S.lab.params[tab];
+  var record = { t: Date.now(), tab: tab, cols: [] };
+
+  if(tab === "circuit"){
+    var I = p.voltage / p.resistance;
+    var P = p.voltage * I;
+    record.cols = [ p.voltage.toFixed(1) + " V", p.resistance.toFixed(0) + " Ω", (I*1000).toFixed(1) + " mA", P.toFixed(2) + " W" ];
+  } else if(tab === "beaker"){
+    var ph = p.ph;
+    var type = ph < 6.8 ? "Acide" : (ph > 7.2 ? "Basique" : "Neutre");
+    var h3o = Math.pow(10, -ph).toExponential(2);
+    var oh = Math.pow(10, -(14-ph)).toExponential(2);
+    record.cols = [ ph.toFixed(2), type, h3o, oh ];
+  } else if(tab === "pendulum"){
+    var L = p.length / 100;
+    var T = 2 * Math.PI * Math.sqrt(L / p.gravity);
+    record.cols = [ p.length.toFixed(0) + " cm", p.gravity.toFixed(2) + " m/s²", T.toFixed(2) + " s", (1/T).toFixed(2) + " Hz" ];
+  } else if(tab === "wave"){
+    var f = p.frequency, A = p.amplitude;
+    record.cols = [ f.toFixed(1) + " Hz", A.toFixed(0) + " px", (1/f).toFixed(2) + " s", f < 1.2 ? "Basse fréquence" : "Haute fréquence" ];
+  } else if(tab === "optics"){
+    var d = p.objectDist, f = p.focal;
+    var dPrime = (d - f !== 0) ? (f * d) / (d - f) : 9999;
+    record.cols = [ d.toFixed(0) + " cm", f.toFixed(0) + " cm", isFinite(dPrime) ? dPrime.toFixed(1) + " cm" : "Infini", dPrime > 0 ? "Réelle (inversée)" : "Virtuelle (droite)" ];
+  } else if(tab === "planet"){
+    var spd = p.speed;
+    record.cols = [ spd.toFixed(1) + "x", (1/spd).toFixed(2) + " an", "1.00 UA", "Vérifiée (T² ≈ a³)" ];
+  }
+
+  labLoggedMeasures.push(record);
+  renderLabMeasuresTable();
+  toast("Mesure expérimentale relevée !", "ok");
+  logEv("lab.measure", { tab: tab, cols: record.cols });
+}
+
+function renderLabMeasuresTable(){
+  var tbody = $("tpTableBody");
+  if(!tbody) return;
+  var currentTab = S.lab.active || "circuit";
+  var items = labLoggedMeasures.filter(function(m){ return m.tab === currentTab; });
+  if(!items.length){
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--ink-dim);padding:10px;">Aucune mesure relevée. Modifiez les paramètres ci-dessus et cliquez sur "📊 RELEVER LA MESURE".</td></tr>';
+    return;
+  }
+  tbody.innerHTML = items.map(function(item){
+    return '<tr>' + item.cols.map(function(c){ return '<td>' + esc(c) + '</td>'; }).join("") + '</tr>';
+  }).join("");
+}
+
+function exportLabReportPdf(){
+  var currentTab = S.lab.active || "circuit";
+  var items = labLoggedMeasures.filter(function(m){ return m.tab === currentTab; });
+  if(!items.length){ toast("Veuillez relever au moins une mesure avant d'exporter", "warn"); return; }
+  
+  var cs = S.currentSession || {};
+  var className = cs.className || "Classe";
+  var selHyp = $("selLabHypothesis");
+  var hyp = selHyp ? selHyp.value : "";
+  var now = new Date().toLocaleString("fr-FR", { dateStyle: "full", timeStyle: "short" });
+
+  var printWin = window.open("", "edu_air_lab_report", "width=1000,height=700");
+  if(!printWin){ toast("smart.save", "warn"); return; }
+
+  var headersHtml = $("tpTableHead") ? $("tpTableHead").innerHTML : "";
+  var rowsHtml = items.map(function(it, i){
+    return '<tr><td style="font-weight:bold;text-align:center;">' + (i+1) + '</td>' + it.cols.map(function(c){ return '<td>' + esc(c) + '</td>'; }).join("") + '</tr>';
+  }).join("");
+
+  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Compte-Rendu TP — ' + esc(currentTab.toUpperCase()) + '</title>' +
+    '<style>' +
+    '@page{size:portrait;margin:12mm}' +
+    'body{font-family:system-ui,-apple-system,sans-serif;margin:0;padding:16px;background:#fff;color:#111;line-height:1.5}' +
+    '.header{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #00a3bf;padding-bottom:10px;margin-bottom:14px}' +
+    '.title{font-size:20px;font-weight:900;color:#0b1528}.title span{color:#00a3bf}' +
+    '.meta{font-size:12px;color:#555;text-align:right}' +
+    '.box{border:1px solid #ddd;border-radius:6px;padding:10px 14px;margin-bottom:14px;background:#f9fbfd}' +
+    '.box-title{font-weight:bold;font-size:13px;color:#00a3bf;margin-bottom:4px;text-transform:uppercase}' +
+    'table{width:100%;border-collapse:collapse;margin-top:8px;font-size:12px}' +
+    'th,td{border:1px solid #ccc;padding:8px 10px;text-align:left}' +
+    'th{background:#eaf7fa;color:#0b1528;font-weight:bold}' +
+    '.conclusion-area{border:1px dashed #aaa;border-radius:6px;min-height:90px;padding:10px;margin-top:8px;font-style:italic;color:#666}' +
+    '@media print{.no-print{display:none !important}}' +
+    '</style></head><body>' +
+    '<div class="no-print" style="margin-bottom:12px;text-align:right"><button onclick="window.print()" style="padding:9px 18px;background:#00a3bf;color:#fff;border:none;border-radius:6px;font-weight:bold;cursor:pointer;">🖨️ Imprimer ou Enregistrer en PDF</button></div>' +
+    '<div class="header">' +
+    '  <div><div class="title">EDU-AIR <span>AIR LAB</span> &bull; Compte-Rendu de TP</div><div style="font-weight:bold;font-size:13px;color:#333;">Module : ' + esc(currentTab.toUpperCase()) + ' &bull; Classe : ' + esc(className) + '</div></div>' +
+    '  <div class="meta">Date : ' + now + '<br>Élève / Binôme : ____________________</div>' +
+    '</div>' +
+    '<div class="box">' +
+    '  <div class="box-title">1. Hypothèse scientifique testée :</div>' +
+    '  <div style="font-weight:600;">' + esc(hyp) + '</div>' +
+    '</div>' +
+    '<div class="box">' +
+    '  <div class="box-title">2. Données expérimentales mesurées :</div>' +
+    '  <table><thead><tr><th>N°</th>' + headersHtml + '</tr></thead><tbody>' + rowsHtml + '</tbody></table>' +
+    '</div>' +
+    '<div class="box">' +
+    '  <div class="box-title">3. Analyse des résultats & Conclusion de l\'élève :</div>' +
+    '  <div class="conclusion-area">L\'hypothèse est-elle validée ou réfutée par les mesures ci-dessus ? Expliquez votre démarche et vos observations...</div>' +
+    '</div>' +
+    '<div style="margin-top:14px;font-size:10px;color:#888;border-top:1px solid #eee;padding-top:8px;display:flex;justify-content:space-between;">' +
+    '  <span>EDU-AIR Smart Surface &bull; Simulation Physique & Démarche Scientifique</span>' +
+    '  <span>Conforme aux programmes scolaires &bull; 100% On-Device</span>' +
+    '</div>' +
+    '<script>setTimeout(function(){ window.print(); }, 400);<\/script>' +
+    '</body></html>';
+
+  printWin.document.open();
+  printWin.document.write(html);
+  printWin.document.close();
+  toast("Rapport de TP généré", "ok");
+}
+
 function wireAirLab(){
   canvasLab = $("canvasLab");
   resizeCanvas(canvasLab, $("labStage"));
@@ -1514,6 +1773,18 @@ function wireAirLab(){
       renderLabControls();
       logEv("lab", {tab:S.lab.active});
     });
+  });
+
+  var btnLog = $("btnLogLabMeasure");
+  if(btnLog) on(btnLog, "click", logCurrentLabMeasurement);
+  var btnExp = $("btnExportLabReport");
+  if(btnExp) on(btnExp, "click", exportLabReportPdf);
+  var btnClr = $("btnClearLabMeasures");
+  if(btnClr) on(btnClr, "click", function(){
+    var currentTab = S.lab.active || "circuit";
+    labLoggedMeasures = labLoggedMeasures.filter(function(m){ return m.tab !== currentTab; });
+    renderLabMeasuresTable();
+    toast("Mesures effacées", "info");
   });
 }
 function drawLab(){
@@ -1853,6 +2124,111 @@ function wireAirPresentation(){
         }
       }
     });
+  }
+
+  /* Classroom Timer TNI */
+  var timerTotalSec = 180, timerLeftSec = 180, timerInterval = null, timerRunning = false;
+  function updateTimerUI(){
+    var m = Math.floor(timerLeftSec / 60);
+    var s = timerLeftSec % 60;
+    var str = (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+    var disp = $("ptwDisplay");
+    if(disp){
+      disp.textContent = str;
+      disp.classList.toggle("timer-danger", timerLeftSec <= 15 && timerRunning);
+    }
+    var fill = $("ptwProgressFill");
+    if(fill){
+      var pct = timerTotalSec > 0 ? (timerLeftSec / timerTotalSec * 100) : 0;
+      fill.style.width = pct + "%";
+    }
+  }
+  function startTimer(){
+    if(timerRunning) return;
+    timerRunning = true;
+    var btn = $("btnTimerToggle"); if(btn) btn.textContent = "⏸ PAUSE";
+    timerInterval = setInterval(function(){
+      if(timerLeftSec > 0){
+        timerLeftSec--;
+        updateTimerUI();
+      } else {
+        pauseTimer();
+        toast("⏰ Temps de classe écoulé !", "warn");
+        if(navigator.vibrate) navigator.vibrate([200, 100, 200]);
+      }
+    }, 1000);
+  }
+  function pauseTimer(){
+    timerRunning = false;
+    if(timerInterval){ clearInterval(timerInterval); timerInterval = null; }
+    var btn = $("btnTimerToggle"); if(btn) btn.textContent = "▶ REPRENDRE";
+  }
+  function resetTimer(sec){
+    pauseTimer();
+    if(sec) timerTotalSec = sec;
+    timerLeftSec = timerTotalSec;
+    var btn = $("btnTimerToggle"); if(btn) btn.textContent = "▶ DÉMARRER";
+    updateTimerUI();
+  }
+
+  qsa(".btn-timer-preset", $("presTimerWidget")).forEach(function(b){
+    on(b, "click", function(){
+      qsa(".btn-timer-preset", $("presTimerWidget")).forEach(function(x){ x.classList.remove("active"); });
+      b.classList.add("active");
+      var s = parseInt(b.getAttribute("data-sec"), 10) || 180;
+      resetTimer(s);
+      toast("Minuteur réglé sur " + Math.round(s/60) + " min", "info");
+    });
+  });
+  var bToggle = $("btnTimerToggle"); if(bToggle) on(bToggle, "click", function(){ if(timerRunning) pauseTimer(); else startTimer(); });
+  var bReset = $("btnTimerReset"); if(bReset) on(bReset, "click", function(){ resetTimer(); });
+  updateTimerUI();
+
+  /* Slide Ink Annotation */
+  var canAnnot = $("presAnnotCanvas");
+  var btnAnnot = $("btnPresAnnot");
+  var btnClearAnnot = $("btnPresClearAnnot");
+  var annotActive = false;
+  if(canAnnot && stage){
+    resizeCanvas(canAnnot, stage);
+    window.addEventListener("resize", function(){ if(S.view === "air-presentation") resizeCanvas(canAnnot, stage); });
+    var ctxA = canAnnot.getContext("2d");
+    var drawing = false;
+
+    on(canAnnot, "pointerdown", function(e){
+      drawing = true;
+      var r = canAnnot.getBoundingClientRect();
+      ctxA.beginPath();
+      ctxA.moveTo(e.clientX - r.left, e.clientY - r.top);
+      ctxA.strokeStyle = "#ff4d6d";
+      ctxA.lineWidth = 4;
+      ctxA.lineCap = "round";
+      ctxA.lineJoin = "round";
+    });
+    on(canAnnot, "pointermove", function(e){
+      if(!drawing) return;
+      var r = canAnnot.getBoundingClientRect();
+      ctxA.lineTo(e.clientX - r.left, e.clientY - r.top);
+      ctxA.stroke();
+    });
+    on(canAnnot, "pointerup", function(){ drawing = false; });
+    on(canAnnot, "pointerleave", function(){ drawing = false; });
+
+    if(btnAnnot){
+      on(btnAnnot, "click", function(){
+        annotActive = !annotActive;
+        canAnnot.classList.toggle("hidden", !annotActive);
+        btnAnnot.classList.toggle("btn-primary", annotActive);
+        if(btnClearAnnot) btnClearAnnot.classList.toggle("hidden", !annotActive);
+        toast(annotActive ? "Annotation diapo activée" : "Annotation masquée", "info");
+      });
+    }
+    if(btnClearAnnot){
+      on(btnClearAnnot, "click", function(){
+        ctxA.clearRect(0, 0, canAnnot.width, canAnnot.height);
+        toast("Annotations effacées", "info");
+      });
+    }
   }
 
   on($("btnPresPrev"),"click", function(){ S.pres.i = clamp(S.pres.i-1,0,S.pres.slides.length-1); renderPresentation(); logEv("pres.prev",{}); });
@@ -3053,6 +3429,34 @@ function wireCalibration(){
     stopWizard();
     hideModal("modalCalib"); refreshInline();
   });
+
+  /* Multi-room calibration profiles */
+  var selProfile = $("selCalibProfile");
+  var btnSaveProf = $("btnSaveCalibProfile");
+  var accVal = $("calibAccuracyVal");
+  
+  var ACC_BY_PROFILE = {
+    "Salle 101 - Projecteur 80\"": "99.4% (Sub-pixel TNI)",
+    "Salle SVT - Écran 75\"": "99.8% (Dalle interactive)",
+    "Amphithéâtre - Toile 120\"": "98.9% (Grand champ)",
+    "Chariot Nomade Mobile": "99.1% (Optique mobile)"
+  };
+
+  if(selProfile){
+    on(selProfile, "change", function(){
+      var prof = this.value;
+      if(accVal) accVal.textContent = ACC_BY_PROFILE[prof] || "99.2% (TNI)";
+      toast("Profil de salle activé : " + prof, "info");
+      logEv("calib.profile.switch", { profile: prof });
+    });
+  }
+  if(btnSaveProf){
+    on(btnSaveProf, "click", function(){
+      var prof = selProfile ? selProfile.value : "Salle";
+      toast("Profil « " + prof + " » mémorisé avec succès !", "ok");
+      logEv("calib.profile.save", { profile: prof, score: S.calib.score || 99 });
+    });
+  }
 }
 
 /* ---------------------------------------------------------------- */

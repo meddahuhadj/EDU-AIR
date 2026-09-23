@@ -568,3 +568,49 @@ body.theme-light .navitem[data-state="warn"]{color:var(--amber)}
 .btn-launch-quiz-ai{margin-top:10px; background:linear-gradient(90deg, #ffc24b, #00e5ff); color:#05070d; font-weight:900; letter-spacing:.06em; border:none; padding:10px 18px; border-radius:8px; cursor:pointer;}
 .btn-launch-quiz-ai:hover{filter:brightness(1.15); box-shadow:0 0 16px rgba(0,229,255,.4);}
 
+/* =============================================================
+   AIR PRESENTATION — MINUTEUR DE CLASSE TNI
+   ============================================================= */
+.pres-timer-widget{margin-top:16px; padding:14px; background:rgba(7,13,26,.85); border:1px solid var(--line-strong); border-radius:var(--r-sm); box-shadow:0 8px 24px rgba(0,0,0,.35);}
+.ptw-header{display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;}
+.ptw-title{font-family:var(--font-display); font-size:12px; font-weight:800; letter-spacing:.1em; color:var(--amber);}
+.ptw-presets{display:flex; gap:6px; flex-wrap:wrap;}
+.btn-timer-preset{background:var(--bg2); color:var(--ink-dim); border:1px solid var(--line); border-radius:6px; font-family:var(--font-display); font-size:11px; font-weight:700; padding:4px 10px; cursor:pointer; transition:all .15s;}
+.btn-timer-preset:hover{color:var(--cy); border-color:var(--cy);}
+.btn-timer-preset.active{background:rgba(0,229,255,.15); color:var(--cy); border-color:var(--cy); box-shadow:0 0 10px rgba(0,229,255,.3);}
+.ptw-body{display:flex; flex-direction:column; align-items:center; gap:10px;}
+.ptw-display{font-family:var(--font-mono); font-size:48px; font-weight:900; color:var(--cy); letter-spacing:2px; text-shadow:0 0 20px rgba(0,229,255,.4); line-height:1;}
+.ptw-display.timer-danger{color:var(--danger); text-shadow:0 0 20px rgba(255,77,109,.6); animation:timerPulse .8s infinite alternate;}
+@keyframes timerPulse{from{transform:scale(1);}to{transform:scale(1.04);}}
+.ptw-progress-bar{width:100%; max-width:480px; height:8px; background:rgba(255,255,255,.08); border-radius:999px; overflow:hidden;}
+.ptw-progress-fill{height:100%; background:linear-gradient(90deg, #00e5ff, #ffc24b); border-radius:999px; transition:width 1s linear;}
+.ptw-controls{display:flex; gap:12px; margin-top:4px;}
+
+/* Presentation Canvas Annotation */
+.pres-annot-canvas{position:absolute; inset:0; width:100%; height:100%; z-index:4; cursor:crosshair; pointer-events:auto;}
+
+/* =============================================================
+   AIR LAB — DÉMARCHE SCIENTIFIQUE & RELEVÉ TP
+   ============================================================= */
+.lab-tp-panel{margin-top:16px; padding:14px; background:rgba(12,20,38,.85); border:1px solid var(--line-strong); border-radius:var(--r-sm);}
+.lab-tp-header{display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;}
+.tp-badge{font-family:var(--font-display); font-size:12px; font-weight:800; letter-spacing:.08em; color:var(--cy);}
+.tp-actions{display:flex; gap:8px; align-items:center; flex-wrap:wrap;}
+.tp-hypothesis-row{display:flex; align-items:center; gap:12px; margin-bottom:12px; flex-wrap:wrap; font-size:12px;}
+.tp-table-wrap{overflow-x:auto; background:var(--bg0); border:1px solid var(--line); border-radius:6px;}
+.tp-table{width:100%; border-collapse:collapse; font-size:12px; text-align:left;}
+.tp-table th{background:rgba(0,229,255,.08); color:var(--cy); font-family:var(--font-display); font-size:10px; font-weight:800; letter-spacing:.06em; padding:8px 12px; border-bottom:1px solid var(--line);}
+.tp-table td{padding:8px 12px; border-bottom:1px solid rgba(255,255,255,.05); font-family:var(--font-mono); color:var(--ink-strong);}
+
+/* =============================================================
+   AIR VISION — MODES PÉDAGOGIQUES
+   ============================================================= */
+.vision-mode-btn{background:var(--bg2); color:var(--ink-dim); border:1px solid var(--line); border-radius:6px; font-family:var(--font-display); font-size:11px; font-weight:700; padding:5px 12px; cursor:pointer; transition:all .15s;}
+.vision-mode-btn:hover{color:var(--cy); border-color:var(--cy);}
+.vision-mode-btn.active{background:rgba(0,229,255,.15); color:var(--cy); border-color:var(--cy); box-shadow:0 0 10px rgba(0,229,255,.25);}
+.vision-vocab-card{display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:var(--bg1); border-left:3px solid var(--cy); border-radius:6px; margin-bottom:8px;}
+.vvc-word-fr{font-size:14px; font-weight:800; color:var(--ink-strong);}
+.vvc-word-en{font-size:13px; font-weight:700; color:var(--amber);}
+.vvc-phonetic{font-size:11px; color:var(--ink-dim); font-style:italic;}
+
+
