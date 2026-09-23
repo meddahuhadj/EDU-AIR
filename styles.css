@@ -340,6 +340,11 @@ label{font-size:12px; color:var(--ink-dim)}
 }
 .mdlchip:hover{color:var(--cy); border-color:var(--cy)}
 .mdlchip.active{background:var(--cy); color:#001520; border-color:var(--cy)}
+.threed-info{background:var(--bg2); border:1px solid var(--line); border-radius:var(--r-sm); padding:14px 16px; margin-bottom:14px}
+.threed-info h4{margin:0 0 6px; color:var(--cy)}
+.threed-info p{margin:0 0 8px; color:var(--ink-dim); line-height:1.5}
+.model-stats{display:flex; gap:14px; flex-wrap:wrap}
+.model-stats span{font-family:var(--font-mono); font-size:12px; color:var(--ink-strong); background:var(--bg3); padding:4px 9px; border-radius:6px; border:1px solid var(--line)}
 
 /* =============================================================
    AIR VISION

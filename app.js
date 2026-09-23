@@ -230,12 +230,12 @@ function switchView(view){
   if(view==="dashboard") renderDashboard();
   if(view==="history") renderHistory();
   if(view==="settings") renderSettings();
-  if(view==="privacy") renderStatic("privacyBody","privacy.body");
-  if(view==="security") renderStatic("secBody","security.body");
+  if(view==="privacy") renderPrivacy();
+  if(view==="security") renderSecurity();
   if(view==="air-quiz") renderQuiz();
   if(view==="air-presentation") renderPresentation();
   if(view==="air-lab"){ renderLabControls(); S.lab.t0 = performance.now(); }
-  if(view==="air-3d") resizeCanvas(canvas3d, stage3dEl());
+  if(view==="air-3d"){ resizeCanvas(canvas3d, stage3dEl()); renderModelInfo(S.threed.model); }
   if(view==="air-vision") resizeCanvas(canvasVision, $("visionWrap"));
   if(view==="calibration") refreshCalibView();
 }
@@ -1449,6 +1449,29 @@ function draw3D(){
   if(hud) hud.textContent = (t("nav."+ (S.threed.model==="threed"?"threed":"threed")) ? S.threed.model.toUpperCase() : S.threed.model.toUpperCase()) + " · " + Math.round(S.threed.rotY*180/Math.PI%360) + "°";
 }
 var drag3d = null;
+var MODEL_STATS = {
+  cube: { volume:8, surface:24, edges:12, vertices:8, faces:6 },
+  pyramid: { volume:3.07, edges:8, vertices:5, faces:5 },
+  sphere: { volume:4.19, surface:12.57 },
+  torus: { volume:3.16, surface:15.79 }
+};
+function renderModelInfo(model){
+  var host = $("threedInfo"); if(!host) return;
+  var name = t("model."+model);
+  var info = t("model."+model+".info");
+  var stats = MODEL_STATS[model];
+  var html = '<h4>'+esc(name)+'</h4><p>'+esc(info)+'</p>';
+  if(stats){
+    var parts = [];
+    if(stats.volume!=null) parts.push(esc(t("model.volume"))+': '+stats.volume+' u³');
+    if(stats.surface!=null) parts.push(esc(t("model.surface"))+': '+stats.surface+' u²');
+    if(stats.edges!=null) parts.push(esc(t("model.edges"))+': '+stats.edges);
+    if(stats.vertices!=null) parts.push(esc(t("model.vertices"))+': '+stats.vertices);
+    if(stats.faces!=null) parts.push(esc(t("model.faces"))+': '+stats.faces);
+    html += '<div class="model-stats">'+parts.map(function(p){ return '<span>'+p+'</span>'; }).join("")+'</div>';
+  }
+  host.innerHTML = html;
+}
 function wireAir3D(){
   canvas3d = $("canvas3d");
   var stage = $("stage3d");
@@ -1465,9 +1488,11 @@ function wireAir3D(){
     on(b,"click", function(){
       S.threed.model = b.getAttribute("data-model");
       qsa(".mdlchip", $("view-air-3d")).forEach(function(x){ x.classList.toggle("active", x===b); x.setAttribute("aria-pressed", x===b?"true":"false"); });
+      renderModelInfo(S.threed.model);
       logEv("3d.model", {model:S.threed.model});
     });
   });
+  renderModelInfo(S.threed.model);
   on($("btn3dHome"),"click", function(){ S.threed.rotX=-0.5; S.threed.rotY=0.6; });
   on($("btn3dAuto"),"click", function(){ S.threed.auto = !S.threed.auto; this.setAttribute("data-state", S.threed.auto?"on":""); });
   on($("chk3dExplode"),"change", function(){ S.threed.explode = this.checked; });
@@ -4367,9 +4392,50 @@ function renderSettings(){
   row.appendChild(installBtn); row.appendChild(resetBtn);
   host.appendChild(row);
 }
-function renderStatic(id, key){
-  var el = $(id); if(!el) return;
-  el.innerHTML = '<p>'+esc(t(key))+'</p>';
+function renderPrivacy(){
+  var el = $("privacyBody"); if(!el) return;
+  var bytes = 0;
+  try{
+    Object.keys(localStorage).forEach(function(k){
+      if(k.indexOf("eduair.")===0) bytes += (localStorage.getItem(k)||"").length + k.length;
+    });
+  }catch(e){}
+  var kb = (bytes/1024).toFixed(1);
+  var html = '<p>'+esc(t("privacy.body"))+'</p><div class="model-stats">'+
+    '<span>'+esc(t("privacy.events"))+': '+S.log.length+'</span>'+
+    '<span>'+esc(t("privacy.quizzes"))+': '+S.quizzes.length+'</span>'+
+    '<span>'+esc(t("privacy.results"))+': '+S.quizResults.length+'</span>'+
+    '<span>'+esc(t("privacy.sessions"))+': '+(S.sessions||[]).length+'</span>'+
+    '<span>'+esc(t("privacy.storage"))+': '+kb+' KB</span>'+
+    '</div><div class="row" style="margin-top:14px"><button class="btn small btn-danger" id="btnPrivacyReset">'+esc(t("settings.reset"))+'</button></div>';
+  el.innerHTML = html;
+  on($("btnPrivacyReset"),"click", function(){
+    confirmDanger("danger.body", function(){
+      try{ Object.keys(localStorage).filter(function(k){ return k.indexOf("eduair.")===0; }).forEach(function(k){ localStorage.removeItem(k); }); }catch(e){}
+      toast("settings.reset","ok"); logEv("settings.reset",{});
+      renderPrivacy();
+    });
+  });
+}
+function renderSecurity(){
+  var el = $("secBody"); if(!el) return;
+  var total = S.log.length;
+  var emergencies = S.log.filter(function(e){ return e.kind==="safety.emergency"; }).length;
+  var gatedKinds = { "board.clear":1, "settings.reset":1, "history.clear":1, "session.delete":1 };
+  var confirmed = S.log.filter(function(e){ return gatedKinds[e.kind]; }).length;
+  var cats = {};
+  S.log.forEach(function(e){ var c=histCategory(e.kind); cats[c]=(cats[c]||0)+1; });
+  var top = Object.keys(cats).sort(function(a,b){ return cats[b]-cats[a]; }).slice(0,3);
+  var html = '<p>'+esc(t("security.body"))+'</p><div class="model-stats">'+
+    '<span>'+esc(t("security.totalActions"))+': '+total+'</span>'+
+    '<span>'+esc(t("security.confirmed"))+': '+confirmed+'</span>'+
+    '<span>'+esc(t("security.emergency"))+': '+emergencies+'</span>'+
+    '</div>';
+  if(top.length){
+    html += '<p class="hint" style="margin-top:10px">'+esc(t("security.topCats"))+': '+
+      esc(top.map(function(c){ return c+" ("+cats[c]+")"; }).join(", "))+'</p>';
+  }
+  el.innerHTML = html;
 }
 function labDwell(){
   var time = {}, last=null, lastT=null;
@@ -4613,10 +4679,11 @@ function boot(){
 labelInstallBtn();
       syncAiBadge();
       if(S.view==="settings") renderSettings();
-      if(S.view==="privacy") renderStatic("privacyBody","privacy.body");
-      if(S.view==="security") renderStatic("secBody","security.body");
+      if(S.view==="privacy") renderPrivacy();
+      if(S.view==="security") renderSecurity();
       if(S.view==="dashboard") renderDashboard();
       if(S.view==="air-lab") renderLabControls();
+      if(S.view==="air-3d") renderModelInfo(S.threed.model);
       if(S.view==="calibration") refreshCalibView();
       if(S.view==="air-quiz") renderQuiz();
       if(S.view==="air-presentation") renderPresentation();
