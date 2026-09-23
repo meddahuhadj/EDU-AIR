@@ -99,6 +99,8 @@ button{font-family:inherit; color:inherit}
 .iconbtn[data-state="err"]{color:var(--danger); border-color:rgba(255,77,109,.6)}
 .badge{padding:4px 10px; border-radius:8px; font-family:var(--font-display); font-weight:700; font-size:10px; letter-spacing:.18em; background:var(--bg2); border:1px solid var(--line-strong); color:var(--ink-dim)}
 .badge-demo{background:linear-gradient(90deg,var(--cy),#7cf7ff); color:#001520; border:0; animation:blink 1.4s infinite}
+.badge-live{background:#0b3320; color:#5dffb0; border:1px solid rgba(93,255,176,.5)}
+.badge-live::before{content:""; display:inline-block; width:6px; height:6px; margin-right:6px; border-radius:50%; background:#5dffb0; box-shadow:0 0 6px #5dffb0}
 @keyframes blink{50%{opacity:.55}}
 
 /* =============================================================

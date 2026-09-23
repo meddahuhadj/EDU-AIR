@@ -1242,6 +1242,15 @@ function openTutorialIfNew(){
 
 function setCamBtn(on){ var b=$("btnCam"); if(b) b.setAttribute("data-state", on?"on":"off"); }
 function setVoiceBtn(on){ var b=$("btnMic"); if(b) b.setAttribute("data-state", on?"on":"off"); }
+function updateModeBadge(){
+  var badge = $("demoBadge"); if(!badge) return;
+  var live = HA.state === "on";
+  var key = live ? "demo.live" : "demo.badge";
+  badge.setAttribute("data-i18n-html", key);
+  badge.textContent = t(key);
+  badge.classList.toggle("badge-live", live);
+  badge.classList.toggle("badge-demo", !live);
+}
 function showCamPreview(on){
   var p=$("camPreview"), o=$("camOverlay");
   if(p) p.classList.toggle("hidden", !on);
@@ -1290,6 +1299,7 @@ function startCamera(){
       v.play().then(function(){
         HA.starting = false; HA.state = "on";
         setCamBtn(true); setChip("stCam","on");
+        updateModeBadge();
         showCamPreview(true);
         drawHandOverlay(null, null);
         initHandLandmarker();
@@ -1326,6 +1336,7 @@ function stopCamera(){
   var c=$("camOverlay"); var ctx=c && c.getContext && c.getContext("2d"); if(ctx) ctx.clearRect(0,0,c.width,c.height);
   showCamPreview(false);
   setCamBtn(false); setChip("stCam","off"); setChip("stHand","off");
+  updateModeBadge();
   toast("cam.off","info"); logEv("cam.off", {});
 }
 
@@ -2381,6 +2392,7 @@ function tick(){
 function boot(){
   applyTheme();
   var badge = $("demoBadge"); if(badge) badge.classList.remove("hidden");
+  updateModeBadge();
   wireTopbar();
   wireNav();
   wireDashboard();
