@@ -648,6 +648,142 @@ function wireSmartSurface(){
       toast("smart.save","ok");
     }catch(e){ toast("smart.save","warn"); }
   });
+  /* Geometry Instruments */
+  var activeInstrument = null;
+  var instPos = { x: 140, y: 100, rot: 0 };
+
+  function renderInstrument(){
+    var overlay = $("boardOverlay");
+    if(!overlay) return;
+    overlay.innerHTML = "";
+    if(!activeInstrument){
+      qsa(".bt-instruments .btbtn", $("boardToolbar")).forEach(function(b){ b.classList.remove("active"); });
+      return;
+    }
+    qsa(".bt-instruments .btbtn", $("boardToolbar")).forEach(function(b){
+      b.classList.toggle("active", b.id === ("btnInst" + activeInstrument.charAt(0).toUpperCase() + activeInstrument.slice(1)));
+    });
+
+    var div = document.createElement("div");
+    div.className = "geom-instrument";
+    div.style.left = instPos.x + "px";
+    div.style.top = instPos.y + "px";
+    div.style.transform = "rotate(" + instPos.rot + "deg)";
+
+    var ctrls = document.createElement("div");
+    ctrls.className = "geom-ctrls";
+    ctrls.innerHTML = '<button type="button" class="geom-btn" id="btnInstRotCCW">↺ -15°</button>' +
+                      '<button type="button" class="geom-btn" id="btnInstRotCW">↻ +15°</button>' +
+                      '<button type="button" class="geom-btn" id="btnInstReset">0°</button>' +
+                      '<button type="button" class="geom-btn geom-btn-close" id="btnInstClose">✕</button>';
+    div.appendChild(ctrls);
+
+    var svgInst = "";
+    if(activeInstrument === "ruler"){
+      var marks = "";
+      for(var cm=0; cm<=25; cm++){
+        var x = 20 + cm * 18;
+        marks += '<line x1="'+x+'" y1="0" x2="'+x+'" y2="24" stroke="#00e5ff" stroke-width="1.5"/>';
+        marks += '<text x="'+(x-4)+'" y="38" fill="#c7d4ee" font-size="10" font-family="monospace">'+cm+'</text>';
+        for(var mm=1; mm<10; mm++){
+          if(cm===25) break;
+          var mx = x + mm * 1.8;
+          var my = (mm===5) ? 16 : 9;
+          marks += '<line x1="'+mx+'" y1="0" x2="'+mx+'" y2="'+my+'" stroke="#00e5ff" stroke-width="0.75" opacity="0.6"/>';
+        }
+      }
+      svgInst = '<svg width="490" height="75" viewBox="0 0 490 75">' +
+        '<rect x="0" y="0" width="490" height="75" rx="6" fill="rgba(10,18,36,0.85)" stroke="#00e5ff" stroke-width="2"/>' +
+        marks +
+        '<text x="240" y="62" fill="#7cf7ff" font-size="11" font-weight="bold" font-family="sans-serif" text-anchor="middle">RÈGLE SCOLAIRE &bull; 25 CM &bull; EDU-AIR TNI</text>' +
+        '</svg>';
+    } else if(activeInstrument === "protractor"){
+      var pmarks = "";
+      for(var deg=0; deg<=180; deg+=10){
+        var rad = (180 - deg) * Math.PI / 180;
+        var cx = 180, cy = 180, r1 = 170, r2 = (deg%30===0) ? 140 : 152;
+        var x1 = cx + r1 * Math.cos(rad), y1 = cy - r1 * Math.sin(rad);
+        var x2 = cx + r2 * Math.cos(rad), y2 = cy - r2 * Math.sin(rad);
+        pmarks += '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="#ffc24b" stroke-width="'+(deg%30===0?1.8:1)+'"/>';
+        if(deg%30===0){
+          var xt = cx + 126 * Math.cos(rad), yt = cy - 126 * Math.sin(rad) + 4;
+          pmarks += '<text x="'+xt+'" y="'+yt+'" fill="#c7d4ee" font-size="10" font-family="monospace" text-anchor="middle">'+deg+'°</text>';
+        }
+      }
+      svgInst = '<svg width="360" height="195" viewBox="0 0 360 195">' +
+        '<path d="M 10 180 A 170 170 0 0 1 350 180 Z" fill="rgba(10,18,36,0.85)" stroke="#ffc24b" stroke-width="2"/>' +
+        pmarks +
+        '<line x1="10" y1="180" x2="350" y2="180" stroke="#ffc24b" stroke-width="2"/>' +
+        '<circle cx="180" cy="180" r="5" fill="#00e5ff"/>' +
+        '<text x="180" y="100" fill="#ffc24b" font-size="11" font-weight="bold" font-family="sans-serif" text-anchor="middle">RAPPORTEUR 180° TNI</text>' +
+        '</svg>';
+    } else if(activeInstrument === "square"){
+      var smarks = "";
+      for(var scm=0; scm<=16; scm++){
+        var sy = 290 - scm * 16;
+        smarks += '<line x1="20" y1="'+sy+'" x2="38" y2="'+sy+'" stroke="#00e5ff" stroke-width="1.5"/>';
+        if(scm%2===0) smarks += '<text x="44" y="'+(sy+4)+'" fill="#c7d4ee" font-size="9" font-family="monospace">'+scm+'</text>';
+      }
+      for(var sx=0; sx<=16; sx++){
+        var sxx = 20 + sx * 16;
+        smarks += '<line x1="'+sxx+'" y1="290" x2="'+sxx+'" y2="272" stroke="#00e5ff" stroke-width="1.5"/>';
+        if(sx%2===0) smarks += '<text x="'+(sxx-3)+'" y="265" fill="#c7d4ee" font-size="9" font-family="monospace">'+sx+'</text>';
+      }
+      svgInst = '<svg width="320" height="320" viewBox="0 0 320 320">' +
+        '<polygon points="20,20 20,290 290,290" fill="rgba(10,18,36,0.85)" stroke="#00e5ff" stroke-width="2"/>' +
+        '<polygon points="55,120 55,255 190,255" fill="#05070d" stroke="#1b2847" stroke-width="1.5"/>' +
+        '<rect x="20" y="270" width="20" height="20" fill="none" stroke="#ffc24b" stroke-width="1.5"/>' +
+        smarks +
+        '<text x="110" y="210" fill="#00e5ff" font-size="11" font-weight="bold" font-family="sans-serif" transform="rotate(-45 110 210)">ÉQUERRE 90° &bull; TNI</text>' +
+        '</svg>';
+    }
+
+    var wrapSvg = document.createElement("div");
+    wrapSvg.innerHTML = svgInst;
+    div.appendChild(wrapSvg);
+
+    var dragging = false, dragOffX = 0, dragOffY = 0;
+    on(div, "pointerdown", function(e){
+      if(e.target.closest(".geom-ctrls")) return;
+      dragging = true;
+      dragOffX = e.clientX - instPos.x;
+      dragOffY = e.clientY - instPos.y;
+      try{ div.setPointerCapture(e.pointerId); }catch(_){}
+    });
+    on(div, "pointermove", function(e){
+      if(!dragging) return;
+      instPos.x = e.clientX - dragOffX;
+      instPos.y = e.clientY - dragOffY;
+      div.style.left = instPos.x + "px";
+      div.style.top = instPos.y + "px";
+    });
+    on(div, "pointerup", function(e){
+      dragging = false;
+      try{ div.releasePointerCapture(e.pointerId); }catch(_){}
+    });
+
+    overlay.appendChild(div);
+
+    var btnRotCCW = $("btnInstRotCCW");
+    if(btnRotCCW) on(btnRotCCW, "click", function(){ instPos.rot = (instPos.rot - 15) % 360; div.style.transform = "rotate("+instPos.rot+"deg)"; });
+    var btnRotCW = $("btnInstRotCW");
+    if(btnRotCW) on(btnRotCW, "click", function(){ instPos.rot = (instPos.rot + 15) % 360; div.style.transform = "rotate("+instPos.rot+"deg)"; });
+    var btnReset = $("btnInstReset");
+    if(btnReset) on(btnReset, "click", function(){ instPos.rot = 0; div.style.transform = "rotate(0deg)"; });
+    var btnClose = $("btnInstClose");
+    if(btnClose) on(btnClose, "click", function(){ activeInstrument = null; renderInstrument(); toast("Instrument masqué","info"); });
+  }
+
+  function toggleInstrument(type){
+    if(activeInstrument === type){ activeInstrument = null; }
+    else { activeInstrument = type; }
+    renderInstrument();
+    toast(activeInstrument ? (type.toUpperCase() + " activé(e)") : "Instrument rangé", "ok");
+  }
+  var bRuler = $("btnInstRuler"); if(bRuler) on(bRuler, "click", function(){ toggleInstrument("ruler"); });
+  var bProt = $("btnInstProtractor"); if(bProt) on(bProt, "click", function(){ toggleInstrument("protractor"); });
+  var bSquare = $("btnInstSquare"); if(bSquare) on(bSquare, "click", function(){ toggleInstrument("square"); });
+
   var stage = $("boardStage"), hud = $("hudPointer");
   on(stage,"pointerleave", function(){ if(hud) hud.classList.add("hidden"); });
   on(stage,"pointermove", function(e){
@@ -957,10 +1093,63 @@ var LAB_FIELDS = {
   optics: [["objectDist",40,300,5,""], ["focal",20,150,5,""]],
   planet: [["speed",0.1,3,0.1,"×"]]
 };
+var LAB_PRESETS = {
+  circuit: [
+    { label:"Loi d'Ohm (5V / 100Ω)", params:{ voltage:5, resistance:100 } },
+    { label:"Court-circuit (Fort I)", params:{ voltage:12, resistance:10 } },
+    { label:"Économie (1.5V / 300Ω)", params:{ voltage:1.5, resistance:300 } }
+  ],
+  beaker: [
+    { label:"Acide fort (pH 1.2)", params:{ ph:1.2 } },
+    { label:"Eau pure (pH 7.0)", params:{ ph:7.0 } },
+    { label:"Base forte (pH 13.0)", params:{ ph:13.0 } }
+  ],
+  pendulum: [
+    { label:"Terre (g=9.81)", params:{ length:100, gravity:9.8 } },
+    { label:"Lune (g=1.62)", params:{ length:100, gravity:1.6 } },
+    { label:"Jupiter (g=24.8)", params:{ length:100, gravity:24.8 } }
+  ],
+  wave: [
+    { label:"Son grave (120 Hz)", params:{ frequency:0.6, amplitude:50 } },
+    { label:"La 440 Hz (Diapason)", params:{ frequency:1.5, amplitude:65 } },
+    { label:"Ultrason (800 Hz)", params:{ frequency:2.8, amplitude:30 } }
+  ],
+  optics: [
+    { label:"Loupe simple", params:{ objectDist:60, focal:80 } },
+    { label:"Image réelle", params:{ objectDist:150, focal:60 } },
+    { label:"Foyer infini", params:{ objectDist:80, focal:80 } }
+  ],
+  planet: [
+    { label:"Kepler 1.0x", params:{ speed:1.0 } },
+    { label:"Accéléré 2.5x", params:{ speed:2.5 } },
+    { label:"Ralenti 0.4x", params:{ speed:0.4 } }
+  ]
+};
+
 function renderLabControls(){
   var tab = S.lab.active;
   var host = $("labControls"); if(!host) return;
   host.innerHTML = "";
+
+  /* Render Presets */
+  var preHost = $("labPresets");
+  if(preHost){
+    preHost.innerHTML = "";
+    (LAB_PRESETS[tab]||[]).forEach(function(pr){
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "lab-preset-btn";
+      btn.textContent = pr.label;
+      on(btn, "click", function(){
+        Object.keys(pr.params).forEach(function(k){ S.lab.params[tab][k] = pr.params[k]; });
+        S.lab.t0 = performance.now();
+        renderLabControls();
+        toast("Préréglage : " + pr.label, "info");
+      });
+      preHost.appendChild(btn);
+    });
+  }
+
   (LAB_FIELDS[tab]||[]).forEach(function(f){
     var key=f[0], min=f[1], max=f[2], step=f[3], unit=f[4];
     var val = S.lab.params[tab][key];
@@ -1005,9 +1194,12 @@ function drawLab(){
   var dt = (performance.now()-S.lab.t0)/1000;
   var p = S.lab.params[S.lab.active];
   var readout = $("labReadout");
+  var fOverlay = $("labFormulaOverlay");
   ctx.strokeStyle="#1b2847"; ctx.strokeRect(0.5,0.5,w-1,h-1);
   if(S.lab.active==="circuit"){
     var I = p.voltage/p.resistance;
+    var P = p.voltage * I;
+    if(fOverlay) fOverlay.innerHTML = "<strong>Loi d'Ohm :</strong> U = R &times; I &nbsp;|&nbsp; <strong>Puissance :</strong> P = " + P.toFixed(2) + " W";
     ctx.strokeStyle="#7cf7ff"; ctx.lineWidth=3;
     ctx.strokeRect(w*0.15,h*0.3,w*0.7,h*0.4);
     ctx.fillStyle="#ffc24b"; ctx.fillRect(w*0.42,h*0.66,w*0.16,h*0.08);
@@ -1025,26 +1217,30 @@ function drawLab(){
     if(readout) readout.textContent = t("lab.current")+": "+I.toFixed(3)+" A";
   } else if(S.lab.active==="beaker"){
     var ph = p.ph;
+    var h3o = Math.pow(10, -ph);
+    if(fOverlay) fOverlay.innerHTML = "<strong>Potentiel Hydrogène :</strong> pH = -log[H₃O⁺] &nbsp;|&nbsp; <strong>[H₃O⁺] =</strong> " + h3o.toExponential(2) + " mol/L";
     var color = ph<7 ? lerpColor([255,77,109],[255,194,75], ph/7) : lerpColor([255,194,75],[0,229,255],(ph-7)/7);
     ctx.strokeStyle="#c7d4ee"; ctx.lineWidth=2;
     var bx=w*0.35, by=h*0.15, bw=w*0.3, bh=h*0.68;
     ctx.beginPath(); ctx.moveTo(bx,by); ctx.lineTo(bx,by+bh); ctx.lineTo(bx+bw,by+bh); ctx.lineTo(bx+bw,by); ctx.stroke();
     ctx.fillStyle = "rgb("+color.join(",")+")";
     ctx.fillRect(bx+3, by+bh*0.35, bw-6, bh*0.65-3);
-    if(readout) readout.textContent = t("lab.ph")+": "+ph.toFixed(1)+ (ph<7?" (acid)":ph>7?" (base)":" (neutral)");
+    if(readout) readout.textContent = t("lab.ph")+": "+ph.toFixed(1)+ (ph<7?" (acide)":ph>7?" (base)":" (neutre)");
   } else if(S.lab.active==="pendulum"){
     var L = p.length/100, g = p.gravity;
     var omega = Math.sqrt(g/L);
     var theta = 0.6*Math.cos(omega*dt);
     var pivX=w/2, pivY=h*0.12, len=Math.min(h*0.7, L*180);
     var bobX = pivX + Math.sin(theta)*len, bobY = pivY + Math.cos(theta)*len;
+    var T = 2*Math.PI*Math.sqrt(L/g);
+    if(fOverlay) fOverlay.innerHTML = "<strong>Période propre :</strong> T = 2&pi;&radic;(L/g) = " + T.toFixed(2) + " s";
     ctx.strokeStyle="#7cf7ff"; ctx.lineWidth=2;
     ctx.beginPath(); ctx.moveTo(pivX,pivY); ctx.lineTo(bobX,bobY); ctx.stroke();
     ctx.fillStyle="#00e5ff"; ctx.beginPath(); ctx.arc(bobX,bobY,10,0,Math.PI*2); ctx.fill();
     ctx.fillStyle="#7c8db3"; ctx.beginPath(); ctx.arc(pivX,pivY,3,0,Math.PI*2); ctx.fill();
-    var T = 2*Math.PI*Math.sqrt(L/g);
     if(readout) readout.textContent = t("lab.period")+": "+T.toFixed(2)+" s";
   } else if(S.lab.active==="wave"){
+    if(fOverlay) fOverlay.innerHTML = "<strong>Équation d'onde :</strong> y(x,t) = A&middot;sin(kx - &omega;t) &nbsp;|&nbsp; f = " + p.frequency.toFixed(1) + " Hz";
     ctx.strokeStyle="#00e5ff"; ctx.lineWidth=2; ctx.beginPath();
     for(var x=0;x<w;x++){
       var y = h/2 + p.amplitude*Math.sin((x/w)*Math.PI*4*p.frequency - dt*p.frequency*3);
@@ -1055,6 +1251,7 @@ function drawLab(){
   } else if(S.lab.active==="optics"){
     var f = p.focal, doo = p.objectDist;
     var di = (doo===f) ? Infinity : 1/((1/f)-(1/doo));
+    if(fOverlay) fOverlay.innerHTML = "<strong>Conjugaison Descartes :</strong> 1/f' = 1/OA' - 1/OA";
     var scale = w/500;
     var axisY = h/2, lensX = w*0.55;
     ctx.strokeStyle="#4a5a7d"; ctx.beginPath(); ctx.moveTo(0,axisY); ctx.lineTo(w,axisY); ctx.stroke();
@@ -1072,16 +1269,17 @@ function drawLab(){
       if(readout) readout.textContent = t("lab.imageDist")+": "+(di/scale).toFixed(0);
     } else if(readout) readout.textContent = t("lab.imageDist")+": ∞";
   } else if(S.lab.active==="planet"){
+    if(fOverlay) fOverlay.innerHTML = "<strong>Lois de Kepler :</strong> T&sup2;/a&sup3; = cste &nbsp;|&nbsp; F = G(M&middot;m)/r&sup2;";
     var cx=w/2, cy=h/2;
     ctx.fillStyle="#ffc24b"; ctx.beginPath(); ctx.arc(cx,cy,10,0,Math.PI*2); ctx.fill();
     [[40,2.2,"#00e5ff"],[70,1.4,"#7cf7ff"],[100,0.9,"#ff4d6d"]].forEach(function(pl,i){
       var r=pl[0]*Math.min(w,h)/260, speed=pl[1]*p.speed;
       ctx.strokeStyle="rgba(124,247,255,.2)"; ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.stroke();
       var a = dt*speed;
-      var x=cx+Math.cos(a)*r, y=cy+Math.sin(a)*r*0.55;
-      ctx.fillStyle=pl[2]; ctx.beginPath(); ctx.arc(x,y,6,0,Math.PI*2); ctx.fill();
+      var px = cx + Math.cos(a)*r, py = cy + Math.sin(a)*r;
+      ctx.fillStyle = pl[2]; ctx.beginPath(); ctx.arc(px,py,4+i,0,Math.PI*2); ctx.fill();
     });
-    if(readout) readout.textContent = t("lab.speed")+": "+p.speed.toFixed(1)+"×";
+    if(readout) readout.textContent = t("lab.speed")+": "+p.speed.toFixed(1)+"x";
   }
 }
 function lerpColor(a,b,f){ f=clamp(f,0,1); return [Math.round(a[0]+(b[0]-a[0])*f), Math.round(a[1]+(b[1]-a[1])*f), Math.round(a[2]+(b[2]-a[2])*f)]; }
@@ -1273,10 +1471,59 @@ function renderPresentation(){
   var i = clamp(S.pres.i, 0, S.pres.slides.length-1); S.pres.i = i;
   var slide = S.pres.slides[i];
   var host = $("presStage");
-  if(host) host.innerHTML = '<div class="pres-slide"><h3>'+esc(slide.t)+'</h3><p>'+esc(slide.b)+'</p></div>';
+  if(host){
+    var spot = $("presSpotOverlay");
+    var loupe = $("presLoupe");
+    host.innerHTML = '<div class="pres-slide"><h3>'+esc(slide.t)+'</h3><p>'+esc(slide.b)+'</p></div>';
+    if(spot) host.appendChild(spot);
+    if(loupe) host.appendChild(loupe);
+  }
   var count = $("presCount"); if(count) count.textContent = (i+1)+" / "+S.pres.slides.length;
 }
 function wireAirPresentation(){
+  var spotActive = false, loupeActive = false;
+  var spotEl = $("presSpotOverlay"), loupeEl = $("presLoupe"), stage = $("presStage");
+
+  var btnSpot = $("btnPresSpot");
+  if(btnSpot){
+    on(btnSpot, "click", function(){
+      spotActive = !spotActive;
+      btnSpot.classList.toggle("btn-primary", spotActive);
+      if(spotEl) spotEl.classList.toggle("hidden", !spotActive);
+      toast(spotActive ? "Spotlight TNI activé" : "Spotlight désactivé", "info");
+    });
+  }
+
+  var btnLoupe = $("btnPresLoupe");
+  if(btnLoupe){
+    on(btnLoupe, "click", function(){
+      loupeActive = !loupeActive;
+      btnLoupe.classList.toggle("btn-primary", loupeActive);
+      if(loupeEl) loupeEl.classList.toggle("hidden", !loupeActive);
+      toast(loupeActive ? "Loupe Zoom 2x activée" : "Loupe désactivée", "info");
+    });
+  }
+
+  if(stage){
+    on(stage, "pointermove", function(e){
+      var r = stage.getBoundingClientRect();
+      var x = e.clientX - r.left, y = e.clientY - r.top;
+      if(spotActive && spotEl){
+        spotEl.style.setProperty("--spot-x", x + "px");
+        spotEl.style.setProperty("--spot-y", y + "px");
+      }
+      if(loupeActive && loupeEl){
+        loupeEl.style.left = x + "px";
+        loupeEl.style.top = y + "px";
+        var curSlide = S.pres.slides[S.pres.i];
+        if(curSlide){
+          loupeEl.innerHTML = '<div style="transform:scale(1.7);transform-origin:center;padding:24px;text-align:center;color:var(--ink-strong);">' +
+            '<h3>'+esc(curSlide.t)+'</h3><p>'+esc(curSlide.b)+'</p></div>';
+        }
+      }
+    });
+  }
+
   on($("btnPresPrev"),"click", function(){ S.pres.i = clamp(S.pres.i-1,0,S.pres.slides.length-1); renderPresentation(); logEv("pres.prev",{}); });
   on($("btnPresNext"),"click", function(){ S.pres.i = clamp(S.pres.i+1,0,S.pres.slides.length-1); renderPresentation(); logEv("pres.next",{}); });
   on(document,"keydown", function(e){
@@ -2157,6 +2404,16 @@ function wireAiTeacher(){
     }
   }
   syncAiBadge();
+  qsa(".qchip", $("teachQuickChips")).forEach(function(chip){
+    on(chip, "click", function(){
+      var q = chip.getAttribute("data-q");
+      var input = $("teachInput");
+      if(input && q){
+        input.value = q;
+        send();
+      }
+    });
+  });
   on($("btnTeachSend"),"click", send);
   on($("teachInput"),"keydown", function(e){ if(e.key==="Enter") send(); });
 }

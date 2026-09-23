@@ -138,6 +138,11 @@
               <button type="button" class="layer-sel-btn" id="btnSelGeo" title="Calque Géométrie">GÉOMÉTRIE</button>
             </div>
           </div>
+          <div class="bt-group bt-instruments" id="boardInstrumentsGroup" role="group" aria-label="Instruments géométrie">
+            <button type="button" class="btbtn sml" id="btnInstRuler" title="Règle graduée 30cm"><span class="ico">📏</span> <span class="lbl">RÈGLE</span></button>
+            <button type="button" class="btbtn sml" id="btnInstProtractor" title="Rapporteur 180°"><span class="ico">📐</span> <span class="lbl">RAPPORTEUR</span></button>
+            <button type="button" class="btbtn sml" id="btnInstSquare" title="Équerre 90°"><span class="ico">📐</span> <span class="lbl">ÉQUERRE</span></button>
+          </div>
           <div class="bt-group">
             <input type="color" id="inkColor" value="#00e5ff" title="Color" aria-label="Color" />
             <label class="btbtn sml"><input type="checkbox" id="chkShapes" checked /> <span data-i18n-html="smart.shapes">SHAPES</span></label>
@@ -236,7 +241,11 @@
             <button class="labtab" data-lab="optics" data-i18n-html="lab.optics">OPTICS</button>
             <button class="labtab" data-lab="planet" data-i18n-html="lab.planet">PLANETS</button>
           </div>
-          <div class="lab-stage" id="labStage"><canvas id="canvasLab" aria-label="Lab simulation"></canvas></div>
+          <div class="lab-presets-row" id="labPresets" aria-label="Préréglages d'expériences STEM"></div>
+          <div class="lab-stage" id="labStage">
+            <canvas id="canvasLab" aria-label="Lab simulation"></canvas>
+            <div class="lab-formula-overlay" id="labFormulaOverlay"></div>
+          </div>
           <div class="lab-controls" id="labControls"></div>
           <div class="lab-readout" id="labReadout"></div>
         </div>
@@ -259,11 +268,16 @@
       <div class="panel">
         <h2 data-i18n-html="presentation.title">AIR PRESENTATION</h2>
         <p class="lede" data-i18n-html="presentation.lede">Deliver presentations without touching a thing — swipe in air to change slides.</p>
-        <div class="pres-stage" id="presStage"></div>
-        <div class="row row-center">
+        <div class="pres-stage" id="presStage">
+          <div class="pres-spot-overlay hidden" id="presSpotOverlay" aria-hidden="true"></div>
+          <div class="pres-loupe hidden" id="presLoupe" aria-hidden="true"></div>
+        </div>
+        <div class="row row-center row-wrap">
           <button class="btn" id="btnPresPrev" data-i18n-html="presentation.prev">PREV</button>
           <span class="pres-count" id="presCount">1 / 1</span>
           <button class="btn" id="btnPresNext" data-i18n-html="presentation.next">NEXT</button>
+          <button class="btn" id="btnPresSpot" title="Focaliser l'attention sur un détail du document (TNI)">🔦 SPOTLIGHT</button>
+          <button class="btn" id="btnPresLoupe" title="Zoomer sur une zone avec une loupe virtuelle">🔍 LOUPE ZOOM</button>
         </div>
       </div>
     </section>
@@ -273,6 +287,12 @@
         <h2 data-i18n-html="teacher.title">AI TEACHER</h2>
         <p class="lede" data-i18n-html="teacher.lede">Your AI co-teacher. Explain topics, run lessons, grade quizzes — all in mid-air.</p>
         <div class="ai-badge" id="aiModeBadge">DEMO</div>
+        <div class="teach-quick-chips" id="teachQuickChips">
+          <button type="button" class="qchip" data-q="Génère 3 questions flash rapides de 2 minutes pour tester la compréhension de la classe (avec les réponses).">⚡ 3 Questions Flash</button>
+          <button type="button" class="qchip" data-q="Fais un résumé synthétique de ce sujet en 3 points essentiels pour des élèves.">📖 Résumé 3 points</button>
+          <button type="button" class="qchip" data-q="Donne une analogie concrète de la vie de tous les jours pour rendre cette notion évidente.">💡 Analogie parlante</button>
+          <button type="button" class="qchip" data-q="Propose un exercice d'application progressif avec sa correction guidée pas à pas.">✍️ Exercice guidé</button>
+        </div>
         <div class="teach-chat" id="teachChat"></div>
         <div class="teach-input row">
           <input type="text" id="teachInput" data-i18n-placeholder-key="teacher.placeholder" placeholder="Ask your AI teacher anything..." aria-label="Ask your AI teacher" />
