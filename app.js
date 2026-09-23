@@ -713,4 +713,155 @@
       navigator.serviceWorker.register("sw.js").catch(() => {});
     });
   }
-})();
+
+  /* ════════════════════════════════════════════════════════════════════════
+     EDU-AIR Real Mode Bridge — WebSocket to local Python server
+     When the user runs `py -3.12 web_bridge.py` on their PC, this code
+     auto-connects and switches the badge from 🔵 DEMO → 🔴 RÉEL.
+     ════════════════════════════════════════════════════════════════════════ */
+  (() => {
+    const BRIDGE_URL = "ws://localhost:8765";
+    const RECONNECT_DELAY_MS = 3000;
+    const MAX_RETRIES = 5;
+
+    let ws = null;
+    let retries = 0;
+    let connected = false;
+    let _pingInterval = null;
+
+    // Badge elements (works both on landing page and SPA dashboard)
+    const getDemoBadge = () =>
+      document.querySelector(".badge-demo, #badge-demo, [data-badge='demo']");
+
+    function setRealBadge(isReal) {
+      // Inject/update a floating badge in the top bar
+      let badge = document.getElementById("__bridge_badge__");
+      if (!badge) {
+        badge = document.createElement("div");
+        badge.id = "__bridge_badge__";
+        badge.style.cssText = [
+          "position:fixed", "top:8px", "right:8px", "z-index:99999",
+          "padding:4px 10px", "border-radius:8px", "font-size:11px",
+          "font-weight:700", "letter-spacing:.5px", "pointer-events:none",
+          "transition:background .4s,color .4s", "font-family:monospace",
+        ].join(";");
+        document.body.appendChild(badge);
+      }
+      if (isReal) {
+        badge.style.background = "#ef5b5b";
+        badge.style.color = "#fff";
+        badge.textContent = "🔴 RÉEL";
+      } else {
+        badge.style.background = "#3b82f6";
+        badge.style.color = "#fff";
+        badge.textContent = "🔵 DÉMO";
+      }
+    }
+
+    function showToast(msg, color = "#7c6cf0") {
+      const t = document.createElement("div");
+      t.style.cssText = [
+        "position:fixed", "bottom:24px", "left:50%", "transform:translateX(-50%)",
+        "z-index:99999", "background:" + color, "color:#fff",
+        "padding:10px 20px", "border-radius:10px", "font-size:13px",
+        "font-weight:600", "box-shadow:0 4px 20px rgba(0,0,0,.3)",
+        "pointer-events:none", "transition:opacity .4s",
+      ].join(";");
+      t.textContent = msg;
+      document.body.appendChild(t);
+      setTimeout(() => { t.style.opacity = "0"; setTimeout(() => t.remove(), 400); }, 3000);
+    }
+
+    function connect() {
+      if (retries >= MAX_RETRIES) {
+        setRealBadge(false);
+        return; // silently stop — bridge is not running
+      }
+      try {
+        ws = new WebSocket(BRIDGE_URL);
+      } catch (e) {
+        return;
+      }
+
+      ws.onopen = () => {
+        retries = 0;
+        connected = true;
+        setRealBadge(true);
+        showToast("✅ EDU-AIR Pont connecté — Mode Réel activé !", "#34d399");
+        // Expose global send function for other modules
+        window.eduAirBridge = { send: bridgeSend, connected: () => connected };
+        // Start ping to keep connection alive
+        _pingInterval = setInterval(() => bridgeSend({ action: "PING" }), 10000);
+      };
+
+      ws.onmessage = (ev) => {
+        try {
+          const data = JSON.parse(ev.data);
+          // Update slide counter if present
+          if (data.slide !== undefined) {
+            const el = document.getElementById("slide-current");
+            if (el) el.textContent = data.slide + 1;
+          }
+          if (data.type === "connected") {
+            console.log("[EDU-AIR Bridge] Server mode:", data.mode, "| Slide:", data.slide);
+          }
+        } catch (e) {}
+      };
+
+      ws.onclose = () => {
+        connected = false;
+        clearInterval(_pingInterval);
+        setRealBadge(false);
+        window.eduAirBridge = null;
+        retries++;
+        if (retries < MAX_RETRIES) {
+          setTimeout(connect, RECONNECT_DELAY_MS);
+        }
+      };
+
+      ws.onerror = () => {
+        // Silently ignore — bridge just isn't running
+      };
+    }
+
+    function bridgeSend(msg) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(msg));
+        return true;
+      }
+      return false;
+    }
+
+    // Intercept navigation buttons (Préc / Suiv) to route through bridge when connected
+    document.addEventListener("click", (e) => {
+      if (!connected) return;
+      const btn = e.target.closest("button, [data-action]");
+      if (!btn) return;
+      const txt = btn.textContent.trim();
+      const dataAction = btn.dataset.action;
+      if (dataAction === "next" || txt === "Suiv" || txt === "→" || txt === "Next") {
+        if (bridgeSend({ action: "NEXT_SLIDE" })) e.stopPropagation();
+      } else if (dataAction === "prev" || txt === "Préc" || txt === "←" || txt === "Prev") {
+        if (bridgeSend({ action: "PREV_SLIDE" })) e.stopPropagation();
+      }
+    }, true);
+
+    // Intercept keyboard shortcuts
+    document.addEventListener("keydown", (e) => {
+      if (!connected) return;
+      if (e.key === "ArrowRight" || e.key === "PageDown") bridgeSend({ action: "NEXT_SLIDE" });
+      if (e.key === "ArrowLeft"  || e.key === "PageUp")   bridgeSend({ action: "PREV_SLIDE" });
+      if (e.key === "b" || e.key === "B")                  bridgeSend({ action: "PAUSE" });
+      if (e.key === "+" || e.key === "=")                  bridgeSend({ action: "ZOOM_IN" });
+      if (e.key === "-")                                   bridgeSend({ action: "ZOOM_OUT" });
+    });
+
+    // Start trying to connect (after slight delay so page renders first)
+    setTimeout(connect, 1500);
+
+    // Expose for console debugging
+    window._eduAirConnect = connect;
+    window._eduAirSend = bridgeSend;
+  })();
+
+})();
