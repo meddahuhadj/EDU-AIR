@@ -1,22 +1,25 @@
-"""EDU-AIR Web Bridge — WebSocket server (port 8765).
+"""EDU-AIR Web Bridge — WebSocket (port 8765) + HTTP server (port 8080).
 
-Connects the Vercel web UI to the local EDU-AIR Python engine.
-When the web page detects a gesture or voice command, it sends a JSON
-message here; this server translates it into a real classroom action.
+Deux services en un :
+  1. Serveur HTTP → sert l'app EDU-AIR localement sur http://localhost:8080
+     (Depuis HTTP, ws://localhost:8765 est autorisé par Chrome)
+  2. WebSocket    → traduit les gestes/voix du navigateur en actions réelles
 
-Usage (from the project root):
-    py -3.12 web_bridge.py          # bridge only (no desktop window)
-    py -3.12 web_bridge.py --full   # bridge + full desktop classroom window
+Usage:
+    py -3.12 web_bridge.py          # HTTP + WebSocket
+    py -3.12 web_bridge.py --full   # HTTP + WebSocket + fenêtre bureau
 
-Then open https://edu-air-smart-surface.vercel.app in the browser.
-The page will auto-connect and switch the badge from DEMO to RÉEL.
+Ouvrez ensuite:  http://localhost:8080
+Le badge passe automatiquement de DEMO → 🔴 RÉEL
 """
 
 from __future__ import annotations
 
 import asyncio
+import http.server
 import json
 import logging
+import os
 import sys
 import threading
 import time
@@ -29,10 +32,8 @@ logging.basicConfig(
 )
 log = logging.getLogger("edu_air.bridge")
 
-# ── Try to import websockets (pure-Python, no binary deps) ──────────────────
 try:
     import websockets
-    from websockets.server import WebSocketServerProtocol
 except ImportError:
     print(
         "\n[EDU-AIR Bridge] 'websockets' package not found.\n"
@@ -41,26 +42,24 @@ except ImportError:
     )
     raise SystemExit(1)
 
-# ── Import EDU-AIR classroom session ────────────────────────────────────────
 try:
     from edu_air.classroom import ClassroomSession, RealBackend, DemoBackend
-    from edu_air import intent as ci
     _IMPORT_OK = True
 except Exception as exc:
-    log.warning("EDU-AIR classroom not importable (%s) — running in echo mode.", exc)
+    log.warning("EDU-AIR classroom not importable (%s) — echo mode.", exc)
     _IMPORT_OK = False
 
-PORT = 8765
-ALLOWED_ORIGINS = ["https://edu-air-smart-surface.vercel.app",
-                   "http://localhost", "http://127.0.0.1",
-                   "null"]  # allow local file:// tests too
+WS_PORT   = 8765
+HTTP_PORT = 8080
 
-# ── Global session (created once, reused for all connections) ───────────────
-_session: ClassroomSession | None = None
-_clients: set[WebSocketServerProtocol] = set()
+# Root of the web files (same folder as this script)
+WEB_ROOT = os.path.dirname(os.path.abspath(__file__))
+
+_session = None
+_clients: set = set()
 
 
-def _get_session() -> ClassroomSession | None:
+def _get_session():
     global _session
     if _session is None and _IMPORT_OK:
         try:
@@ -68,120 +67,75 @@ def _get_session() -> ClassroomSession | None:
         except Exception:
             backend = DemoBackend()
         _session = ClassroomSession(backend=backend)
-        log.info("ClassroomSession created — backend: %s", type(backend).__name__)
+        log.info("ClassroomSession — backend: %s", type(backend).__name__)
     return _session
 
 
-# ── Action dispatcher ───────────────────────────────────────────────────────
-def _dispatch(msg: dict[str, Any]) -> dict[str, Any]:
-    """Translate a web message into a classroom action. Return a status dict."""
+# ── Action dispatcher ──────────────────────────────────────────────────────
+def _dispatch(msg: dict) -> dict:
     action = msg.get("action", "").upper()
     session = _get_session()
-
     if session is None:
         return {"ok": False, "error": "no_session"}
-
     try:
-        if action == "NEXT_SLIDE":
-            r = session.presentation.next_slide()
-        elif action == "PREV_SLIDE":
-            r = session.presentation.prev_slide()
-        elif action == "PRES_START":
-            r = session.presentation.start(msg.get("total", 10))
-        elif action == "PRES_STOP":
-            r = session.presentation.stop()
-        elif action == "PAUSE":
-            r = session.presentation.pause()
-        elif action == "SCROLL_DOWN":
-            r = session.presentation.scroll_down()
-        elif action == "SCROLL_UP":
-            r = session.presentation.scroll_up()
-        elif action == "ZOOM_IN":
-            r = session.presentation.zoom_in()
-        elif action == "ZOOM_OUT":
-            r = session.presentation.zoom_out()
-        elif action == "POINTER":
-            # raw_norm from browser webcam
-            raw = msg.get("raw", None)
-            if raw:
-                session.update_pointer(tuple(raw))
-            return {"ok": True, "action": "POINTER"}
-        elif action == "ANNOTATION_CLEAR":
-            session.annotation.clear()
-            return {"ok": True, "action": "ANNOTATION_CLEAR"}
+        if action == "NEXT_SLIDE":   r = session.presentation.next_slide()
+        elif action == "PREV_SLIDE": r = session.presentation.prev_slide()
+        elif action == "PRES_START": r = session.presentation.start(msg.get("total", 10))
+        elif action == "PRES_STOP":  r = session.presentation.stop()
+        elif action == "PAUSE":      r = session.presentation.pause()
+        elif action == "SCROLL_DOWN":r = session.presentation.scroll_down()
+        elif action == "SCROLL_UP":  r = session.presentation.scroll_up()
+        elif action == "ZOOM_IN":    r = session.presentation.zoom_in()
+        elif action == "ZOOM_OUT":   r = session.presentation.zoom_out()
         elif action == "VOICE":
-            text = msg.get("text", "")
-            if text:
-                session.handle_voice_text(text)
-            return {"ok": True, "action": "VOICE", "text": text}
+            session.handle_voice_text(msg.get("text", ""))
+            return {"ok": True, "action": "VOICE"}
         elif action == "PING":
             return {
-                "ok": True,
-                "action": "PONG",
+                "ok": True, "action": "PONG",
                 "mode": session.mode,
                 "slide": session.presentation.slide_index,
                 "total": session.presentation.total_slides,
-                "profile": getattr(session, "auto_profile", "general"),
             }
         else:
-            return {"ok": False, "error": f"unknown_action:{action}"}
+            return {"ok": False, "error": f"unknown:{action}"}
 
         return {
-            "ok": True,
-            "action": action,
-            "command": r.command,
-            "key": r.key,
+            "ok": True, "action": action, "key": r.key,
             "mode": session.mode,
             "slide": session.presentation.slide_index,
         }
     except Exception as exc:
-        log.exception("Dispatch error for %s", action)
+        log.exception("Dispatch error %s", action)
         return {"ok": False, "error": str(exc)}
 
 
-# ── WebSocket handler ───────────────────────────────────────────────────────
-async def _handler(ws: WebSocketServerProtocol) -> None:
-    origin = ws.request_headers.get("Origin", "null")
-    if not any(origin.startswith(o) for o in ALLOWED_ORIGINS):
-        log.warning("Rejected origin: %s", origin)
-        await ws.close(1008, "Origin not allowed")
-        return
-
+# ── WebSocket handler ──────────────────────────────────────────────────────
+async def _ws_handler(ws) -> None:
     _clients.add(ws)
-    log.info("✅ Web client connected — %s (total: %d)", origin, len(_clients))
-
-    # Greet the new client immediately
+    log.info("✅ Client connecté (total: %d)", len(_clients))
     session = _get_session()
-    greeting = {
+    await ws.send(json.dumps({
         "type": "connected",
         "mode": session.mode if session else "no_session",
-        "bridge_version": "1.0",
-        "slide": session.presentation.slide_index if session else 0,
-    }
-    await ws.send(json.dumps(greeting))
-
+        "bridge_version": "1.1",
+    }))
     try:
-        async for raw_msg in ws:
+        async for raw in ws:
             try:
-                msg = json.loads(raw_msg)
-            except json.JSONDecodeError:
+                msg = json.loads(raw)
+            except Exception:
                 await ws.send(json.dumps({"ok": False, "error": "invalid_json"}))
                 continue
-
             result = _dispatch(msg)
             await ws.send(json.dumps(result))
-
-            # Broadcast status updates to all connected clients (slide sync)
             if result.get("ok") and result.get("action") not in ("PONG", "POINTER"):
                 await _broadcast(result)
-
-    except websockets.exceptions.ConnectionClosedOK:
+    except Exception:
         pass
-    except Exception as exc:
-        log.error("Client error: %s", exc)
     finally:
         _clients.discard(ws)
-        log.info("Client disconnected (total: %d)", len(_clients))
+        log.info("Client déconnecté (total: %d)", len(_clients))
 
 
 async def _broadcast(data: dict) -> None:
@@ -191,36 +145,56 @@ async def _broadcast(data: dict) -> None:
     await asyncio.gather(*(c.send(msg) for c in list(_clients)), return_exceptions=True)
 
 
-# ── Main ─────────────────────────────────────────────────────────────────────
-async def run_bridge() -> None:
-    log.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-    log.info("  EDU-AIR Web Bridge  —  ws://localhost:%d", PORT)
-    log.info("  Open: https://edu-air-smart-surface.vercel.app")
-    log.info("  The web page will auto-connect and switch to 🔴 RÉEL")
-    log.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+# ── HTTP server (serves local files) ──────────────────────────────────────
+class _CORSHandler(http.server.SimpleHTTPRequestHandler):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, directory=WEB_ROOT, **kwargs)
 
-    async with websockets.serve(_handler, "localhost", PORT):
-        log.info("Bridge listening on ws://localhost:%d …  (Ctrl+C to stop)", PORT)
-        await asyncio.Future()  # run forever
+    def end_headers(self):
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Cache-Control", "no-cache")
+        super().end_headers()
+
+    def log_message(self, fmt, *args):
+        pass  # suppress HTTP logs
+
+
+def _run_http_server():
+    server = http.server.HTTPServer(("localhost", HTTP_PORT), _CORSHandler)
+    log.info("🌐 HTTP server → http://localhost:%d", HTTP_PORT)
+    server.serve_forever()
+
+
+# ── Main ──────────────────────────────────────────────────────────────────
+async def run_bridge() -> None:
+    log.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    log.info("  EDU-AIR Bridge v1.1")
+    log.info("  🌐 Ouvrez → http://localhost:%d", HTTP_PORT)
+    log.info("  🔌 WebSocket → ws://localhost:%d", WS_PORT)
+    log.info("  Le badge passera automatiquement 🔴 RÉEL")
+    log.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
+    # Start HTTP server in background thread
+    t = threading.Thread(target=_run_http_server, daemon=True)
+    t.start()
+
+    async with websockets.serve(_ws_handler, "localhost", WS_PORT):
+        log.info("Bridge actif — Ctrl+C pour arrêter")
+        await asyncio.Future()
 
 
 def main() -> None:
-    full_mode = "--full" in sys.argv
-
-    if full_mode:
-        # Launch the desktop window in a separate thread
-        def _launch_desktop():
+    if "--full" in sys.argv:
+        def _desktop():
             import edu_air_main
-            edu_air_main.main(["--real"])
-
-        t = threading.Thread(target=_launch_desktop, daemon=True)
-        t.start()
-        time.sleep(1.5)  # give Qt time to start
+            edu_air_main.main([])
+        threading.Thread(target=_desktop, daemon=True).start()
+        time.sleep(1.5)
 
     try:
         asyncio.run(run_bridge())
     except KeyboardInterrupt:
-        log.info("Bridge stopped.")
+        log.info("Bridge arrêté.")
 
 
 if __name__ == "__main__":

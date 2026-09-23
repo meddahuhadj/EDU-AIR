@@ -1,18 +1,21 @@
 @echo off
-rem EDU-AIR Web Bridge — connects the Vercel web page to the local Python engine.
-rem Launch this, then open https://edu-air-smart-surface.vercel.app
-rem The page will auto-switch from DEMO to REEL.
+rem EDU-AIR Web Bridge v1.1
+rem Sert l'app en LOCAL (http://localhost:8080) + WebSocket (ws://localhost:8765)
+rem Chrome autorise ws:// depuis http://, donc le mode REEL fonctionne !
 setlocal
 cd /d "%~dp0"
 echo.
-echo  ══════════════════════════════════════════════════
-echo   EDU-AIR  Web Bridge  —  Mode Reel dans le navigateur
-echo  ══════════════════════════════════════════════════
-echo   1. Ce serveur va demarrer sur ws://localhost:8765
-echo   2. Ouvrez  https://edu-air-smart-surface.vercel.app
-echo   3. La page basculera automatiquement en MODE REEL
-echo  ══════════════════════════════════════════════════
+echo  ══════════════════════════════════════════════════════
+echo   EDU-AIR  Mode Reel Web  —  v1.1
+echo  ══════════════════════════════════════════════════════
+echo   Apres le demarrage, ouvrez dans Chrome :
 echo.
+echo     http://localhost:8080
+echo.
+echo   Le badge passera de DEMO a  REEL automatiquement.
+echo  ══════════════════════════════════════════════════════
+echo.
+
 where py >nul 2>nul
 if %errorlevel%==0 (
     py -3.12 -m pip install websockets -q

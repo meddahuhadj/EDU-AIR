@@ -32,6 +32,9 @@ from .config import SETTINGS
 from .pointer import InteractivePointer
 from .presentation import PresentationController, RecordingDriver
 from .quiz import VoiceQuiz, QuestionBank
+from .geometry import GeometryEngine
+from .lab3d import Lab3DEngine
+from .ai_teacher import AITeacherCopilot
 from .safety import (
     ClassroomSafetyEngine,
     SafetyDecision,
@@ -209,6 +212,9 @@ class ClassroomSession:
             self.presentation.suppress_launch = True
         self.annotation = annotation or AnnotationModel(self.settings.annotation)
         self.quiz = quiz or VoiceQuiz(QuestionBank(), self.settings.quiz)
+        self.geometry = GeometryEngine()
+        self.lab3d = Lab3DEngine()
+        self.ai_teacher = AITeacherCopilot()
         self.intent_engine = intent_engine or ci.ClassroomIntentEngine()
         self.safety = safety or ClassroomSafetyEngine()
         self.auto_approve = self.mode == "demo"

@@ -52,6 +52,11 @@ STOP_TIMER = "STOP_TIMER"
 SAVE_LESSON = "SAVE_LESSON"
 TOGGLE_MICRO_GESTURES = "TOGGLE_MICRO_GESTURES"
 SET_DRAW_SHAPE = "SET_DRAW_SHAPE"
+START_GEOMETRY = "START_GEOMETRY"
+START_LAB3D = "START_LAB3D"
+ROTATE_LAB3D = "ROTATE_LAB3D"
+EXPLODE_LAB3D = "EXPLODE_LAB3D"
+ASK_AI_TEACHER = "ASK_AI_TEACHER"
 
 # Intent constants already defined by the HADJ voice catalogue that the
 # classroom reuses directly.
@@ -273,6 +278,22 @@ CLASSROOM_COMMANDS: list[dict] = [
 
     {"intent": SET_DRAW_SHAPE, "langs": ["en"],
      "patterns": [r"\bdraw\s+shape[s]?\s*(?:mode)?\b", r"\bshape\s+tool\b"]},
+
+    # --- interactive geometry & 3d lab & ai teacher -------------------------
+    {"intent": START_GEOMETRY, "langs": ["en", "fr", "ar"],
+     "patterns": [r"\b(?:start|d[ée]marrer|lancer)\s+(?:g[ée]om[ée]trie|geometry)\b", r"ابدأ\s+الهندسة"]},
+
+    {"intent": START_LAB3D, "langs": ["en", "fr", "ar"],
+     "patterns": [r"\b(?:start|open|d[ée]marrer|ouvrir)\s+(?:lab|laboratoire|3d)\b", r"افتح\s+المختبر"]},
+
+    {"intent": ROTATE_LAB3D, "langs": ["en", "fr", "ar"],
+     "patterns": [r"\b(?:rotate|tourner|pivot)\s+(?:model|3d|molecule)\b", r"دوران\s+المجسم"]},
+
+    {"intent": EXPLODE_LAB3D, "langs": ["en", "fr", "ar"],
+     "patterns": [r"\b(?:explode|vue\s+[ée]clat[ée]e)\b", r"عرض\s+مفكك"]},
+
+    {"intent": ASK_AI_TEACHER, "langs": ["en", "fr", "ar"],
+     "patterns": [r"\b(?:ask|demander|question)\s+(?:ai|teacher|enseignant)\b", r"اسأل\s+المعلم"]},
     {"intent": SET_DRAW_SHAPE, "langs": ["fr"],
      "patterns": [r"\btracer?\s+(?:un\s+)?forme\b", r"\bmode\s+forme[s]?\b"]},
     {"intent": SET_DRAW_SHAPE, "langs": ["ar"],

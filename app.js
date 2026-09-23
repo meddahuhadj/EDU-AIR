@@ -864,4 +864,36 @@
     window._eduAirSend = bridgeSend;
   })();
 
+  /* ---------- Pedago Carousel & Interactive Modules ---------- */
+  (() => {
+    const carPrev = document.getElementById("car-prev");
+    const carNext = document.getElementById("car-next");
+    const carCurrent = document.getElementById("car-current");
+    const slides = $$(".carousel-slide");
+    let currentSlide = 1;
+    const totalSlides = slides.length || 4;
+
+    function showSlide(n) {
+      if (slides.length === 0) return;
+      currentSlide = ((n - 1 + totalSlides) % totalSlides) + 1;
+      slides.forEach((s) => {
+        const slideIdx = parseInt(s.dataset.slide, 10);
+        s.classList.toggle("active", slideIdx === currentSlide);
+      });
+      if (carCurrent) carCurrent.textContent = currentSlide;
+    }
+
+    if (carPrev) carPrev.addEventListener("click", () => showSlide(currentSlide - 1));
+    if (carNext) carNext.addEventListener("click", () => showSlide(currentSlide + 1));
+
+    // Interactive Quiz Option clicks inside Slide 4 & Dashboard
+    document.addEventListener("click", (e) => {
+      const opt = e.target.closest(".quiz-opts .opt");
+      if (!opt) return;
+      const optsContainer = opt.parentElement;
+      $$(".opt", optsContainer).forEach((o) => o.classList.remove("selected", "opt-a"));
+      opt.classList.add("selected", "opt-a");
+    });
+  })();
+
 })();

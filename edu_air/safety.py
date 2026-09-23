@@ -30,6 +30,7 @@ from .intent import (
     ANNOTATION_SHAPE, LESSON_SAVE,
     QUIZ_START, QUIZ_STOP, QUIZ_NEXT, QUIZ_PREV, QUIZ_ANSWER, QUIZ_REVEAL,
     QUIZ_RESTART, TIMER_START, TIMER_STOP,
+    GEOMETRY_START, LAB3D_START, LAB3D_ROTATE, LAB3D_EXPLODE, AI_TEACHER_ASK,
     SAFETY_TOGGLES,
 )
 
@@ -93,6 +94,12 @@ CLASSROOM_ACTIONS: list[ActionSpec] = [
     # --- classroom timer ---------------------------------------------------------
     _safe(TIMER_START, "Start the classroom timer"),
     _safe(TIMER_STOP, "Stop the classroom timer"),
+    # --- interactive geometry, 3d lab & ai teacher ------------------------------
+    _safe(GEOMETRY_START, "Start dynamic geometry mode"),
+    _safe(LAB3D_START, "Open 3D science lab"),
+    _safe(LAB3D_ROTATE, "Rotate 3D model"),
+    _safe(LAB3D_EXPLODE, "Toggle 3D exploded view"),
+    _safe(AI_TEACHER_ASK, "Ask AI teacher copilot"),
 ]
 
 

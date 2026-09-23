@@ -81,6 +81,18 @@ CURRICULUM_BANKS: dict[str, list[Question]] = {
         Question("Où se situe l'ADN dans une cellule eucaryote ?",
                  ["Le Noyau", "Le Cytoplasme", "La Membrane", "Le Ribosome"], 0, note="L'ADN se trouve concentré dans le noyau cellulaire."),
     ],
+    "physique_chimie": [
+        Question("Quelle est la formule chimique de l'eau ?",
+                 ["CO₂", "H₂O", "NaCl", "CH₄"], 1, note="H₂O signifie deux atomes d'hydrogène et un atome d'oxygène."),
+        Question("Quelle est la vitesse de la lumière dans le vide ?",
+                 ["300 000 km/s", "1 000 km/h", "300 km/s", "3 000 000 km/s"], 0, note="La lumière se propage à environ 300 000 km/s dans le vide."),
+    ],
+    "computer_science": [
+        Question("Quel langage est principalement utilisé pour la Data Science et l'IA ?",
+                 ["Python", "HTML", "CSS", "Assembly"], 0, note="Python possède un vaste écosystème de bibliothèques scientifiques."),
+        Question("Que signifie l'acronyme HTML ?",
+                 ["HyperText Markup Language", "HighTech Main Language", "Home Tool Markup Language", "Hyperlink Text Mode Language"], 0, note="HTML est le langage standard de structuration web."),
+    ],
     "histoire_geo": [
         Question("En quelle année s'est déroulée la Révolution Française ?",
                  ["1789", "1914", "1815", "1492"], 0, note="1789 marque la prise de la Bastille et le début de la Révolution."),
@@ -94,6 +106,12 @@ CURRICULUM_BANKS: dict[str, list[Question]] = {
                  ["He go to school", "He goes to school", "He going school", "He gone to school"], 1, note="Third person singular takes '-s' in Present Simple."),
         Question("What is the past tense of 'write'?",
                  ["Writed", "Wrote", "Written", "Writing"], 1, note="'Write' is an irregular verb: write -> wrote -> written."),
+    ],
+    "arabic": [
+        Question("ما هي عاصمة الجزائر؟",
+                 ["الجزائر العاصمة", "وهران", "قسنطينة", "عنابة"], 0, note="الجزائر العاصمة هي عاصمة الجمهورية الجزائرية."),
+        Question("كم عدد أضلاع المثلث؟",
+                 ["اثنان", "ثلاثة", "أربعة", "خمسة"], 1, note="المثلث يتكون من ثلاثة أضلاع وثلاث زوايا."),
     ]
 }
 

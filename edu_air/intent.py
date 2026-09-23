@@ -57,6 +57,12 @@ TIMER_STOP = "TIMER_STOP"
 LESSON_SAVE = "LESSON_SAVE"
 MICRO_GESTURES_TOGGLE = "MICRO_GESTURES_TOGGLE"
 
+GEOMETRY_START = "GEOMETRY_START"
+LAB3D_START = "LAB3D_START"
+LAB3D_ROTATE = "LAB3D_ROTATE"
+LAB3D_EXPLODE = "LAB3D_EXPLODE"
+AI_TEACHER_ASK = "AI_TEACHER_ASK"
+
 
 @dataclass
 class ClassroomIntent:
@@ -174,6 +180,11 @@ class ClassroomIntentEngine:
             cvoice.NEXT_EXERCISE: NEXT_SLIDE,
             cvoice.START_TIMER: TIMER_START,
             cvoice.STOP_TIMER: TIMER_STOP,
+            cvoice.START_GEOMETRY: GEOMETRY_START,
+            cvoice.START_LAB3D: LAB3D_START,
+            cvoice.ROTATE_LAB3D: LAB3D_ROTATE,
+            cvoice.EXPLODE_LAB3D: LAB3D_EXPLODE,
+            cvoice.ASK_AI_TEACHER: AI_TEACHER_ASK,
             vc.GO_FORWARD: NEXT_SLIDE,
             vc.NEXT_PAGE: NEXT_SLIDE,
             vc.GO_BACK: PREV_SLIDE,
