@@ -534,3 +534,37 @@ body.theme-light .btn.gold,body.theme-light .btn.danger{background:rgba(120,120,
 body.theme-light .mdlchip{background:var(--bg1); color:var(--ink)}
 body.theme-light .labtab{background:var(--bg1); color:var(--ink)}
 body.theme-light .navitem[data-state="warn"]{color:var(--amber)}
+
+/* =============================================================
+   CLASSROOM SESSION BAR & SESSION MANAGER (TNI PERSISTENCE)
+   ============================================================= */
+.session-bar{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 14px; background:rgba(12,20,38,.85); border-bottom:1px solid var(--line-strong); flex-wrap:wrap;}
+.sb-session-info{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+.sb-session-tag{font-family:var(--font-display); font-size:11px; font-weight:800; letter-spacing:.1em; color:var(--cy);}
+.sb-select{background:var(--bg3); color:var(--ink-strong); border:1px solid var(--line); border-radius:6px; font-family:var(--font-display); font-size:11px; font-weight:700; padding:4px 8px; outline:none; cursor:pointer;}
+.sb-select:focus{border-color:var(--cy);}
+.sb-input{background:var(--bg3); color:var(--ink-strong); border:1px solid var(--line); border-radius:6px; font-family:inherit; font-size:12px; padding:4px 10px; width:220px; outline:none;}
+.sb-input:focus{border-color:var(--cy);}
+.sb-session-actions{display:flex; align-items:center; gap:8px;}
+
+/* Session Manager in Dashboard */
+.session-manager-panel{margin-top:24px; padding-top:20px; border-top:1px dashed var(--line-strong);}
+.session-cards-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:14px; margin-top:14px;}
+.session-card{background:var(--bg2); border:1px solid var(--line); border-radius:var(--r-sm); padding:14px; display:flex; flex-direction:column; gap:10px; transition:border-color .15s, transform .15s; position:relative;}
+.session-card:hover{border-color:var(--cy); transform:translateY(-2px); box-shadow:0 8px 24px rgba(0,0,0,.4);}
+.sc-head{display:flex; justify-content:space-between; align-items:center;}
+.sc-badge{font-family:var(--font-display); font-size:10px; font-weight:800; letter-spacing:.08em; padding:3px 8px; border-radius:999px; background:rgba(0,229,255,.12); color:var(--cy); border:1px solid rgba(0,229,255,.3);}
+.sc-subject{font-size:11px; color:var(--amber); font-weight:700;}
+.sc-title{font-size:14px; font-weight:700; color:var(--ink-strong); margin:0;}
+.sc-meta{font-size:11px; color:var(--ink-dim); display:flex; justify-content:space-between;}
+.sc-preview-box{height:60px; background:var(--bg0); border-radius:6px; border:1px solid var(--line); display:flex; align-items:center; justify-content:center; overflow:hidden;}
+.sc-actions{display:flex; gap:8px; margin-top:auto;}
+.sc-btn-resume{flex:1; background:linear-gradient(90deg, #00e5ff, #7cf7ff); color:#05070d; font-weight:800; border:none; padding:7px 12px; border-radius:6px; cursor:pointer;}
+.sc-btn-resume:hover{filter:brightness(1.15);}
+.sc-btn-del{background:transparent; border:1px solid var(--line); color:var(--danger); padding:7px 10px; border-radius:6px; cursor:pointer;}
+.sc-btn-del:hover{background:rgba(255,77,109,.15); border-color:var(--danger);}
+
+/* Launch AI Quiz button */
+.btn-launch-quiz-ai{margin-top:10px; background:linear-gradient(90deg, #ffc24b, #00e5ff); color:#05070d; font-weight:900; letter-spacing:.06em; border:none; padding:10px 18px; border-radius:8px; cursor:pointer;}
+.btn-launch-quiz-ai:hover{filter:brightness(1.15); box-shadow:0 0 16px rgba(0,229,255,.4);}
+

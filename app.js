@@ -19,6 +19,8 @@ var S = window.EDUAIR = {
   log: [],
   quizzes: getLS("quizzes", []),
   quiz: { active:null, qi:0, score:0, total:0, wrongByQ:{}, reported:true },
+  sessions: getLS("sessions", null),
+  currentSession: getLS("currentSession", null),
   pres: { i:0, slides:[
     {t:"EDU-AIR SMART SURFACE", b:"A contactless AI-powered interactive whiteboard. No touch frame, no special sensor."},
     {t:"Air pointer", b:"Your hand becomes the cursor — pinch to click, hold to drag."},
@@ -61,6 +63,54 @@ function t(key){ return (window.i18n && window.i18n.t) ? window.i18n.t(key) : ke
 function setLS(k,v){ try{ localStorage.setItem("eduair."+k, JSON.stringify(v)); }catch(e){} }
 function getLS(k,d){ try{ var v=localStorage.getItem("eduair."+k); return v==null?d:JSON.parse(v); }catch(e){ return d; } }
 function applyTheme(){ document.body.classList.toggle("theme-light", S.theme==="light"); }
+
+if(!S.sessions || !Array.isArray(S.sessions) || !S.sessions.length){
+  S.sessions = [
+    {
+      id: "sess_demo_1",
+      className: "6ème A",
+      subject: "Mathématiques",
+      title: "Théorème de Pythagore & Angles",
+      date: Date.now() - 3600000 * 24,
+      strokeCount: 18,
+      bgType: "grid",
+      strokes: [
+        { tool: "pen", color: "#00e5ff", size: 4, layer: "geo", pts: [{x:0.2,y:0.3},{x:0.5,y:0.3},{x:0.5,y:0.7},{x:0.2,y:0.7},{x:0.2,y:0.3}] },
+        { tool: "pen", color: "#ffc24b", size: 4, layer: "draw", pts: [{x:0.2,y:0.3},{x:0.5,y:0.7}] }
+      ],
+      layers: { bg: { visible: true, type: "grid" }, draw: { visible: true }, geo: { visible: true } }
+    },
+    {
+      id: "sess_demo_2",
+      className: "4ème C",
+      subject: "Physique-Chimie",
+      title: "Loi d'Ohm & Circuits Électriques",
+      date: Date.now() - 3600000 * 48,
+      strokeCount: 12,
+      bgType: "axis",
+      strokes: [
+        { tool: "pen", color: "#ff4d6d", size: 4, layer: "geo", pts: [{x:0.1,y:0.5},{x:0.9,y:0.5}] },
+        { tool: "pen", color: "#00e5ff", size: 4, layer: "draw", pts: [{x:0.5,y:0.2},{x:0.5,y:0.8}] }
+      ],
+      layers: { bg: { visible: true, type: "axis" }, draw: { visible: true }, geo: { visible: true } }
+    }
+  ];
+  setLS("sessions", S.sessions);
+}
+if(!S.currentSession){
+  S.currentSession = {
+    id: "sess_" + Date.now(),
+    className: "6ème A",
+    subject: "Mathématiques",
+    title: "Géométrie & Angles",
+    date: Date.now(),
+    bgType: "grid",
+    strokeCount: 0,
+    strokes: [],
+    layers: { bg: { visible: true, type: "grid" }, draw: { visible: true }, geo: { visible: true } }
+  };
+  setLS("currentSession", S.currentSession);
+}
 
 function toast(key,kind,raw){
   var box = $("toasts"); if(!box) return;
@@ -471,36 +521,61 @@ function exportPedagogicalPdf(pad){
     if(!printWin){ toast("smart.save","warn"); return; }
     var now = new Date().toLocaleString("fr-FR",{dateStyle:"full",timeStyle:"short"});
     var bgType = (pad.layers.bg && pad.layers.bg.type) ? pad.layers.bg.type : "grid";
-    var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>EDU-AIR — Session Tableau Numérique Interactif</title>' +
+    
+    var cs = S.currentSession || {};
+    var className = cs.className || "6ème A";
+    var subject = cs.subject || "Mathématiques";
+    var lessonTitle = cs.title || "Leçon du jour";
+    var strokeCount = pad.strokes ? pad.strokes.length : 0;
+
+    var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>EDU-AIR TNI — ' + esc(lessonTitle) + ' (' + esc(className) + ')</title>' +
       '<style>' +
-      '@page{size:landscape;margin:10mm}' +
-      'body{font-family:system-ui,-apple-system,sans-serif;margin:0;padding:16px;background:#fff;color:#111}' +
-      '.header{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #00a3bf;padding-bottom:10px;margin-bottom:12px}' +
+      '@page{size:landscape;margin:8mm}' +
+      'body{font-family:system-ui,-apple-system,sans-serif;margin:0;padding:14px;background:#fff;color:#111}' +
+      '.header{display:flex;justify-content:space-between;align-items:center;border-bottom:2.5px solid #00a3bf;padding-bottom:10px;margin-bottom:12px}' +
       '.logo{font-size:20px;font-weight:900;letter-spacing:1px;color:#05070d}.logo span{color:#00a3bf}' +
-      '.meta{text-align:right;font-size:11px;color:#555}' +
-      '.stage-box{border:1.5px solid #1b2847;border-radius:8px;background:#091020;padding:6px;box-shadow:0 4px 12px rgba(0,0,0,0.15)}' +
+      '.class-badge{display:inline-block;padding:3px 8px;border-radius:4px;background:#00a3bf;color:#fff;font-size:12px;font-weight:700;margin-left:8px;vertical-align:middle;}' +
+      '.sub-badge{display:inline-block;padding:3px 8px;border-radius:4px;background:#1e3056;color:#7cf7ff;font-size:12px;font-weight:600;margin-left:4px;vertical-align:middle;}' +
+      '.lesson-title{font-size:16px;font-weight:800;color:#1b2847;margin-top:4px;}' +
+      '.meta{text-align:right;font-size:11px;color:#444;line-height:1.4}' +
+      '.stage-box{border:1.5px solid #1b2847;border-radius:8px;background:#091020;padding:6px;box-shadow:0 4px 12px rgba(0,0,0,0.12)}' +
       'svg{width:100%;height:auto;display:block;border-radius:4px}' +
-      '.notes{margin-top:12px;border:1px dashed #bbb;border-radius:6px;padding:8px 12px;font-size:11px;color:#444}' +
-      '.footer{display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-size:10px;color:#777;border-top:1px solid #ddd;padding-top:8px}' +
+      '.notes-grid{display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-top:12px;}' +
+      '.notes{border:1px dashed #999;border-radius:6px;padding:8px 12px;font-size:11px;color:#333;min-height:50px;}' +
+      '.notes-title{font-weight:bold;margin-bottom:4px;color:#00a3bf;font-size:11px;text-transform:uppercase;}' +
+      '.footer{display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:10px;color:#777;border-top:1px solid #ddd;padding-top:6px}' +
       '@media print{.no-print{display:none !important}}' +
       '</style></head><body>' +
-      '<div class="no-print" style="margin-bottom:12px;text-align:right"><button onclick="window.print()" style="padding:8px 18px;background:#00a3bf;color:#fff;border:none;border-radius:6px;font-weight:bold;cursor:pointer;font-size:13px">🖨️ Imprimer ou Enregistrer en PDF</button></div>' +
+      '<div class="no-print" style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">' +
+      '  <div><strong>Feuille de Cours TNI &bull; Prête pour l\'impression A4 Paysage ou distribution PDF aux élèves</strong></div>' +
+      '  <button onclick="window.print()" style="padding:9px 20px;background:#00a3bf;color:#fff;border:none;border-radius:6px;font-weight:bold;cursor:pointer;font-size:13px;box-shadow:0 2px 6px rgba(0,163,191,0.4)">🖨️ Imprimer ou Enregistrer en PDF</button>' +
+      '</div>' +
       '<div class="header">' +
-      '  <div class="logo">EDU-AIR <span>SMART SURFACE</span> &bull; TNI Éducatif</div>' +
-      '  <div class="meta"><div><strong>Date :</strong> ' + now + '</div><div><strong>Mode :</strong> Sans contact &bull; Fond : ' + bgType.toUpperCase() + '</div></div>' +
+      '  <div>' +
+      '    <div class="logo">EDU-AIR <span>SMART SURFACE</span> &bull; TNI Éducatif <span class="class-badge">' + esc(className) + '</span><span class="sub-badge">' + esc(subject) + '</span></div>' +
+      '    <div class="lesson-title">📖 ' + esc(lessonTitle) + '</div>' +
+      '  </div>' +
+      '  <div class="meta"><div><strong>Date :</strong> ' + now + '</div><div><strong>Fond TNI :</strong> ' + bgType.toUpperCase() + ' &bull; <strong>' + strokeCount + '</strong> annotation(s)</div></div>' +
       '</div>' +
       '<div class="stage-box">' + svgData + '</div>' +
-      '<div class="notes"><strong>Annotations pédagogiques & Remarques de cours :</strong> </div>' +
+      '<div class="notes-grid">' +
+      '  <div class="notes"><div class="notes-title">📝 Synthèse du cours & Démonstrations :</div>' +
+      '    <div style="color:#666;font-style:italic;">(Notes de l\'enseignant(e) — à distribuer aux élèves de la classe ' + esc(className) + ')</div>' +
+      '  </div>' +
+      '  <div class="notes"><div class="notes-title">📌 Devoirs & Exercices d\'application :</div>' +
+      '    <div style="color:#666;font-style:italic;">(À préparer pour le cours suivant)</div>' +
+      '  </div>' +
+      '</div>' +
       '<div class="footer">' +
-      '  <div>EDU-AIR Smart Surface — 100% On-Device & Conforme RGPD Scolaire</div>' +
-      '  <div>Tableau Numérique Interactif (65"–86")</div>' +
+      '  <div>EDU-AIR Smart Surface — 100% On-Device & Conforme RGPD Scolaire (Aucun transfert de données)</div>' +
+      '  <div>Tableau Numérique Interactif &bull; Compatible ENT / LMS / Pronote</div>' +
       '</div>' +
       '<script>setTimeout(function(){ window.print(); }, 400);<\/script>' +
       '</body></html>';
     printWin.document.open();
     printWin.document.write(html);
     printWin.document.close();
-    toast("PDF Pédagogique généré","ok");
+    toast("PDF Pédagogique généré pour " + className, "ok");
   }catch(e){ toast("smart.save","warn"); }
 }
 
@@ -793,6 +868,262 @@ function wireSmartSurface(){
     hud.style.top = (e.clientY-r.top) + "px";
     hud.classList.remove("hidden");
   });
+}
+
+/* ---------------------------------------------------------------- */
+/* Sessions TNI: persistance de classe, reprise de tableau & calques */
+/* ---------------------------------------------------------------- */
+function syncSessionBarInputs(){
+  var cs = S.currentSession || {};
+  var selClass = $("selSessionClass"); if(selClass && cs.className) selClass.value = cs.className;
+  var selSub = $("selSessionSubject"); if(selSub && cs.subject) selSub.value = cs.subject;
+  var inputTitle = $("inputSessionTitle"); if(inputTitle && cs.title) inputTitle.value = cs.title;
+}
+
+function saveCurrentSession(silent){
+  if(!boardPad) return;
+  var selClass = $("selSessionClass");
+  var selSub = $("selSessionSubject");
+  var inputTitle = $("inputSessionTitle");
+  
+  var className = (selClass && selClass.value) || "6ème A";
+  var subject = (selSub && selSub.value) || "Mathématiques";
+  var title = (inputTitle && inputTitle.value.trim()) || "Leçon sans titre";
+  var bgType = (boardPad.layers && boardPad.layers.bg && boardPad.layers.bg.type) || "grid";
+
+  var sessId = (S.currentSession && S.currentSession.id) ? S.currentSession.id : ("sess_" + Date.now());
+  var sessionObj = {
+    id: sessId,
+    className: className,
+    subject: subject,
+    title: title,
+    bgType: bgType,
+    date: Date.now(),
+    strokeCount: boardPad.strokes.length,
+    strokes: JSON.parse(JSON.stringify(boardPad.strokes)),
+    layers: JSON.parse(JSON.stringify(boardPad.layers))
+  };
+
+  S.currentSession = sessionObj;
+  setLS("currentSession", S.currentSession);
+
+  var list = S.sessions || [];
+  var idx = -1;
+  for(var i=0; i<list.length; i++){
+    if(list[i].id === sessId){ idx = i; break; }
+  }
+  if(idx >= 0){
+    list[idx] = sessionObj;
+  } else {
+    list.unshift(sessionObj);
+  }
+  S.sessions = list;
+  setLS("sessions", S.sessions);
+
+  if(!silent){
+    toast("Séance sauvegardée : " + title + " (" + className + ")", "ok");
+    logEv("session.save", { id: sessId, title: title, class: className, strokes: sessionObj.strokeCount });
+  }
+
+  if(S.view === "dashboard") renderSessionCards();
+}
+
+function resumeSession(id){
+  var list = S.sessions || [];
+  var sess = null;
+  for(var i=0; i<list.length; i++){
+    if(list[i].id === id){ sess = list[i]; break; }
+  }
+  if(!sess){ toast("Séance introuvable", "warn"); return; }
+
+  S.currentSession = sess;
+  setLS("currentSession", S.currentSession);
+  syncSessionBarInputs();
+
+  if(boardPad){
+    boardPad.strokes = JSON.parse(JSON.stringify(sess.strokes || []));
+    boardPad.redo = [];
+    if(sess.layers) boardPad.layers = JSON.parse(JSON.stringify(sess.layers));
+    if(sess.bgType){
+      boardPad.setBackgroundType(sess.bgType);
+      var selBg = $("selBgType"); if(selBg) selBg.value = sess.bgType;
+    }
+    boardPad.renderAll();
+  }
+
+  switchView("smart-surface");
+  toast("Séance reprise : " + sess.title + " (" + sess.className + ")", "ok");
+  logEv("session.resume", { id: id, title: sess.title, class: sess.className });
+}
+
+function newSession(){
+  if(boardPad && boardPad.strokes.length > 0){
+    saveCurrentSession(true);
+  }
+  var newId = "sess_" + Date.now();
+  var selClass = $("selSessionClass");
+  var selSub = $("selSessionSubject");
+  var inputTitle = $("inputSessionTitle");
+  
+  var className = (selClass && selClass.value) || "6ème A";
+  var subject = (selSub && selSub.value) || "Mathématiques";
+  var title = "Nouvelle leçon du " + new Date().toLocaleDateString("fr-FR");
+
+  if(inputTitle) inputTitle.value = title;
+
+  S.currentSession = {
+    id: newId,
+    className: className,
+    subject: subject,
+    title: title,
+    date: Date.now(),
+    bgType: "grid",
+    strokeCount: 0,
+    strokes: [],
+    layers: {
+      bg: { visible: true, type: "grid" },
+      draw: { visible: true },
+      geo: { visible: true }
+    }
+  };
+  setLS("currentSession", S.currentSession);
+
+  if(boardPad){
+    boardPad.clear();
+    boardPad.setBackgroundType("grid");
+    var selBg = $("selBgType"); if(selBg) selBg.value = "grid";
+  }
+
+  toast("Nouvelle séance initialisée", "info");
+  logEv("session.new", { id: newId });
+}
+
+function deleteSession(id){
+  S.sessions = (S.sessions || []).filter(function(s){ return s.id !== id; });
+  setLS("sessions", S.sessions);
+  if(S.currentSession && S.currentSession.id === id){
+    newSession();
+  }
+  renderSessionCards();
+  toast("Séance supprimée", "info");
+  logEv("session.delete", { id: id });
+}
+
+function renderSessionCards(filterClass){
+  var host = $("sessionCardsGrid");
+  if(!host) return;
+  var selFilter = $("selFilterClass");
+  var fVal = filterClass || (selFilter ? selFilter.value : "all");
+
+  var list = S.sessions || [];
+  if(fVal && fVal !== "all"){
+    list = list.filter(function(s){ return s.className === fVal; });
+  }
+
+  if(!list.length){
+    host.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:32px;color:var(--ink-dim);border:1px dashed var(--line);border-radius:12px;background:rgba(255,255,255,0.02);">' +
+      '<div style="font-size:32px;margin-bottom:8px;">📁</div>' +
+      '<div>Aucune séance enregistrée pour ce filtre.</div>' +
+      '<div style="font-size:12px;margin-top:6px;opacity:0.8;">Utilisez le bouton "💾 SAUVEGARDER SÉANCE" sur la Surface Intelligente pour conserver vos cours par classe.</div>' +
+      '</div>';
+    return;
+  }
+
+  host.innerHTML = list.map(function(s){
+    var d = new Date(s.date);
+    var dateStr = d.toLocaleDateString("fr-FR", { day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" });
+    var nStrokes = s.strokeCount != null ? s.strokeCount : (s.strokes ? s.strokes.length : 0);
+    var isCurrent = S.currentSession && S.currentSession.id === s.id;
+
+    return '<div class="session-card' + (isCurrent ? ' active-session' : '') + '">' +
+      '<div class="sc-header">' +
+        '<span class="sc-badge-class">' + esc(s.className || "Classe") + '</span>' +
+        '<span class="sc-badge-subject">' + esc(s.subject || "Général") + '</span>' +
+      '</div>' +
+      '<h4 class="sc-title" title="' + esc(s.title) + '">' + esc(s.title || "Leçon") + '</h4>' +
+      '<div class="sc-meta">' +
+        '<span>📅 ' + esc(dateStr) + '</span>' +
+        '<span>✏️ ' + nStrokes + ' tracé(s)</span>' +
+        '<span>📐 Fond ' + esc((s.bgType || "grid").toUpperCase()) + '</span>' +
+      '</div>' +
+      '<div class="sc-actions">' +
+        '<button type="button" class="btn btn-sm btn-primary sc-btn-resume" data-id="' + esc(s.id) + '">▶ REPRENDRE SUR LE TNI</button>' +
+        '<button type="button" class="btn btn-sm btn-danger sc-btn-del" data-id="' + esc(s.id) + '" title="Supprimer">🗑️</button>' +
+      '</div>' +
+    '</div>';
+  }).join("");
+
+  qsa(".sc-btn-resume", host).forEach(function(btn){
+    on(btn, "click", function(){
+      var id = btn.getAttribute("data-id");
+      resumeSession(id);
+    });
+  });
+
+  qsa(".sc-btn-del", host).forEach(function(btn){
+    on(btn, "click", function(e){
+      e.stopPropagation();
+      var id = btn.getAttribute("data-id");
+      confirmDanger("Supprimer définitivement cette séance ?", function(){
+        deleteSession(id);
+      });
+    });
+  });
+}
+
+function wireSessions(){
+  syncSessionBarInputs();
+
+  var selClass = $("selSessionClass");
+  if(selClass){
+    on(selClass, "change", function(){
+      if(S.currentSession){
+        S.currentSession.className = this.value;
+        setLS("currentSession", S.currentSession);
+      }
+    });
+  }
+
+  var selSub = $("selSessionSubject");
+  if(selSub){
+    on(selSub, "change", function(){
+      if(S.currentSession){
+        S.currentSession.subject = this.value;
+        setLS("currentSession", S.currentSession);
+      }
+    });
+  }
+
+  var inputTitle = $("inputSessionTitle");
+  if(inputTitle){
+    on(inputTitle, "input", function(){
+      if(S.currentSession){
+        S.currentSession.title = this.value;
+        setLS("currentSession", S.currentSession);
+      }
+    });
+  }
+
+  var btnSave = $("btnSaveSession");
+  if(btnSave){
+    on(btnSave, "click", function(){
+      saveCurrentSession();
+    });
+  }
+
+  var btnNew = $("btnNewSession");
+  if(btnNew){
+    on(btnNew, "click", function(){
+      newSession();
+    });
+  }
+
+  var selFilter = $("selFilterClass");
+  if(selFilter){
+    on(selFilter, "change", function(){
+      renderSessionCards(this.value);
+    });
+  }
 }
 
 /* ---------------------------------------------------------------- */
@@ -2379,6 +2710,102 @@ function askLiveAI(msg){
     return reply;
   });
 }
+function generateAiQuizForSubject(subject){
+  var s = (subject || "").toLowerCase();
+  if(/math|géo|angle|algeb/.test(s)){
+    return {
+      title: "Quiz TNI : Mathématiques & Géométrie",
+      questions: [
+        { q: "Quelle est la somme des angles d'un triangle quelconque ?", opts: ["90°", "180°", "360°", "Dépend du triangle"], correct: 1 },
+        { q: "Dans un triangle rectangle, quel théorème relie les côtés ?", opts: ["Thalès", "Pythagore", "Al-Kashi", "Descartes"], correct: 1 },
+        { q: "Quelle est la formule de l'aire d'un disque de rayon r ?", opts: ["2 × π × r", "π × r²", "4 × π × r²", "π × d"], correct: 1 },
+        { q: "Deux droites perpendiculaires à une même troisième sont :", opts: ["Sécantes", "Perpendiculaires", "Parallèles entre elles", "Confondue"], correct: 2 }
+      ]
+    };
+  } else if(/phys|chimie|courant|electr/.test(s)){
+    return {
+      title: "Quiz TNI : Physique-Chimie",
+      questions: [
+        { q: "Quelle relation mathématique définit la loi d'Ohm ?", opts: ["U = R × I", "P = U / I", "I = U × R", "R = U × I"], correct: 0 },
+        { q: "Une solution dont le pH vaut 3 est qualifiée de :", opts: ["Neutre", "Basique", "Acide", "Tampon"], correct: 2 },
+        { q: "Quelle est l'unité du Système International pour la fréquence ?", opts: ["Volt (V)", "Hertz (Hz)", "Joule (J)", "Watt (W)"], correct: 1 },
+        { q: "Quel est le symbole atomique du fer dans la table périodique ?", opts: ["F", "Fe", "Fr", "Fo"], correct: 1 }
+      ]
+    };
+  } else if(/svt|bio|scien|nature/.test(s)){
+    return {
+      title: "Quiz TNI : SVT & Biologie",
+      questions: [
+        { q: "Quel organite cellulaire est la centrale énergétique (production d'ATP) ?", opts: ["Noyau", "Mitochondrie", "Ribosome", "Vacuole"], correct: 1 },
+        { q: "Quel gaz est absorbé par les feuilles des plantes lors de la photosynthèse ?", opts: ["Dioxygène (O₂)", "Diazote (N₂)", "Dioxyde de carbone (CO₂)", "Méthane (CH₄)"], correct: 2 },
+        { q: "Dans une molécule d'ADN, quelle base azotée s'apparie toujours avec l'Adénine (A) ?", opts: ["Cytosine (C)", "Guanine (G)", "Thymine (T)", "Uracile (U)"], correct: 2 },
+        { q: "Combien de paires de chromosomes comporte le génome d'une cellule humaine saine ?", opts: ["23 paires", "46 paires", "12 paires", "24 paires"], correct: 0 }
+      ]
+    };
+  } else if(/hist|géo/.test(s)){
+    return {
+      title: "Quiz TNI : Histoire & Géographie",
+      questions: [
+        { q: "En quelle année s'est déroulée la prise de la Bastille (Révolution Française) ?", opts: ["1789", "1804", "1848", "1914"], correct: 0 },
+        { q: "Quel est le plus long fleuve de France métropolitaine ?", opts: ["La Seine", "Le Rhône", "La Loire", "La Garonne"], correct: 2 },
+        { q: "Combien d'États membres compte l'Union Européenne actuellement ?", opts: ["25", "27", "28", "30"], correct: 1 },
+        { q: "Quelle est la capitale officielle du Canada ?", opts: ["Toronto", "Montréal", "Ottawa", "Vancouver"], correct: 2 }
+      ]
+    };
+  } else {
+    return {
+      title: "Quiz TNI : Connaissances Générales & Technologie",
+      questions: [
+        { q: "Quel composant d'un ordinateur exécute les calculs et instructions ?", opts: ["Disque SSD", "Processeur (CPU)", "Carte réseau", "Alimentation"], correct: 1 },
+        { q: "Quel protocole web chiffre les échanges pour garantir la sécurité ?", opts: ["HTTP", "HTTPS", "FTP", "DNS"], correct: 1 },
+        { q: "Que signifie l'acronyme TNI en pédagogie numérique ?", opts: ["Terminal Numérique Isolé", "Tableau Numérique Interactif", "Transmission Node Interface", "Technique Nouvelle d'Impression"], correct: 1 },
+        { q: "En quelle unité mesure-t-on la mémoire vive (RAM) de nos jours ?", opts: ["Gigahertz (GHz)", "Gigaoctets (Go)", "Mégapixels", "Watts"], correct: 1 }
+      ]
+    };
+  }
+}
+
+function handleAiQuizResponse(msg, targetBubble){
+  var currentSub = (S.currentSession && S.currentSession.subject) || "Mathématiques";
+  var quizData = generateAiQuizForSubject(currentSub);
+  
+  var text = "✨ Quiz interactif TNI généré pour la matière : " + currentSub + " (" + quizData.questions.length + " questions)\n\n" +
+    quizData.questions.map(function(q, i){
+      var letter = ["A","B","C","D"][q.correct] || "A";
+      return (i+1) + ". " + q.q + "\n" +
+        q.opts.map(function(o, oi){ return "   " + ["A","B","C","D"][oi] + ") " + o; }).join("\n") +
+        "\n   👉 Bonne réponse : " + letter + ") " + q.opts[q.correct];
+    }).join("\n\n");
+
+  var btn = document.createElement("button");
+  btn.className = "btn btn-primary btn-launch-quiz-ai";
+  btn.style.cssText = "margin-top:14px;width:100%;font-weight:800;padding:12px;font-size:13px;letter-spacing:0.5px;box-shadow:0 4px 14px rgba(0,229,255,0.35);";
+  btn.innerHTML = "🎮 LANCER CE QUIZ DANS AIR QUIZ TNI (" + quizData.questions.length + " questions)";
+  btn.onclick = function(){
+    var newQuiz = { id: Date.now(), title: quizData.title, questions: quizData.questions };
+    S.quizzes.push(newQuiz);
+    setLS("quizzes", S.quizzes);
+    S.quiz = { active: newQuiz, qi: 0, score: 0, total: newQuiz.questions.length, wrongByQ: {}, reported: false };
+    switchView("air-quiz");
+    toast("Quiz TNI lancé : " + quizData.title, "ok");
+  };
+
+  if(targetBubble){
+    targetBubble.textContent = text;
+    targetBubble.classList.remove("chat-typing");
+    var wrap = document.createElement("div");
+    wrap.appendChild(btn);
+    targetBubble.appendChild(wrap);
+    var host = $("teachChat"); if(host) host.scrollTop = host.scrollHeight;
+  } else {
+    var b = addChatBubble(text, "ai");
+    var wrap = document.createElement("div");
+    wrap.appendChild(btn);
+    b.appendChild(wrap);
+    var host = $("teachChat"); if(host) host.scrollTop = host.scrollHeight;
+  }
+}
+
 function wireAiTeacher(){
   var liveBadge = $("aiModeBadge");
   function send(){
@@ -2388,6 +2815,16 @@ function wireAiTeacher(){
     addChatBubble(msg, "me");
     input.value = "";
     logEv("teacher.ask", {});
+
+    var isQuizReq = /quiz|qcm|questionnaire/i.test(msg);
+    if(isQuizReq){
+      var typing = addChatBubble("", "typing");
+      setTimeout(function(){
+        handleAiQuizResponse(msg, typing);
+      }, 500);
+      return;
+    }
+
     var live = S.ai.mode === "live";
     if(live){
       var typing = addChatBubble("", "typing");
@@ -2786,6 +3223,12 @@ function quizAccuracy(){
 }
 function wireDashboard(){
   on($("btnExportCsv"),"click", exportQuizCSV);
+  var selFilter = $("selFilterClass");
+  if(selFilter){
+    on(selFilter, "change", function(){
+      renderSessionCards(this.value);
+    });
+  }
 }
 function hardestOf(res){
   if(!res || !res.wrongByQ) return null;
@@ -2871,6 +3314,7 @@ function renderDashboard(){
     }).join("");
   }
   renderBadges();
+  renderSessionCards();
   var quick = $("dashQuick");
   if(quick){
     var views = ["smart-surface","air-pointer","air-draw","air-3d","air-vision","air-lab","air-quiz","air-presentation","ai-teacher"];
@@ -2968,6 +3412,7 @@ function boot(){
   wireNav();
   wireDashboard();
   wireSmartSurface();
+  wireSessions();
   wireAirPointer();
   wireAirDraw();
   wireAir3D();

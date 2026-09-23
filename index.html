@@ -101,6 +101,36 @@
 
   <!-- ============ MAIN ============ -->
   <main id="main">
+    <!-- ============ CLASSROOM SESSION BAR ============ -->
+    <div class="session-bar" id="sessionBar">
+      <div class="sb-session-info">
+        <span class="sb-session-tag">🏫 CLASSE:</span>
+        <select id="selSessionClass" class="sb-select">
+          <option value="6ème A" selected>6ème A</option>
+          <option value="5ème B">5ème B</option>
+          <option value="4ème C">4ème C</option>
+          <option value="3ème A">3ème A</option>
+          <option value="2nde 1">2nde 1</option>
+          <option value="1ère Spé">1ère Spé</option>
+          <option value="Terminale">Terminale</option>
+        </select>
+        <span class="sb-session-tag">📚 MATIÈRE:</span>
+        <select id="selSessionSubject" class="sb-select">
+          <option value="Mathématiques" selected>Mathématiques</option>
+          <option value="Sciences & SVT">Sciences & SVT</option>
+          <option value="Physique-Chimie">Physique-Chimie</option>
+          <option value="Histoire-Géo">Histoire-Géo</option>
+          <option value="Français">Français</option>
+          <option value="Technologie">Technologie</option>
+        </select>
+        <input type="text" id="inputSessionTitle" class="sb-input" placeholder="Titre de la leçon..." value="Géométrie & Angles" title="Titre de la séance" />
+      </div>
+      <div class="sb-session-actions">
+        <button type="button" class="btn btn-sm btn-primary" id="btnSaveSession" title="Enregistrer l'état complet de la séance">💾 SAUVEGARDER SÉANCE</button>
+        <button type="button" class="btn btn-sm" id="btnNewSession" title="Démarrer une nouvelle séance">➕ NOUVELLE SÉANCE</button>
+      </div>
+    </div>
+
 <!-- ============ VIEW: SMART SURFACE ============ -->
     <section class="view active" id="view-smart-surface">
       <div class="board-wrap">
@@ -288,6 +318,7 @@
         <p class="lede" data-i18n-html="teacher.lede">Your AI co-teacher. Explain topics, run lessons, grade quizzes — all in mid-air.</p>
         <div class="ai-badge" id="aiModeBadge">DEMO</div>
         <div class="teach-quick-chips" id="teachQuickChips">
+          <button type="button" class="qchip" id="btnChipGenQuiz" data-q="Génère un quiz interactif TNI de 4 questions à choix multiples (A, B, C, D) sur le sujet du cours, avec indication claire de la bonne réponse pour le lancer directement dans Air Quiz." style="border-color:var(--cy);color:var(--cy);font-weight:800;">🎮 Générer un Quiz TNI interactif</button>
           <button type="button" class="qchip" data-q="Génère 3 questions flash rapides de 2 minutes pour tester la compréhension de la classe (avec les réponses).">⚡ 3 Questions Flash</button>
           <button type="button" class="qchip" data-q="Fais un résumé synthétique de ce sujet en 3 points essentiels pour des élèves.">📖 Résumé 3 points</button>
           <button type="button" class="qchip" data-q="Donne une analogie concrète de la vie de tous les jours pour rendre cette notion évidente.">💡 Analogie parlante</button>
@@ -353,6 +384,28 @@
         </div>
         <div class="dash-badges" id="dashBadges"></div>
         <div class="dash-grid" id="dashQuick"></div>
+
+        <!-- ============ SESSIONS DE CLASSE PERSISTANTES (TNI) ============ -->
+        <div class="session-manager-panel" id="sessionManagerPanel">
+          <div class="row row-between row-center-v" style="margin-bottom:8px;">
+            <h3 style="margin:0;">🗂️ SÉANCES DE CLASSE ENREGISTRÉES (PERSISTANCE TNI)</h3>
+            <div class="row row-center-v">
+              <label style="font-size:12px;color:var(--ink-dim);">Filtrer par classe :</label>
+              <select id="selFilterClass" class="sb-select">
+                <option value="all" selected>Toutes les classes</option>
+                <option value="6ème A">6ème A</option>
+                <option value="5ème B">5ème B</option>
+                <option value="4ème C">4ème C</option>
+                <option value="3ème A">3ème A</option>
+                <option value="2nde 1">2nde 1</option>
+                <option value="1ère Spé">1ère Spé</option>
+                <option value="Terminale">Terminale</option>
+              </select>
+            </div>
+          </div>
+          <p class="lede" style="margin-bottom:12px;">Retrouvez et reprenez n'importe quelle séance exactement là où vous l'avez laissée (calques, tracés, fond, instruments).</p>
+          <div class="session-cards-grid" id="sessionCardsGrid"></div>
+        </div>
       </div>
     </section>
   </main>
