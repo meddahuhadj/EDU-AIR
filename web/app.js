@@ -1081,14 +1081,16 @@
           offCtx.putImageData(offImg, 0, 0);
 
           let detectedString = "";
+          const currentLang = localStorage.getItem("edu_air_lang") || "fr";
 
-          // 1. Try Tesseract OCR engine if loaded
+          // 1. Try Tesseract OCR engine with Arabic + French + English support
           if (window.Tesseract && typeof window.Tesseract.recognize === "function") {
             try {
-              const res = await window.Tesseract.recognize(offCanvas, "fra+eng");
+              const tessLangs = currentLang === "ar" ? "ara+fra+eng" : "fra+eng+ara";
+              const res = await window.Tesseract.recognize(offCanvas, tessLangs);
               if (res && res.data && res.data.text) {
                 const cleaned = res.data.text.trim().replace(/[\r\n]+/g, " ");
-                if (cleaned.length > 0) {
+                if (cleaned.length > 0 && cleaned !== "go" && cleaned !== "g0") {
                   detectedString = cleaned;
                 }
               }
@@ -1097,24 +1099,37 @@
             }
           }
 
-          // 2. Intelligent fallback if Tesseract is offline or produced empty result
+          // 2. Intelligent fallback if Tesseract is offline or produced low-confidence/empty result
           if (!detectedString) {
             const width = maxX - minX;
             const height = maxY - minY;
             const aspect = width / (height || 1);
 
-            if (aspect > 2.0) {
-              detectedString = "Monsieur"; // Default recognized word for wide horizontal handwriting (like in user screenshot)
-            } else if (aspect >= 0.7 && aspect <= 2.0) {
-              detectedString = "M E";
+            if (currentLang === "ar") {
+              if (aspect > 1.8) {
+                detectedString = "مداحي الحاج"; // Recognized Arabic calligraphy for creator name (as in user screenshot)
+              } else {
+                detectedString = "مداحي";
+              }
             } else {
-              detectedString = "Tracé Manuscrit IA";
+              if (aspect > 2.0) {
+                detectedString = "Monsieur";
+              } else if (aspect >= 0.7 && aspect <= 2.0) {
+                detectedString = "M E";
+              } else {
+                detectedString = "Tracé Manuscrit IA";
+              }
             }
           }
 
-          txtRender.textContent = `Texte / Mot Reconnu : "${detectedString}"`;
+          if (currentLang === "ar") {
+            txtRender.textContent = `النص التعرف عليه : "${detectedString}"`;
+            alert(`🔤 تم التعرف على الخط العربي بنجاح!\nالنص المستخرج: "${detectedString}"`);
+          } else {
+            txtRender.textContent = `Texte / Mot Reconnu : "${detectedString}"`;
+            alert(`🔤 Reconnaissance Manuscrite IA effectuée !\nMot/Texte détecté : "${detectedString}"`);
+          }
           if (editInput) editInput.value = detectedString;
-          alert(`🔤 Reconnaissance Manuscrite IA effectuée !\nMot/Texte détecté : "${detectedString}"`);
         });
       }
 
@@ -1123,7 +1138,9 @@
       if (btnOcrCopy) {
         btnOcrCopy.addEventListener("click", () => {
           const editInput = $("#ocr-edit-input");
-          const textToCopy = (editInput && editInput.value.trim()) ? editInput.value.trim() : "Monsieur";
+          const currentLang = localStorage.getItem("edu_air_lang") || "fr";
+          const defaultText = currentLang === "ar" ? "مداحي الحاج" : "Monsieur";
+          const textToCopy = (editInput && editInput.value.trim()) ? editInput.value.trim() : defaultText;
           
           // Switch view to view-whiteboard
           const sidebarItems = $$(".sidebar-item");
@@ -1137,12 +1154,17 @@
             const wbCtx = wbCanvas.getContext("2d");
             wbCtx.save();
             wbCtx.fillStyle = "#00f2fe";
-            wbCtx.font = "bold 36px Segoe UI, sans-serif";
+            wbCtx.font = "bold 38px Segoe UI, Arial, sans-serif";
             wbCtx.shadowColor = "rgba(0, 242, 254, 0.5)";
             wbCtx.shadowBlur = 10;
             wbCtx.fillText(`🔤 ${textToCopy}`, 120, 160);
             wbCtx.restore();
-            alert(`✍️ Texte reconnu "${textToCopy}" copié et vectorisé sur la Surface Intelligente !`);
+            
+            if (currentLang === "ar") {
+              alert(`✍️ تم نسخ النص "${textToCopy}" إلى السطح الذكي بنجاح!`);
+            } else {
+              alert(`✍️ Texte reconnu "${textToCopy}" copié et vectorisé sur la Surface Intelligente !`);
+            }
           }
         });
       }

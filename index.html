@@ -511,15 +511,15 @@
         <!-- OCR & Math Formula Result Box -->
         <div id="ocr-result-box" style="display: none; background: rgba(0,242,254,0.12); border: 1px solid rgba(0,242,254,0.4); padding: 1rem; border-radius: 12px; margin-top: 0.8rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; flex-wrap: wrap;">
-            <h4 style="color: #00f2fe; margin: 0;">🔤 Formule & Texte Reconnu (Analyse AI Canvas) :</h4>
-            <span style="font-size: 0.78rem; color: #3ddc97; font-weight: bold;">✓ Reconnaissance en temps réel</span>
+            <h4 style="color: #00f2fe; margin: 0;" data-i18n="ocrTitle">🔤 Formule & Texte Reconnu (Analyse AI Canvas) :</h4>
+            <span style="font-size: 0.78rem; color: #3ddc97; font-weight: bold;" data-i18n="ocrLiveNotice">✓ Reconnaissance en temps réel</span>
           </div>
-          <div id="ocr-text-render" style="font-size: 1.3rem; font-weight: 800; color: #3ddc97; font-family: monospace; background: rgba(6,9,18,0.7); padding: 0.8rem 1rem; border-radius: 8px; border: 1px solid rgba(0,242,254,0.3); margin-bottom: 0.8rem;">
+          <div id="ocr-text-render" style="font-size: 1.3rem; font-weight: 800; color: #3ddc97; font-family: monospace; background: rgba(6,9,18,0.7); padding: 0.8rem 1rem; border-radius: 8px; border: 1px solid rgba(0,242,254,0.3); margin-bottom: 0.8rem;" data-i18n="ocrTextRender">
             Texte Reconnu
           </div>
           <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-            <input type="text" id="ocr-edit-input" placeholder="Éditer le texte reconnu..." style="flex: 1; min-width: 200px; background: #060912; border: 1px solid rgba(126,195,255,0.3); color: #fff; padding: 0.5rem 0.8rem; border-radius: 8px; font-family: monospace;">
-            <button type="button" class="btn-app btn-app-primary" id="btn-ocr-copy-canvas" style="padding: 0.4rem 0.8rem; font-size: 0.82rem;">✍️ Copier sur le Tableau</button>
+            <input type="text" id="ocr-edit-input" placeholder="Éditer le texte reconnu..." data-i18n-placeholder="ocrInputPlaceholder" style="flex: 1; min-width: 200px; background: #060912; border: 1px solid rgba(126,195,255,0.3); color: #fff; padding: 0.5rem 0.8rem; border-radius: 8px; font-family: monospace;">
+            <button type="button" class="btn-app btn-app-primary" id="btn-ocr-copy-canvas" style="padding: 0.4rem 0.8rem; font-size: 0.82rem;" data-i18n="ocrCopyBtn">✍️ Copier sur le Tableau</button>
           </div>
         </div>
       </div>
