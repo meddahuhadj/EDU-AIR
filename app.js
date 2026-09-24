@@ -124,15 +124,109 @@
     }
 
     // ============================================================
-    // MODULE 2: SURFACE INTELLIGENTE (WHITEBOARD DRAWING ENGINE)
+    // MODULE 2: SURFACE INTELLIGENTE (WHITEBOARD DRAWING ENGINE & TOOLBAR)
     // ============================================================
     const wbCanvas = $("#whiteboard-full-canvas");
     if (wbCanvas) {
       const ctx = wbCanvas.getContext("2d");
       let isDrawing = false;
+      let wbActiveTool = "pen"; // "pen", "highlighter", "eraser", "shape"
+      let wbActiveShape = "none";
       let wbColor = "#00f2fe";
-      let wbLineWidth = 3;
+      let wbLineWidth = 4;
       let isLocked = false;
+      let wbHistoryStack = [];
+      let startX = 0;
+      let startY = 0;
+      let snapshot = null;
+
+      // Tool Buttons in Whiteboard Toolbar
+      const wbView = $("#view-whiteboard");
+      if (wbView) {
+        const toolPen = $("#wb-tool-pen");
+        const toolHighlighter = $("#wb-tool-highlighter");
+        const toolEraser = $("#wb-tool-eraser");
+        const shapeSelect = $("#wb-shape-select");
+
+        if (toolPen) {
+          toolPen.addEventListener("click", () => {
+            wbActiveTool = "pen";
+            wbActiveShape = "none";
+            if (shapeSelect) shapeSelect.value = "none";
+            [toolPen, toolHighlighter, toolEraser].forEach(b => b && b.classList.remove("active"));
+            toolPen.classList.add("active");
+          });
+        }
+
+        if (toolHighlighter) {
+          toolHighlighter.addEventListener("click", () => {
+            wbActiveTool = "highlighter";
+            wbActiveShape = "none";
+            if (shapeSelect) shapeSelect.value = "none";
+            [toolPen, toolHighlighter, toolEraser].forEach(b => b && b.classList.remove("active"));
+            toolHighlighter.classList.add("active");
+          });
+        }
+
+        if (toolEraser) {
+          toolEraser.addEventListener("click", () => {
+            wbActiveTool = "eraser";
+            wbActiveShape = "none";
+            if (shapeSelect) shapeSelect.value = "none";
+            [toolPen, toolHighlighter, toolEraser].forEach(b => b && b.classList.remove("active"));
+            toolEraser.classList.add("active");
+          });
+        }
+
+        if (shapeSelect) {
+          shapeSelect.addEventListener("change", (e) => {
+            wbActiveShape = e.target.value;
+            if (wbActiveShape !== "none") {
+              wbActiveTool = "shape";
+              [toolPen, toolHighlighter, toolEraser].forEach(b => b && b.classList.remove("active"));
+            } else {
+              wbActiveTool = "pen";
+              if (toolPen) toolPen.classList.add("active");
+            }
+          });
+        }
+
+        // Color dots
+        const colorDots = wbView.querySelectorAll(".color-dot");
+        colorDots.forEach((dot) => {
+          dot.addEventListener("click", () => {
+            colorDots.forEach((d) => d.classList.remove("active"));
+            dot.classList.add("active");
+            wbColor = dot.getAttribute("data-color") || "#00f2fe";
+            if (wbActiveTool === "eraser") {
+              wbActiveTool = "pen";
+              if (toolPen) toolPen.classList.add("active");
+              if (toolEraser) toolEraser.classList.remove("active");
+            }
+          });
+        });
+
+        // Custom color picker
+        const customColorPicker = $("#wb-custom-color-picker");
+        if (customColorPicker) {
+          customColorPicker.addEventListener("input", (e) => {
+            wbColor = e.target.value;
+          });
+        }
+
+        // Line width slider
+        const lineWidthSlider = $("#wb-line-width");
+        if (lineWidthSlider) {
+          lineWidthSlider.addEventListener("input", (e) => {
+            wbLineWidth = parseInt(e.target.value, 10);
+          });
+        }
+      }
+
+      function saveWbState() {
+        wbHistoryStack.push(ctx.getImageData(0, 0, wbCanvas.width, wbCanvas.height));
+        if (wbHistoryStack.length > 25) wbHistoryStack.shift();
+      }
 
       function getWbCoords(e) {
         const rect = wbCanvas.getBoundingClientRect();
@@ -144,73 +238,185 @@
         };
       }
 
+      function drawShape(type, sX, sY, eX, eY) {
+        ctx.strokeStyle = wbColor;
+        ctx.fillStyle = wbColor;
+        ctx.lineWidth = wbLineWidth;
+        ctx.lineCap = "round";
+        ctx.globalAlpha = 1.0;
+        ctx.beginPath();
+
+        if (type === "line") {
+          ctx.moveTo(sX, sY);
+          ctx.lineTo(eX, eY);
+          ctx.stroke();
+        } else if (type === "rect") {
+          ctx.strokeRect(sX, sY, eX - sX, eY - sY);
+        } else if (type === "circle") {
+          const radius = Math.sqrt(Math.pow(eX - sX, 2) + Math.pow(eY - sY, 2));
+          ctx.arc(sX, sY, radius, 0, Math.PI * 2);
+          ctx.stroke();
+        } else if (type === "triangle") {
+          ctx.moveTo(sX + (eX - sX) / 2, sY);
+          ctx.lineTo(sX, eY);
+          ctx.lineTo(eX, eY);
+          ctx.closePath();
+          ctx.stroke();
+        } else if (type === "arrow") {
+          ctx.moveTo(sX, sY);
+          ctx.lineTo(eX, eY);
+          ctx.stroke();
+          const angle = Math.atan2(eY - sY, eX - sX);
+          const headlen = 15;
+          ctx.beginPath();
+          ctx.moveTo(eX, eY);
+          ctx.lineTo(eX - headlen * Math.cos(angle - Math.PI / 6), eY - headlen * Math.sin(angle - Math.PI / 6));
+          ctx.lineTo(eX - headlen * Math.cos(angle + Math.PI / 6), eY - headlen * Math.sin(angle + Math.PI / 6));
+          ctx.closePath();
+          ctx.fill();
+        }
+      }
+
       wbCanvas.addEventListener("mousedown", (e) => {
         if (isLocked) {
           alert("🔒 Calque Enseignant verrouillé ! Cliquez sur 'Déverrouiller Calque' pour dessiner.");
           return;
         }
+        saveWbState();
         isDrawing = true;
         const pos = getWbCoords(e);
-        ctx.beginPath();
-        ctx.moveTo(pos.x, pos.y);
+        startX = pos.x;
+        startY = pos.y;
+        snapshot = ctx.getImageData(0, 0, wbCanvas.width, wbCanvas.height);
+
+        if (wbActiveTool !== "shape") {
+          ctx.beginPath();
+          ctx.moveTo(pos.x, pos.y);
+        }
       });
 
       wbCanvas.addEventListener("mousemove", (e) => {
         if (!isDrawing || isLocked) return;
         const pos = getWbCoords(e);
-        ctx.strokeStyle = wbColor;
-        ctx.lineWidth = wbLineWidth;
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
-        ctx.lineTo(pos.x, pos.y);
-        ctx.stroke();
+
+        if (wbActiveTool === "shape") {
+          ctx.putImageData(snapshot, 0, 0);
+          drawShape(wbActiveShape, startX, startY, pos.x, pos.y);
+        } else if (wbActiveTool === "pen") {
+          ctx.strokeStyle = wbColor;
+          ctx.lineWidth = wbLineWidth;
+          ctx.lineCap = "round";
+          ctx.lineJoin = "round";
+          ctx.globalAlpha = 1.0;
+          ctx.lineTo(pos.x, pos.y);
+          ctx.stroke();
+        } else if (wbActiveTool === "highlighter") {
+          ctx.strokeStyle = wbColor;
+          ctx.lineWidth = wbLineWidth * 4;
+          ctx.lineCap = "square";
+          ctx.globalAlpha = 0.35;
+          ctx.lineTo(pos.x, pos.y);
+          ctx.stroke();
+        } else if (wbActiveTool === "eraser") {
+          ctx.globalAlpha = 1.0;
+          ctx.clearRect(pos.x - (wbLineWidth * 3), pos.y - (wbLineWidth * 3), wbLineWidth * 6, wbLineWidth * 6);
+        }
       });
 
-      window.addEventListener("mouseup", () => { isDrawing = false; });
+      window.addEventListener("mouseup", () => {
+        if (isDrawing) {
+          isDrawing = false;
+          ctx.globalAlpha = 1.0;
+        }
+      });
 
       wbCanvas.addEventListener("touchstart", (e) => {
         if (isLocked) return;
         e.preventDefault();
+        saveWbState();
         isDrawing = true;
         const pos = getWbCoords(e);
-        ctx.beginPath();
-        ctx.moveTo(pos.x, pos.y);
+        startX = pos.x;
+        startY = pos.y;
+        snapshot = ctx.getImageData(0, 0, wbCanvas.width, wbCanvas.height);
+        if (wbActiveTool !== "shape") {
+          ctx.beginPath();
+          ctx.moveTo(pos.x, pos.y);
+        }
       }, { passive: false });
 
       wbCanvas.addEventListener("touchmove", (e) => {
         if (!isDrawing || isLocked) return;
         e.preventDefault();
         const pos = getWbCoords(e);
-        ctx.strokeStyle = wbColor;
-        ctx.lineWidth = wbLineWidth;
-        ctx.lineCap = "round";
-        ctx.lineTo(pos.x, pos.y);
-        ctx.stroke();
+
+        if (wbActiveTool === "shape") {
+          ctx.putImageData(snapshot, 0, 0);
+          drawShape(wbActiveShape, startX, startY, pos.x, pos.y);
+        } else if (wbActiveTool === "pen") {
+          ctx.strokeStyle = wbColor;
+          ctx.lineWidth = wbLineWidth;
+          ctx.lineCap = "round";
+          ctx.globalAlpha = 1.0;
+          ctx.lineTo(pos.x, pos.y);
+          ctx.stroke();
+        } else if (wbActiveTool === "highlighter") {
+          ctx.strokeStyle = wbColor;
+          ctx.lineWidth = wbLineWidth * 4;
+          ctx.lineCap = "square";
+          ctx.globalAlpha = 0.35;
+          ctx.lineTo(pos.x, pos.y);
+          ctx.stroke();
+        } else if (wbActiveTool === "eraser") {
+          ctx.globalAlpha = 1.0;
+          ctx.clearRect(pos.x - (wbLineWidth * 3), pos.y - (wbLineWidth * 3), wbLineWidth * 6, wbLineWidth * 6);
+        }
       }, { passive: false });
 
-      wbCanvas.addEventListener("touchend", () => { isDrawing = false; });
+      wbCanvas.addEventListener("touchend", () => { isDrawing = false; ctx.globalAlpha = 1.0; });
+
+      // Undo & Clear for Whiteboard
+      const btnWbUndo = $("#btn-wb-undo");
+      if (btnWbUndo) {
+        btnWbUndo.addEventListener("click", () => {
+          if (wbHistoryStack.length > 0) {
+            const state = wbHistoryStack.pop();
+            ctx.putImageData(state, 0, 0);
+          } else {
+            ctx.clearRect(0, 0, wbCanvas.width, wbCanvas.height);
+          }
+        });
+      }
+
+      const btnWbClear = $("#btn-wb-clear");
+      if (btnWbClear) {
+        btnWbClear.addEventListener("click", () => {
+          saveWbState();
+          ctx.clearRect(0, 0, wbCanvas.width, wbCanvas.height);
+        });
+      }
 
       // Specialty Backgrounds
       const wbBgSelect = $("#wb-bg-select");
       if (wbBgSelect) {
         wbBgSelect.addEventListener("change", (e) => {
           const bg = e.target.value;
-          wbCanvas.style.backgroundColor = "#08101e";
+          wbCanvas.style.backgroundColor = (document.documentElement.getAttribute("data-theme") === "light") ? "#ffffff" : "#08101e";
 
           if (bg === "grid") {
             wbCanvas.style.backgroundImage = "linear-gradient(rgba(0, 242, 254, 0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 242, 254, 0.15) 1px, transparent 1px)";
             wbCanvas.style.backgroundSize = "30px 30px";
           } else if (bg === "music") {
-            wbCanvas.style.backgroundImage = "linear-gradient(rgba(255, 255, 255, 0.25) 2px, transparent 2px)";
+            wbCanvas.style.backgroundImage = "linear-gradient(rgba(100, 150, 220, 0.25) 2px, transparent 2px)";
             wbCanvas.style.backgroundSize = "100% 16px";
           } else if (bg === "timeline") {
             wbCanvas.style.backgroundImage = "linear-gradient(0deg, transparent 48%, rgba(255, 184, 77, 0.6) 50%, transparent 52%), linear-gradient(90deg, rgba(255, 184, 77, 0.4) 2px, transparent 2px)";
             wbCanvas.style.backgroundSize = "100% 100%, 80px 100%";
           } else if (bg === "map") {
-            wbCanvas.style.backgroundImage = "radial-gradient(circle, rgba(61, 220, 151, 0.15) 2px, transparent 2px)";
+            wbCanvas.style.backgroundImage = "radial-gradient(circle, rgba(61, 220, 151, 0.2) 2px, transparent 2px)";
             wbCanvas.style.backgroundSize = "40px 40px";
           } else if (bg === "graph") {
-            wbCanvas.style.backgroundImage = "linear-gradient(rgba(126, 195, 255, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(126, 195, 255, 0.2) 1px, transparent 1px)";
+            wbCanvas.style.backgroundImage = "linear-gradient(rgba(126, 195, 255, 0.25) 1px, transparent 1px), linear-gradient(90deg, rgba(126, 195, 255, 0.25) 1px, transparent 1px)";
             wbCanvas.style.backgroundSize = "10px 10px";
           } else {
             wbCanvas.style.backgroundImage = "none";

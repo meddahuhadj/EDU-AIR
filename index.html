@@ -283,7 +283,7 @@
 
       <!-- ================= MODULE 2: SURFACE INTELLIGENTE ================= -->
       <div class="module-view" id="view-whiteboard">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem; flex-wrap: wrap; gap: 0.5rem;">
           <h2 style="color: #00f2fe;" data-i18n="wbTitle">✨ Surface Intelligente — Tableau Blanc Tactile</h2>
           <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
             <select class="select-custom" id="wb-bg-select">
@@ -297,6 +297,42 @@
             <button type="button" class="btn-app btn-app-ghost" id="btn-lock-layer" data-i18n="btnLockLayer">🔒 Verrouiller Calque Prof</button>
             <button type="button" class="btn-app btn-app-primary" id="btn-wb-save" data-i18n="btnWbSave">💾 Exporter PNG</button>
           </div>
+        </div>
+
+        <!-- Annotation & Drawing Toolbar for Surface Intelligente -->
+        <div class="annotation-toolbar" style="margin-bottom: 0.8rem;">
+          <strong style="color: #9fb0cf; font-size: 0.82rem; margin-right: 0.4rem;" data-i18n="toolAnnotation">OUTILS SURFACE :</strong>
+          <button type="button" class="tool-chip active" id="wb-tool-pen" data-i18n="toolPen">✏️ STYLO</button>
+          <button type="button" class="tool-chip" id="wb-tool-highlighter" data-i18n="toolHighlighter">🖍️ SURLIGNEUR</button>
+          <button type="button" class="tool-chip" id="wb-tool-eraser" data-i18n="toolEraser">❌ GOMME</button>
+
+          <select class="select-custom" id="wb-shape-select" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; margin-inline: 0.4rem;">
+            <option value="none" data-i18n="shapeDraw">📐 FORMES ▾</option>
+            <option value="line" data-i18n="shapeLine">📏 Ligne Droite</option>
+            <option value="circle" data-i18n="shapeCircle">⭕ Cercle</option>
+            <option value="rect" data-i18n="shapeRect">⬛ Rectangle</option>
+            <option value="triangle" data-i18n="shapeTriangle">🔺 Triangle</option>
+            <option value="arrow" data-i18n="shapeArrow">➔ Flèche</option>
+          </select>
+
+          <div class="color-dots-picker" style="margin-inline: 0.5rem;">
+            <span class="color-dot active" data-color="#00f2fe" style="background: #00f2fe;"></span>
+            <span class="color-dot" data-color="#1a73e8" style="background: #1a73e8;"></span>
+            <span class="color-dot" data-color="#ff9800" style="background: #ff9800;"></span>
+            <span class="color-dot" data-color="#f44336" style="background: #f44336;"></span>
+            <span class="color-dot" data-color="#4caf50" style="background: #4caf50;"></span>
+            <span class="color-dot" data-color="#ffffff" style="background: #ffffff; border: 1px solid #ccc;"></span>
+            <span class="color-dot" data-color="#000000" style="background: #000000; border: 1px solid #666;"></span>
+            <input type="color" id="wb-custom-color-picker" value="#00f2fe" style="width: 24px; height: 24px; border: none; background: transparent; cursor: pointer; vertical-align: middle;">
+          </div>
+
+          <div style="display: inline-flex; align-items: center; gap: 0.3rem; margin-inline: 0.4rem;">
+            <span style="font-size: 0.78rem; color: #9fb0cf;">Épaisseur :</span>
+            <input type="range" id="wb-line-width" min="1" max="30" value="4" style="width: 80px; vertical-align: middle;">
+          </div>
+
+          <button type="button" class="btn-app btn-app-ghost" id="btn-wb-undo" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;" data-i18n="btnDrawUndo">↩ Annuler</button>
+          <button type="button" class="btn-app btn-app-ghost" id="btn-wb-clear" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;" data-i18n="btnDrawClear">🗑️ Effacer</button>
         </div>
 
         <div style="position: relative; width: 100%; height: 520px; background: #080d1a; border: 2px solid rgba(0,242,254,0.3); border-radius: 14px; overflow: hidden;" id="wb-canvas-container">
