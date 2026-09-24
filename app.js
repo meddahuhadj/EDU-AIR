@@ -2159,13 +2159,409 @@
       });
     }
 
-    // --- PiP WebCam Video Initialization ---
+    // --- Hand Tracking & Air Gesture Detection Engine ---
     const pipVideo = $("#pip-webcam-video");
+    const pipCanvas = $("#pip-hand-canvas");
+    const pipStatusTag = $("#pip-status-tag") || $(".pip-status-tag");
+    const txtCamStatus = $("#txt-cam-status");
+    const pillModeHand = $("#pill-mode-hand");
+    const airPointer = $("#air-pointer-cursor");
+    const airCursorLabel = $("#air-cursor-label");
+
+    let handTrackerActive = true;
+    let currentGesture = "NONE";
+    let isPinching = false;
+    let smoothedX = window.innerWidth / 2;
+    let smoothedY = window.innerHeight / 2;
+    let lastGestureTime = 0;
+    let handsEngine = null;
+
+    // MediaPipe Hand connections (pairs of landmark indices)
+    const HAND_CONNECTIONS = [
+      [0, 1], [1, 2], [2, 3], [3, 4],           // Thumb
+      [0, 5], [5, 6], [6, 7], [7, 8],           // Index
+      [5, 9], [9, 10], [10, 11], [11, 12],      // Middle
+      [9, 13], [13, 14], [14, 15], [15, 16],    // Ring
+      [13, 17], [17, 18], [18, 19], [19, 20],   // Pinky
+      [0, 17]                                   // Palm base
+    ];
+
+    function drawHandSkeleton(ctx, landmarks, width, height) {
+      if (!ctx) return;
+      ctx.clearRect(0, 0, width, height);
+
+      // 1. Draw connecting bones
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = "#00f2fe";
+      ctx.shadowColor = "#00f2fe";
+      ctx.shadowBlur = 6;
+
+      HAND_CONNECTIONS.forEach(([i, j]) => {
+        const p1 = landmarks[i];
+        const p2 = landmarks[j];
+        if (p1 && p2) {
+          ctx.beginPath();
+          ctx.moveTo(p1.x * width, p1.y * height);
+          ctx.lineTo(p2.x * width, p2.y * height);
+          ctx.stroke();
+        }
+      });
+
+      // 2. Draw glowing joints
+      landmarks.forEach((lm, idx) => {
+        const px = lm.x * width;
+        const py = lm.y * height;
+        ctx.beginPath();
+        if (idx === 8) {
+          // Index tip: cyan target
+          ctx.arc(px, py, 6, 0, 2 * Math.PI);
+          ctx.fillStyle = "#00f2fe";
+          ctx.shadowColor = "#00f2fe";
+          ctx.shadowBlur = 10;
+        } else if (idx === 4) {
+          // Thumb tip: golden tip
+          ctx.arc(px, py, 5, 0, 2 * Math.PI);
+          ctx.fillStyle = "#ffd166";
+          ctx.shadowColor = "#ffd166";
+          ctx.shadowBlur = 8;
+        } else {
+          ctx.arc(px, py, 3.5, 0, 2 * Math.PI);
+          ctx.fillStyle = "#3ddc97";
+          ctx.shadowBlur = 4;
+        }
+        ctx.fill();
+      });
+    }
+
+    function classifyHandGesture(lm) {
+      // Finger heights check (lm[8] is index tip, lm[6] is index PIP joint)
+      const indexUp = lm[8].y < lm[6].y;
+      const middleUp = lm[12].y < lm[10].y;
+      const ringUp = lm[16].y < lm[14].y;
+      const pinkyUp = lm[20].y < lm[18].y;
+
+      // Distance between index tip (#8) and thumb tip (#4)
+      const pinchDist = Math.hypot(lm[8].x - lm[4].x, lm[8].y - lm[4].y);
+      const pinchActive = pinchDist < 0.08;
+
+      if (pinchActive) {
+        return { name: "PINCH", label: "🎯 Pincement (Clic / Dessin)", code: "🤏 Pincement" };
+      }
+      if (indexUp && !middleUp && !ringUp && !pinkyUp) {
+        return { name: "POINT", label: "☝️ Pointeur Air Actif (Index Pointé)", code: "☝️ Pointeur Air" };
+      }
+      if (indexUp && middleUp && !ringUp && !pinkyUp) {
+        return { name: "PEACE", label: "✌️ Geste Diaporama (Slide Suivante)", code: "✌️ Slide Suivante" };
+      }
+      if (indexUp && middleUp && ringUp && pinkyUp) {
+        return { name: "PALM", label: "🖐️ Paume Ouverte (Navigation Surface)", code: "🖐️ Paume Ouverte" };
+      }
+      if (!indexUp && !middleUp && !ringUp && !pinkyUp) {
+        return { name: "FIST", label: "✊ Poing Fermé (Effacer / Pause)", code: "✊ Poing Fermé" };
+      }
+      if (lm[4].y < lm[2].y && !indexUp && !middleUp && !ringUp && !pinkyUp) {
+        return { name: "THUMBS_UP", label: "👍 Pouce Levé (Confirmation)", code: "👍 Valider" };
+      }
+
+      return { name: "GESTURE", label: "✋ Main Détectée — Contrôle Actif", code: "✋ Main Détectée" };
+    }
+
+    function handleAirGesturesInteraction(x, y, gestureName) {
+      const now = Date.now();
+
+      // 1. Drawing / Annotation on Whiteboard & Air Draw canvases
+      if (isPinching) {
+        const activeView = $(".module-view.active-view");
+        if (activeView) {
+          const canvas = activeView.querySelector("canvas");
+          if (canvas) {
+            const rect = canvas.getBoundingClientRect();
+            if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+              const canvasX = (x - rect.left) * (canvas.width / rect.width);
+              const canvasY = (y - rect.top) * (canvas.height / rect.height);
+              const ctx = canvas.getContext("2d");
+              if (ctx) {
+                ctx.lineWidth = 4;
+                ctx.lineCap = "round";
+                ctx.strokeStyle = "#00f2fe";
+                if (!canvas._isAirDrawing) {
+                  canvas._isAirDrawing = true;
+                  ctx.beginPath();
+                  ctx.moveTo(canvasX, canvasY);
+                } else {
+                  ctx.lineTo(canvasX, canvasY);
+                  ctx.stroke();
+                }
+              }
+            }
+          }
+        }
+      } else {
+        $$("canvas").forEach(c => { c._isAirDrawing = false; });
+      }
+
+      // 2. Gesture Trigger Actions with cooldown
+      if (now - lastGestureTime > 1200) {
+        if (gestureName === "PEACE") {
+          const btnNext = $("#btn-pres-next");
+          if (btnNext) {
+            btnNext.click();
+            lastGestureTime = now;
+          }
+        } else if (gestureName === "FIST") {
+          const btnClear = $("#btn-wb-clear") || $("#btn-draw-clear");
+          if (btnClear) {
+            btnClear.click();
+            lastGestureTime = now;
+          }
+        }
+      }
+    }
+
+    function processHandLandmarks(landmarks) {
+      if (!landmarks || landmarks.length === 0) {
+        onNoHandDetected();
+        return;
+      }
+
+      const lm = landmarks[0];
+      if (pipCanvas) {
+        if (pipCanvas.width !== pipCanvas.clientWidth || pipCanvas.height !== pipCanvas.clientHeight) {
+          pipCanvas.width = pipCanvas.clientWidth || 180;
+          pipCanvas.height = pipCanvas.clientHeight || 130;
+        }
+        const ctx = pipCanvas.getContext("2d");
+        drawHandSkeleton(ctx, lm, pipCanvas.width, pipCanvas.height);
+      }
+
+      // Calculate screen position from Index tip (#8)
+      // Mirroring adjustment (camera scaleX(-1))
+      const rawX = (1 - lm[8].x) * window.innerWidth;
+      const rawY = lm[8].y * window.innerHeight;
+
+      smoothedX += (rawX - smoothedX) * 0.35;
+      smoothedY += (rawY - smoothedY) * 0.35;
+
+      const gest = classifyHandGesture(lm);
+      currentGesture = gest.name;
+      isPinching = gest.name === "PINCH";
+
+      // Position Air Pointer Cursor
+      if (airPointer) {
+        airPointer.style.transform = `translate3d(${smoothedX}px, ${smoothedY}px, 0)`;
+        airPointer.classList.add("active");
+        airPointer.classList.toggle("pinching", isPinching);
+        airPointer.classList.toggle("palm", gest.name === "PALM");
+        airPointer.classList.toggle("peace", gest.name === "PEACE");
+        if (airCursorLabel) {
+          airCursorLabel.textContent = gest.code;
+        }
+      }
+
+      // Update Header Badges
+      if (txtCamStatus) {
+        txtCamStatus.textContent = gest.label;
+      }
+      if (pipStatusTag) {
+        pipStatusTag.textContent = `🟢 MAIN : ${gest.code}`;
+        pipStatusTag.style.color = "#3ddc97";
+      }
+      if (pillModeHand) {
+        pillModeHand.classList.add("active");
+        pillModeHand.style.borderColor = "#00f2fe";
+      }
+
+      handleAirGesturesInteraction(smoothedX, smoothedY, gest.name);
+    }
+
+    function onNoHandDetected() {
+      if (pipCanvas) {
+        const ctx = pipCanvas.getContext("2d");
+        ctx.clearRect(0, 0, pipCanvas.width, pipCanvas.height);
+      }
+      if (airPointer) {
+        airPointer.classList.remove("active");
+      }
+      if (txtCamStatus) {
+        txtCamStatus.textContent = "Montrez votre main devant la caméra";
+      }
+      if (pipStatusTag) {
+        pipStatusTag.textContent = "🟢 AI HAND ON";
+        pipStatusTag.style.color = "#3ddc97";
+      }
+    }
+
+    // Fallback skin/motion hand tracker
+    const fallbackCanvas = document.createElement("canvas");
+    fallbackCanvas.width = 160;
+    fallbackCanvas.height = 120;
+    const fallbackCtx = fallbackCanvas.getContext("2d", { willReadFrequently: true });
+
+    function processFallbackHandTracker(videoEl) {
+      if (!videoEl || videoEl.readyState < 2 || !fallbackCtx) return;
+      fallbackCtx.drawImage(videoEl, 0, 0, 160, 120);
+      const frame = fallbackCtx.getImageData(0, 0, 160, 120);
+      const data = frame.data;
+
+      let sumX = 0, sumY = 0, count = 0;
+
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i], g = data[i+1], b = data[i+2];
+        const isSkin = (r > 60 && g > 40 && b > 20 && r > g && r > b && (Math.max(r, g, b) - Math.min(r, g, b) > 15));
+        if (isSkin) {
+          const pixelIndex = i / 4;
+          const px = pixelIndex % 160;
+          const py = Math.floor(pixelIndex / 160);
+          sumX += px;
+          sumY += py;
+          count++;
+        }
+      }
+
+      if (count > 80) {
+        const avgX = sumX / count;
+        const avgY = sumY / count;
+        const normX = avgX / 160;
+        const normY = avgY / 120;
+
+        if (pipCanvas) {
+          if (pipCanvas.width !== pipCanvas.clientWidth || pipCanvas.height !== pipCanvas.clientHeight) {
+            pipCanvas.width = pipCanvas.clientWidth || 180;
+            pipCanvas.height = pipCanvas.clientHeight || 130;
+          }
+          const ctx = pipCanvas.getContext("2d");
+          ctx.clearRect(0, 0, pipCanvas.width, pipCanvas.height);
+          ctx.beginPath();
+          ctx.arc(normX * pipCanvas.width, normY * pipCanvas.height, 14, 0, 2 * Math.PI);
+          ctx.fillStyle = "rgba(0, 242, 254, 0.4)";
+          ctx.strokeStyle = "#00f2fe";
+          ctx.lineWidth = 2;
+          ctx.fill();
+          ctx.stroke();
+        }
+
+        const rawX = (1 - normX) * window.innerWidth;
+        const rawY = normY * window.innerHeight;
+
+        smoothedX += (rawX - smoothedX) * 0.25;
+        smoothedY += (rawY - smoothedY) * 0.25;
+
+        if (airPointer) {
+          airPointer.style.transform = `translate3d(${smoothedX}px, ${smoothedY}px, 0)`;
+          airPointer.classList.add("active");
+          if (airCursorLabel) airCursorLabel.textContent = "✋ Main Détectée";
+        }
+        if (txtCamStatus) txtCamStatus.textContent = "✨ Main détectée — Pointeur Air Actif";
+        if (pipStatusTag) {
+          pipStatusTag.textContent = "🟢 MAIN DÉTECTÉE";
+          pipStatusTag.style.color = "#3ddc97";
+        }
+      } else {
+        if (!handsEngine) onNoHandDetected();
+      }
+    }
+
+    // MediaPipe Hands Initialization with dynamic script loading fallback
+    function loadMediaPipeScripts(callback) {
+      if (typeof window.Hands !== "undefined") {
+        if (callback) callback();
+        return;
+      }
+      console.log("📦 Chargement dynamique des scripts MediaPipe...");
+      const s1 = document.createElement("script");
+      s1.src = "https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js";
+      s1.crossOrigin = "anonymous";
+      s1.onload = () => {
+        const s2 = document.createElement("script");
+        s2.src = "https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js";
+        s2.crossOrigin = "anonymous";
+        s2.onload = () => {
+          console.log("✅ Scripts MediaPipe chargés avec succès.");
+          if (callback) callback();
+        };
+        document.head.appendChild(s2);
+      };
+      document.head.appendChild(s1);
+    }
+
+    function initMediaPipeHands() {
+      if (typeof window.Hands !== "undefined") {
+        try {
+          handsEngine = new window.Hands({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+          });
+          handsEngine.setOptions({
+            maxNumHands: 1,
+            modelComplexity: 1,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+          });
+          handsEngine.onResults((results) => {
+            if (results && results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+              processHandLandmarks(results.multiHandLandmarks);
+            } else {
+              onNoHandDetected();
+            }
+          });
+          console.log("✅ Moteur MediaPipe Hands initialisé.");
+          return true;
+        } catch (e) {
+          console.warn("MediaPipe Hands init warning:", e);
+        }
+      } else {
+        loadMediaPipeScripts(() => { initMediaPipeHands(); });
+      }
+      return false;
+    }
+
+    // Initialize Camera Stream & Detection Loop
     if (pipVideo && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
       navigator.mediaDevices.getUserMedia({ video: true })
-        .then((stream) => { pipVideo.srcObject = stream; })
-        .catch((err) => { console.log("Webcam notice:", err.message); });
+        .then((stream) => {
+          pipVideo.srcObject = stream;
+          pipVideo.onloadedmetadata = () => {
+            pipVideo.play();
+            initMediaPipeHands();
+
+            let processingFrame = false;
+            async function videoProcessLoop() {
+              if (pipVideo && pipVideo.readyState >= 2 && handTrackerActive) {
+                if (handsEngine && !processingFrame) {
+                  processingFrame = true;
+                  try {
+                    await handsEngine.send({ image: pipVideo });
+                  } catch (err) {
+                    processFallbackHandTracker(pipVideo);
+                  }
+                  processingFrame = false;
+                } else if (!handsEngine) {
+                  processFallbackHandTracker(pipVideo);
+                }
+              }
+              requestAnimationFrame(videoProcessLoop);
+            }
+            requestAnimationFrame(videoProcessLoop);
+          };
+        })
+        .catch((err) => {
+          console.log("Webcam notice:", err.message);
+          if (txtCamStatus) txtCamStatus.textContent = "📷 Activez la caméra pour le contrôle gestuel";
+        });
     }
+
+    // Allow Manual Pointer Simulation on Canvas when moving mouse with Shift key pressed
+    document.addEventListener("mousemove", (e) => {
+      if (e.shiftKey) {
+        smoothedX = e.clientX;
+        smoothedY = e.clientY;
+        if (airPointer) {
+          airPointer.style.transform = `translate3d(${smoothedX}px, ${smoothedY}px, 0)`;
+          airPointer.classList.add("active");
+          if (airCursorLabel) airCursorLabel.textContent = "☝️ Test Pointeur";
+        }
+        if (txtCamStatus) txtCamStatus.textContent = "✨ Mode Test — Pointeur Air Actif";
+      }
+    });
 
     console.log("EDU-AIR Smart Surface App Fully Initialized.");
   });
