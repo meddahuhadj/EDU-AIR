@@ -789,17 +789,30 @@
       <div class="module-view" id="view-labo">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap;">
           <h2 style="color: #00f2fe;" data-i18n="labTitle">🔬 Labo Air — Simulations STEM</h2>
-          <select class="select-custom" id="lab-sim-select">
-            <option value="ohm" data-i18n="labSimOhm">⚡ Électricité (Loi d'Ohm U = R × I)</option>
-            <option value="genetics" data-i18n="labSimGenetics">🧬 Génétique (Tableau de Punnett)</option>
-            <option value="ph" data-i18n="labSimPh">🧪 Chimie (Titrage Acide-Base & pH)</option>
-            <option value="em" data-i18n="labSimEm">🧲 Électromagnétisme (Champ & Boussole)</option>
-          </select>
+          <div style="display: flex; gap: .7rem; align-items: center; flex-wrap: wrap;">
+            <select class="select-custom" id="lab-sim-select">
+              <option value="ohm" data-i18n="labSimOhm">⚡ Électricité (Loi d'Ohm U = R × I)</option>
+              <option value="genetics" data-i18n="labSimGenetics">🧬 Génétique (Tableau de Punnett)</option>
+              <option value="ph" data-i18n="labSimPh">🧪 Chimie (Titrage Acide-Base & pH)</option>
+              <option value="em" data-i18n="labSimEm">🧲 Électromagnétisme (Champ & Boussole)</option>
+              <option value="pendulum" data-i18n="labSimPendulum">🧵 Pendule</option>
+              <option value="waves" data-i18n="labSimWaves">🌊 Ondes</option>
+              <option value="optics" data-i18n="labSimOptics">🔍 Optique</option>
+              <option value="planets" data-i18n="labSimPlanets">🪐 Planètes</option>
+            </select>
+            <button id="lab-report-btn" class="select-custom" style="font-weight: 800; letter-spacing: .5px;">🏆 AI LAB REPORT</button>
+          </div>
         </div>
 
         <div style="background: rgba(10,20,38,0.8); border: 1px solid rgba(126,195,255,0.2); padding: 1.5rem; border-radius: 14px;">
           <h3 style="color: #fff; margin-bottom: 1rem;" id="lab-sim-title" data-i18n="labTitleOhm">⚡ Simulation Circuit Électrique (Loi d'Ohm U = R × I)</h3>
           <div id="lab-sim-body"></div>
+        </div>
+
+        <div id="lab-report" style="display: none; margin-top: 1rem; background: rgba(10,20,38,0.85); border: 1px solid rgba(255,209,102,0.35); padding: 1.2rem 1.4rem; border-radius: 14px;">
+          <h3 style="color: #ffd166; margin-bottom: .3rem;" id="lab-report-title">🏆 AI LAB REPORT</h3>
+          <div style="color: #5f7ea0; font-size: .78rem; margin-bottom: 1rem;" data-i18n="labReportAfter">Rapport auto-généré par EDU-AIR à partir de vos paramètres et mesures — Hypothèse → Expérience → Observation → Résultat → Conclusion.</div>
+          <div id="lab-report-body" style="display: flex; flex-direction: column; gap: .75rem;"></div>
         </div>
       </div>
 

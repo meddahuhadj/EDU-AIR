@@ -1522,7 +1522,11 @@
       ohm: { html: labOhmHTML, bind: labBindOhm },
       genetics: { html: labGenHTML, bind: labBindGen },
       ph: { html: labPhHTML, bind: labBindPh },
-      em: { html: labEmHTML, bind: labBindEm }
+      em: { html: labEmHTML, bind: labBindEm },
+      pendulum: { html: labPenHTML, bind: labPenBind },
+      waves: { html: labWaveHTML, bind: labWaveBind },
+      optics: { html: labOptHTML, bind: labOptBind },
+      planets: { html: labPlanHTML, bind: labPlanBind }
     };
 
     function labGcd(a, b) { return b ? labGcd(b, a % b) : Math.abs(a); }
@@ -1545,6 +1549,10 @@
           titleEl.textContent = labSelect.options[labSelect.selectedIndex].text;
         }
       }
+      const rep = $("#lab-report");
+      if (rep) rep.style.display = "none";
+      const rBtn = $("#lab-report-btn");
+      if (rBtn) rBtn.style.opacity = "1";
       if (!silent && labSelect && labSelect.options[labSelect.selectedIndex]) {
         visionShowToast("🧪 " + labSelect.options[labSelect.selectedIndex].text);
       }
@@ -1941,6 +1949,816 @@
       }
       setDir(I ? I.value : 3);
       labEmLoop();
+    }
+
+    // --- Shared helpers for RUN EXPERIMENT sims ---
+    function labSet(id, text) { const el = document.getElementById(id); if (el) el.textContent = text; }
+    function labNum(x, d) {
+      try {
+        const lang = localStorage.getItem("edu_air_lang") || "fr";
+        return Number(x).toLocaleString(lang, { minimumFractionDigits: d, maximumFractionDigits: d });
+      } catch (e) { return Number(x).toFixed(d); }
+    }
+    function labFill(tpl, vars) {
+      return tpl.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k]) : m));
+    }
+    function labRunBtn(id, state) {
+      const b = document.getElementById(id);
+      if (b) b.textContent = state ? visionT("labStop") : visionT("labRun");
+    }
+    function labStopActive() {
+      labStopRaf();
+      ["pen", "wave", "opt", "plan"].forEach(k => {
+        const st = labState[k];
+        if (st && st.running) st.running = false;
+      });
+      ["pen", "wave", "opt", "plan"].forEach(k => labRunBtn(k + "-run", false));
+    }
+
+    // --- Simulation 5 : Pendule (RUN EXPERIMENT) ---
+    const labState = {
+      pen: { running: false, time: 0, th: 0, om: 0, lastSign: 0, zero: 0, hist: [], t1Text: null },
+      wave: { running: false, time: 0, lastSign: 0, cycles: 0, hist: [], t1Text: null },
+      opt: { running: false, reveal: 0 },
+      plan: { running: false, x: 0, y: 0, vx: 0, vy: 0, t: 0, trail: [], totalA: 0, prevX: 0, prevY: 0, t1Text: null }
+    };
+
+    function labPenHTML() {
+      return `<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:.8rem; margin-bottom:.8rem;">
+        <label style="color:#00f2fe; font-size:.78rem; font-weight:700;">${visionT("labPenLen")}<br><input type="range" id="pen-L" min="0.2" max="2" step="0.05" value="1" style="width:100%;"></label>
+        <label style="color:#ffb84d; font-size:.78rem; font-weight:700;">${visionT("labPenMass")}<br><input type="range" id="pen-m" min="50" max="500" step="10" value="150" style="width:100%;"></label>
+        <label style="color:#ffd166; font-size:.78rem; font-weight:700;">${visionT("labPenAng")}<br><input type="range" id="pen-a" min="5" max="75" step="5" value="30" style="width:100%;"></label>
+        <label style="color:#3ddc97; font-size:.78rem; font-weight:700;">${visionT("labPenGrav")}<br>
+          <select id="pen-g" class="select-custom" style="width:100%; margin-top:.3rem;">
+            <option value="1.62">🌙 Lune 1.62</option>
+            <option value="3.71">🛸 Mars 3.71</option>
+            <option value="9.81" selected>🌍 Terre 9.81</option>
+            <option value="24.79">🔥 Jupiter 24.79</option>
+          </select></label>
+      </div>
+      <div style="margin-bottom:.8rem;"><button id="pen-run" class="select-custom" style="font-weight:800; letter-spacing:1px;">${visionT("labRun")}</button></div>
+      <div style="display:flex; gap:1rem; flex-wrap:wrap; align-items:flex-start;">
+        <canvas id="pen-anim" width="520" height="360" style="flex:1; min-width:300px; border:1px solid rgba(126,195,255,0.25); border-radius:10px; background:#060912;"></canvas>
+        <div style="width:250px; min-width:215px; display:flex; flex-direction:column; gap:.5rem;">
+          <div style="display:flex; justify-content:space-between; background:rgba(10,20,38,0.8); border:1px solid rgba(126,195,255,0.2); padding:.55rem .8rem; border-radius:10px;"><span style="color:#9fb0cf; font-size:.82rem;">${visionT("labPenPeriod")} (${visionT("labTheory")})</span><b id="pen-t0" style="color:#00f2fe;">—</b></div>
+          <div style="display:flex; justify-content:space-between; background:rgba(10,20,38,0.8); border:1px solid rgba(126,195,255,0.2); padding:.55rem .8rem; border-radius:10px;"><span style="color:#9fb0cf; font-size:.82rem;">${visionT("labPenPeriod")} (${visionT("labMeasured")})</span><b id="pen-t1" style="color:#ffd166;">—</b></div>
+          <div style="display:flex; justify-content:space-between; background:rgba(10,20,38,0.8); border:1px solid rgba(126,195,255,0.2); padding:.55rem .8rem; border-radius:10px;"><span style="color:#9fb0cf; font-size:.82rem;">${visionT("labPenFreq")}</span><b id="pen-f" style="color:#3ddc97;">—</b></div>
+          <div style="display:flex; justify-content:space-between; background:rgba(10,20,38,0.8); border:1px solid rgba(126,195,255,0.2); padding:.55rem .8rem; border-radius:10px;"><span style="color:#9fb0cf; font-size:.82rem;">${visionT("labPenMaxV")}</span><b id="pen-v" style="color:#ffb84d;">—</b></div>
+          <div style="display:flex; justify-content:space-between; background:rgba(10,20,38,0.8); border:1px solid rgba(126,195,255,0.2); padding:.55rem .8rem; border-radius:10px;"><span style="color:#9fb0cf; font-size:.82rem;">${visionT("labPenN")}</span><b id="pen-n" style="color:#fff;">0</b></div>
+        </div>
+      </div>
+      <canvas id="pen-graph" width="560" height="150" style="width:100%; margin-top:.6rem; border:1px solid rgba(126,195,255,0.25); border-radius:10px; background:#060912;"></canvas>
+      <div style="margin-top:.6rem; display:flex; gap:1rem; flex-wrap:wrap;">
+        <span style="background:rgba(0,242,254,0.12); padding:.45rem .8rem; border-radius:9px; color:#00f2fe; font-weight:700; font-size:.85rem;">${visionT("labFormula")} ${visionT("labPenFormula")}</span>
+        <span style="color:#9fb0cf; font-size:.82rem; flex:1; min-width:220px;">${visionT("labPenConcl")}</span>
+      </div>`;
+    }
+
+    function labPenValues() {
+      return {
+        L: parseFloat(($("#pen-L") || { value: 1 }).value) || 1,
+        m: parseFloat(($("#pen-m") || { value: 150 }).value) || 150,
+        a: parseFloat(($("#pen-a") || { value: 30 }).value) || 30,
+        g: parseFloat(($("#pen-g") || { value: 9.81 }).value) || 9.81
+      };
+    }
+
+    function labPenDraw() {
+      const cv = $("#pen-anim");
+      if (!cv) return;
+      const p = labPenValues();
+      const W = cv.width, H = cv.height;
+      const g = cv.getContext("2d");
+      const cx = W / 2, top = 38;
+      const pix = Math.min((H - 80) / p.L, 150);
+      const th = labState.pen.th;
+      const bx = cx + Math.sin(th) * pix * p.L;
+      const by = top + Math.cos(th) * pix * p.L;
+      g.clearRect(0, 0, W, H);
+      g.fillStyle = "#060912"; g.fillRect(0, 0, W, H);
+      g.strokeStyle = "#9fb0cf"; g.lineWidth = 10;
+      g.beginPath(); g.moveTo(cx - 44, top - 8); g.lineTo(cx + 44, top - 8); g.stroke();
+      g.beginPath(); g.moveTo(cx, top - 8); g.lineTo(cx, top + 12); g.stroke();
+      g.setLineDash([4, 5]); g.strokeStyle = "rgba(126,195,255,0.35)"; g.lineWidth = 1;
+      g.beginPath(); g.moveTo(cx, top); g.lineTo(cx, top + pix * p.L); g.stroke(); g.setLineDash([]);
+      g.strokeStyle = "#ffd166"; g.lineWidth = 2;
+      const ra = Math.min(pix * p.L * 0.3, 64);
+      g.beginPath(); g.arc(cx, top, ra, -Math.PI / 2, -Math.PI / 2 + th, th > 0); g.stroke();
+      g.strokeStyle = "#fff"; g.lineWidth = 2;
+      g.beginPath(); g.moveTo(cx, top); g.lineTo(bx, by); g.stroke();
+      const rad = Math.max(9, Math.min(22, 6 + p.m / 34));
+      g.beginPath(); g.arc(bx, by, rad, 0, Math.PI * 2);
+      g.fillStyle = "#ffb84d"; g.fill();
+      g.strokeStyle = "rgba(255,255,255,0.4)"; g.lineWidth = 1.5; g.stroke();
+      g.fillStyle = "#9fb0cf"; g.font = "12px Segoe UI, sans-serif"; g.textAlign = "center"; g.textBaseline = "alphabetic";
+      g.fillText("θ = " + (th * 180 / Math.PI).toFixed(1) + "°  ·  m = " + p.m + " g", cx, H - 12);
+    }
+
+    function labPenGraph() {
+      const cv = $("#pen-graph");
+      if (!cv) return;
+      const g = cv.getContext("2d");
+      const W = cv.width, H = cv.height;
+      g.clearRect(0, 0, W, H);
+      g.fillStyle = "#060912"; g.fillRect(0, 0, W, H);
+      const tMax = Math.max(labState.pen.time, 4);
+      const thMax = Math.max(labPenValues().a * Math.PI / 180, 0.2);
+      const X = (t) => 6 + (t / tMax) * (W - 12);
+      const Y = (th) => H / 2 - (th / (thMax * 1.2)) * (H - 20);
+      g.strokeStyle = "rgba(126,195,255,0.2)"; g.lineWidth = 1;
+      g.beginPath(); g.moveTo(0, H / 2); g.lineTo(W, H / 2); g.stroke();
+      g.strokeStyle = "#00f2fe"; g.lineWidth = 2;
+      g.beginPath();
+      const h = labState.pen.hist;
+      h.forEach((pt, i) => { const x = X(pt.t), y = Y(pt.th); if (i === 0) g.moveTo(x, y); else g.lineTo(x, y); });
+      g.stroke();
+      g.fillStyle = "#9fb0cf"; g.font = "11px Segoe UI, sans-serif"; g.textAlign = "left";
+      g.fillText("θ(t)", 8, 14);
+    }
+
+    function labPenUpdate() {
+      const p = labPenValues();
+      const t0 = 2 * Math.PI * Math.sqrt(p.L / p.g);
+      const t0b = t0 * (1 + (p.a * p.a) / 3600);
+      const vmax = Math.sqrt(2 * p.g * p.L * (1 - Math.cos(p.a * Math.PI / 180)));
+      labSet("pen-t0", t0.toFixed(3) + " s" + (p.a < 20 ? "" : "  (~" + t0b.toFixed(3) + " s)"));
+      labSet("pen-f", (1 / t0).toFixed(2) + " Hz");
+      labSet("pen-v", vmax.toFixed(2) + " m/s");
+      if (!labState.pen.running) { labState.pen.th = p.a * Math.PI / 180; }
+      labPenDraw();
+      labPenGraph();
+    }
+
+    function labPenLoop() {
+      if (labActiveKind !== "pendulum" || !labState.pen.running) { labRaf = null; return; }
+      const p = labPenValues();
+      const dt = 1 / 360;
+      for (let i = 0; i < 6; i++) {
+        const om = labState.pen.om + (-(p.g / p.L) * Math.sin(labState.pen.th)) * dt;
+        labState.pen.th += om * dt;
+        labState.pen.om = om;
+        labState.pen.time += dt;
+        const s = labState.pen.th;
+        const sign = s === 0 ? 0 : s > 0 ? 1 : -1;
+        if (sign !== 0 && labState.pen.lastSign !== 0 && sign !== labState.pen.lastSign) labState.pen.zero++;
+        if (sign !== 0) labState.pen.lastSign = sign;
+        labState.pen.hist.push({ t: labState.pen.time, th: s });
+        if (labState.pen.hist.length > 3600) labState.pen.hist.shift();
+      }
+      labPenDraw();
+      labPenGraph();
+      const z = labState.pen.zero;
+      if (z >= 2) {
+        const per = 2 * labState.pen.time / z;
+        labState.pen.t1Text = parseFloat(per.toFixed(3));
+        labSet("pen-t1", per.toFixed(3) + " s");
+      }
+      labSet("pen-n", Math.floor(labState.pen.zero / 2) + "  (" + z + " passages)");
+      labRaf = requestAnimationFrame(labPenLoop);
+    }
+
+    function labPenBind() {
+      labState.pen.running = false;
+      labState.pen.t1Text = null;
+      const run = $("#pen-run");
+      if (!run) return;
+      run.addEventListener("click", () => {
+        labState.pen.running = !labState.pen.running;
+        if (labState.pen.running) {
+          labState.pen = Object.assign({}, labState.pen, { time: 0, th: labPenValues().a * Math.PI / 180, om: 0, zero: 0, lastSign: 0, hist: [] });
+          labSet("pen-t1", "—");
+          labPenLoop();
+        } else {
+          labStopRaf();
+        }
+        labRunBtn("pen-run", labState.pen.running);
+      });
+      ["#pen-L", "#pen-m", "#pen-a", "#pen-g"].forEach(sel => {
+        const el = $(sel);
+        if (el) el.addEventListener("input", () => {
+          if (labState.pen.running) { labState.pen.running = false; labRunBtn("pen-run", false); labStopRaf(); labSet("pen-t1", "—"); }
+          labPenUpdate();
+        });
+      });
+      labPenUpdate();
+    }
+
+    // --- Simulation 6 : Onde progressive (RUN EXPERIMENT) ---
+    function labWaveHTML() {
+      return `<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:.8rem; margin-bottom:.8rem;">
+        <label style="color:#ff5d5d; font-size:.78rem; font-weight:700;">${visionT("labWaveAmp")}<br><input type="range" id="wave-A" min="1" max="10" step="0.5" value="5" style="width:100%;"></label>
+        <label style="color:#00f2fe; font-size:.78rem; font-weight:700;">${visionT("labWaveFreq")}<br><input type="range" id="wave-f" min="0.5" max="5" step="0.1" value="1.5" style="width:100%;"></label>
+        <label style="color:#3ddc97; font-size:.78rem; font-weight:700;">${visionT("labWaveLambda")}<br><input type="range" id="wave-l" min="0.5" max="3" step="0.1" value="1.5" style="width:100%;"></label>
+      </div>
+      <div style="margin-bottom:.8rem;"><button id="wave-run" class="select-custom" style="font-weight:800; letter-spacing:1px;">${visionT("labRun")}</button></div>
+      <div style="display:flex; gap:1rem; flex-wrap:wrap; align-items:flex-start;">
+        <canvas id="wave-anim" width="560" height="220" style="flex:1; min-width:300px; border:1px solid rgba(126,195,255,0.25); border-radius:10px; background:#060912;"></canvas>
+        <div style="width:240px; min-width:205px; display:flex; flex-direction:column; gap:.5rem;">
+          <div style="display:flex; justify-content:space-between; background:rgba(10,20,38,0.8); border:1px solid rgba(126,195,255,0.2); padding:.55rem .8rem; border-radius:10px;"><span style="color:#9fb0cf; font-size:.82rem;">${visionT("labWaveSpeed")}</span><b id="wave-v" style="color:#00f2fe;">—</b></div>
+          <div style="display:flex; justify-content:space-between; background:rgba(10,20,38,0.8); border:1px solid rgba(126,195,255,0.2); padding:.55rem .8rem; border-radius:10px;"><span style="color:#9fb0cf; font-size:.82rem;">${visionT("labWavePeriod")} (${visionT("labTheory")})</span><b id="wave-t0" style="color:#00f2fe;">—</b></div>
+          <div style="display:flex; justify-content:space-between; background:rgba(10,20,38,0.8); border:1px solid rgba(126,195,255,0.2); padding:.55rem .8rem; border-radius:10px;"><span style="color:#9fb0cf; font-size:.82rem;">${visionT("labWavePeriod")} (${visionT("labMeasured")})</span><b id="wave-t1" style="color:#ffd166;">—</b></div>
+          <div style="display:flex; justify-content:space-between; background:rgba(10,20,38,0.8); border:1px solid rgba(126,195,255,0.2); padding:.55rem .8rem; border-radius:10px;"><span style="color:#9fb0cf; font-size:.82rem;">f</span><b id="wave-fv" style="color:#3ddc97;">—</b></div>
+          <div style="display:flex; justify-content:space-between; background:rgba(10,20,38,0.8); border:1px solid rgba(126,195,255,0.2); padding:.55rem .8rem; border-radius:10px;"><span style="color:#9fb0cf; font-size:.82rem;">${visionT("labWaveLambda")}</span><b id="wave-la" style="color:#ffb84d;">—</b></div>
+        </div>
+      </div>
+      <canvas id="wave-graph" width="560" height="140" style="width:100%; margin-top:.6rem; border:1px solid rgba(126,195,255,0.25); border-radius:10px; background:#060912;"></canvas>
+      <div style="margin-top:.6rem; display:flex; gap:1rem; flex-wrap:wrap;">
+        <span style="background:rgba(0,242,254,0.12); padding:.45rem .8rem; border-radius:9px; color:#00f2fe; font-weight:700; font-size:.85rem;">${visionT("labFormula")} ${visionT("labWaveFormula")}</span>
+        <span style="color:#9fb0cf; font-size:.82rem; flex:1; min-width:220px;">${visionT("labWaveConcl")}</span>
+      </div>`;
+    }
+
+    function labWaveValues() {
+      return {
+        A: parseFloat(($("#wave-A") || { value: 5 }).value) || 5,
+        f: parseFloat(($("#wave-f") || { value: 1.5 }).value) || 1.5,
+        la: parseFloat(($("#wave-l") || { value: 1.5 }).value) || 1.5
+      };
+    }
+
+    function labWaveDraw() {
+      const cv = $("#wave-anim");
+      if (!cv) return;
+      const v = labWaveValues();
+      const W = cv.width, H = cv.height;
+      const g = cv.getContext("2d");
+      const k = 2 * Math.PI / v.la;
+      const om = 2 * Math.PI * v.f;
+      const xMax = v.la * 2.2;
+      const px = W / xMax;
+      const Amp = ((H / 2 - 18) / 10) * v.A;
+      const cy = H / 2;
+      g.clearRect(0, 0, W, H);
+      g.fillStyle = "#060912"; g.fillRect(0, 0, W, H);
+      g.strokeStyle = "rgba(126,195,255,0.22)"; g.lineWidth = 1;
+      g.beginPath(); g.moveTo(0, cy); g.lineTo(W, cy); g.stroke();
+      for (let a = v.la / 2; a < xMax; a += v.la) {
+        g.strokeStyle = "rgba(61,220,151,0.25)";
+        g.beginPath(); g.moveTo(a * px, 0); g.lineTo(a * px, H); g.stroke();
+      }
+      g.strokeStyle = "#ff5d5d"; g.lineWidth = 2.5;
+      g.beginPath();
+      for (let x = 0; x <= W; x += 2) {
+        const m = x / px;
+        const y = cy - Amp * Math.sin(k * m - om * labState.wave.time);
+        if (x === 0) g.moveTo(x, y); else g.lineTo(x, y);
+      }
+      g.stroke();
+      const xm = W / 2;
+      const ym = cy - Amp * Math.sin(k * (xm / px) - om * labState.wave.time);
+      g.strokeStyle = "rgba(255,209,102,0.5)"; g.lineWidth = 1;
+      g.beginPath(); g.moveTo(xm, 0); g.lineTo(xm, H); g.stroke();
+      g.beginPath(); g.arc(xm, ym, 5, 0, Math.PI * 2);
+      g.fillStyle = "#ffd166"; g.fill();
+      const frontX = (((om * labState.wave.time + Math.PI / 2) / k) % xMax + xMax) % xMax;
+      g.beginPath(); g.arc(frontX * px, cy - Amp, 5, 0, Math.PI * 2);
+      g.fillStyle = "#3ddc97"; g.fill();
+      g.fillStyle = "#9fb0cf"; g.font = "11px Segoe UI, sans-serif"; g.textAlign = "left";
+      g.fillText("λ = " + v.la + " m", 8, 16);
+    }
+
+    function labWaveGraph() {
+      const cv = $("#wave-graph");
+      if (!cv) return;
+      const g = cv.getContext("2d");
+      const W = cv.width, H = cv.height;
+      g.clearRect(0, 0, W, H);
+      g.fillStyle = "#060912"; g.fillRect(0, 0, W, H);
+      const v = labWaveValues();
+      const tMax = Math.max(labState.wave.time, 4);
+      const AmpP = H / 2 - 16;
+      const X = (t) => 6 + (t / tMax) * (W - 12);
+      const Y = (y) => H / 2 - (y / 10) * AmpP;
+      g.strokeStyle = "rgba(126,195,255,0.2)"; g.lineWidth = 1;
+      g.beginPath(); g.moveTo(0, H / 2); g.lineTo(W, H / 2); g.stroke();
+      g.strokeStyle = "#3ddc97"; g.lineWidth = 2;
+      g.beginPath();
+      labState.wave.hist.forEach((pt, i) => { const x = X(pt.t), y = Y(pt.y); if (i === 0) g.moveTo(x, y); else g.lineTo(x, y); });
+      g.stroke();
+      g.fillStyle = "#9fb0cf"; g.font = "11px Segoe UI, sans-serif"; g.textAlign = "left";
+      g.fillText("y(point) en cm vs t", 8, 14);
+    }
+
+    function labWaveUpdate() {
+      const v = labWaveValues();
+      labSet("wave-v", (v.la * v.f).toFixed(2) + " m/s");
+      labSet("wave-t0", (1 / v.f).toFixed(2) + " s");
+      labSet("wave-fv", v.f.toFixed(1) + " Hz");
+      labSet("wave-la", v.la.toFixed(1) + " m");
+      if (!labState.wave.running) labWaveDraw();
+    }
+
+    function labWaveLoop() {
+      if (labActiveKind !== "waves" || !labState.wave.running) { labRaf = null; return; }
+      const dt = 1 / 60;
+      labState.wave.time += dt;
+      const v = labWaveValues();
+      const k = 2 * Math.PI / v.la;
+      const om = 2 * Math.PI * v.f;
+      const ym = Math.sin(k * v.la * 1.1 - om * labState.wave.time);
+      const sign = ym === 0 ? 0 : ym > 0 ? 1 : -1;
+      if (sign !== 0 && labState.wave.lastSign !== 0 && sign !== labState.wave.lastSign) labState.wave.cycles++;
+      if (sign !== 0) labState.wave.lastSign = sign;
+      labState.wave.hist.push({ t: labState.wave.time, y: v.A * Math.sin(om * labState.wave.time) });
+      if (labState.wave.hist.length > 3600) labState.wave.hist.shift();
+      if (labState.wave.cycles >= 2) {
+        const t1 = 2 * labState.wave.time / labState.wave.cycles;
+        labState.wave.t1Text = parseFloat(t1.toFixed(2));
+        labSet("wave-t1", t1.toFixed(2) + " s");
+      }
+      labWaveDraw();
+      labWaveGraph();
+      labRaf = requestAnimationFrame(labWaveLoop);
+    }
+
+    function labWaveBind() {
+      labState.wave.running = false;
+      labState.wave.t1Text = null;
+      const run = $("#wave-run");
+      if (!run) return;
+      run.addEventListener("click", () => {
+        labState.wave.running = !labState.wave.running;
+        if (labState.wave.running) {
+          labState.wave = Object.assign({}, labState.wave, { time: 0, cycles: 0, lastSign: 0, hist: [] });
+          labSet("wave-t1", "—");
+          labWaveLoop();
+        } else {
+          labStopRaf();
+        }
+        labRunBtn("wave-run", labState.wave.running);
+      });
+      ["#wave-A", "#wave-f", "#wave-l"].forEach(sel => {
+        const el = $(sel);
+        if (el) el.addEventListener("input", () => {
+          if (labState.wave.running) { labState.wave.running = false; labRunBtn("wave-run", false); labStopRaf(); labSet("wave-t1", "—"); }
+          labWaveUpdate();
+        });
+      });
+      labWaveUpdate();
+    }
+
+    // --- Simulation 7 : Lentille convergente (RUN EXPERIMENT) ---
+    function labOptHTML() {
+      return `<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:.8rem; margin-bottom:.8rem;">
+        <label style="color:#00f2fe; font-size:.78rem; font-weight:700;">${visionT("labOptFocal")}<br><input type="range" id="opt-f" min="5" max="30" step="1" value="10" style="width:100%;"></label>
+        <label style="color:#ffd166; font-size:.78rem; font-weight:700;">${visionT("labOptDist")}<br><input type="range" id="opt-d" min="6" max="100" step="1" value="25" style="width:100%;"></label>
+        <label style="color:#ff5d5d; font-size:.78rem; font-weight:700;">${visionT("labOptHeight")}<br><input type="range" id="opt-h" min="1" max="8" step="0.5" value="4" style="width:100%;"></label>
+      </div>
+      <div style="margin-bottom:.8rem;"><button id="opt-run" class="select-custom" style="font-weight:800; letter-spacing:1px;">${visionT("labRun")}</button></div>
+      <div style="display:flex; gap:1rem; flex-wrap:wrap; align-items:flex-start;">
+        <canvas id="opt-canvas" width="640" height="320" style="flex:1; min-width:300px; border:1px solid rgba(126,195,255,0.25); border-radius:10px; background:#060912;"></canvas>
+        <div style="width:240px; min-width:205px; display:flex; flex-direction:column; gap:.5rem;">
+          <div style="display:flex; justify-content:space-between; background:rgba(10,20,38,0.8); border:1px solid rgba(126,195,255,0.2); padding:.55rem .8rem; border-radius:10px;"><span style="color:#9fb0cf; font-size:.82rem;">${visionT("labOptImageDist")}</span><b id="opt-di" style="color:#00f2fe;">—</b></div>
+          <div style="display:flex; justify-content:space-between; background:rgba(10,20,38,0.8); border:1px solid rgba(126,195,255,0.2); padding:.55rem .8rem; border-radius:10px;"><span style="color:#9fb0cf; font-size:.82rem;">${visionT("labOptMag")}</span><b id="opt-m" style="color:#ffd166;">—</b></div>
+          <div style="display:flex; justify-content:space-between; background:rgba(10,20,38,0.8); border:1px solid rgba(126,195,255,0.2); padding:.55rem .8rem; border-radius:10px;"><span style="color:#9fb0cf; font-size:.82rem;">${visionT("labOptImageHeight")}</span><b id="opt-hi" style="color:#ff5d5d;">—</b></div>
+          <div style="display:flex; justify-content:space-between; background:rgba(10,20,38,0.8); border:1px solid rgba(126,195,255,0.2); padding:.55rem .8rem; border-radius:10px;"><span style="color:#9fb0cf; font-size:.82rem;">${visionT("labOptNature")}</span><b id="opt-nat" style="color:#3ddc97;">—</b></div>
+        </div>
+      </div>
+      <canvas id="opt-graph" width="560" height="200" style="width:100%; margin-top:.6rem; border:1px solid rgba(126,195,255,0.25); border-radius:10px; background:#060912;"></canvas>
+      <div style="margin-top:.6rem; display:flex; gap:1rem; flex-wrap:wrap;">
+        <span style="background:rgba(0,242,254,0.12); padding:.45rem .8rem; border-radius:9px; color:#00f2fe; font-weight:700; font-size:.85rem;">${visionT("labFormula")} ${visionT("labOptFormula")}</span>
+        <span style="color:#9fb0cf; font-size:.82rem; flex:1; min-width:220px;">${visionT("labOptConcl")}</span>
+      </div>`;
+    }
+
+    function labOptValues() {
+      const f = parseFloat(($("#opt-f") || { value: 10 }).value) || 10;
+      const d = parseFloat(($("#opt-d") || { value: 25 }).value) || 25;
+      const h = parseFloat(($("#opt-h") || { value: 4 }).value) || 4;
+      const di = Math.abs(d - f) < 1e-6 ? NaN : (d * f) / (d - f);
+      const m = -di / d;
+      const hi = m * h;
+      const real = di > 0;
+      const invert = hi < 0;
+      const mag = Math.abs(m) > 1.01;
+      return { f, d, h, di, m, hi, real, invert, mag };
+    }
+
+function labOptNat(v) {
+    const parts = [v.real ? visionT("labOptReal") : visionT("labOptVirtual"), v.invert ? visionT("labOptInverted") : visionT("labOptUpright"), v.mag ? visionT("labOptEnlarged") : visionT("labOptReduced")];
+    return parts.join(", ");
+  }
+
+  function labOptUpdate() {
+    const v = labOptValues();
+    labSet("opt-di", (isNaN(v.di) ? "∞" : (Math.round(v.di * 10) / 10).toFixed(1)) + " cm");
+    labSet("opt-m", (Math.round(v.m * 100) / 100).toFixed(2));
+    labSet("opt-hi", (Math.round(Math.abs(v.hi) * 10) / 10).toFixed(1) + " cm");
+    labSet("opt-nat", labOptNat(v));
+  }
+
+    function labOptDraw() {
+      const cv = $("#opt-canvas");
+      if (!cv) return;
+      const v = labOptValues();
+      const W = cv.width, H = cv.height;
+      const g = cv.getContext("2d");
+      const x0 = Math.round(W * 0.55);
+      const cy = H / 2;
+      const s = Math.max(2.2, Math.min(13, (x0 - 25) / Math.max(v.d, 1)));
+      g.clearRect(0, 0, W, H);
+      g.fillStyle = "#060912"; g.fillRect(0, 0, W, H);
+      g.strokeStyle = "rgba(126,195,255,0.25)"; g.lineWidth = 1;
+      g.beginPath(); g.moveTo(0, cy); g.lineTo(W, cy); g.stroke();
+      const fl = x0 - v.f * s, fr = x0 + v.f * s;
+      g.strokeStyle = "#3ddc97"; g.lineWidth = 1.5;
+      [[fl, "F"], [fr, "F'"]].forEach(([fx, lab]) => {
+        g.beginPath(); g.moveTo(fx, cy - 8); g.lineTo(fx, cy + 8); g.stroke();
+        g.fillStyle = "#3ddc97"; g.font = "bold 12px Segoe UI, sans-serif"; g.textAlign = "center";
+        g.fillText(lab, fx, cy + 22);
+      });
+      g.strokeStyle = "#7cc3ff"; g.lineWidth = 4;
+      g.beginPath(); g.moveTo(x0, cy - 55); g.lineTo(x0, cy + 55); g.stroke();
+      g.beginPath(); g.arc(x0, cy, 13, -Math.PI / 2, Math.PI / 2); g.stroke();
+      const pxo = x0 - v.d * s;
+      const yTop = cy - v.h * s;
+      g.strokeStyle = "#fff"; g.lineWidth = 3;
+      g.beginPath(); g.moveTo(pxo, cy); g.lineTo(pxo, yTop); g.stroke();
+      g.beginPath(); g.moveTo(pxo - 6, yTop + 13); g.lineTo(pxo, yTop); g.lineTo(pxo + 6, yTop + 13); g.stroke();
+      g.fillStyle = "#ff5d5d"; g.font = "11px Segoe UI, sans-serif"; g.textAlign = "left";
+      g.fillText("ho = " + v.h + " cm", Math.min(pxo + 6, W - 60), Math.max(yTop, 12));
+      if (!isNaN(v.di)) {
+        const reveal = labState.opt.reveal;
+        const xImg = x0 + v.di * s;
+        const hiPix = v.hi * s;
+        const yBot = cy - hiPix;
+        const rayo = (x1, y1, x2, y2, col, dash) => {
+          g.strokeStyle = col; g.lineWidth = 2; g.setLineDash(dash ? [5, 4] : []);
+          g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); g.setLineDash([]);
+        };
+        const seg = (ax, ay, bx, by, col, dash, pp) => {
+          g.strokeStyle = col; g.lineWidth = 2; g.setLineDash(dash ? [5, 4] : []);
+          g.beginPath(); g.moveTo(ax, ay); g.lineTo(ax + (bx - ax) * pp, ay + (by - ay) * pp); g.stroke(); g.setLineDash([]);
+        };
+        if (v.real && hiPix > -2500 && hiPix < 2500) {
+          const tip = yTop, rayLen = Math.hypot(xImg - x0, yBot - yTop) || 1;
+          seg(pxo, tip, x0, tip, "#ff5d5d", false, Math.max(0, Math.min(1, reveal * 1.3)));
+          seg(x0, tip, xImg, yBot, "#ff5d5d", false, Math.max(0, Math.min(1, (reveal - 0.2) * 1.5)));
+          rayo(pxo, tip, xImg, yBot, "#ffb84d");
+          const frx = x0 + v.f * s;
+          seg(pxo, tip, frx, tip, "#3ddc97", false, Math.max(0, Math.min(1, reveal * 1.3)));
+          seg(frx, tip, xImg, yBot, "#3ddc97", false, Math.max(0, Math.min(1, (reveal - 0.2) * 1.5)));
+          g.strokeStyle = "#ff5d5d"; g.lineWidth = 3;
+          g.beginPath(); g.moveTo(xImg, cy); g.lineTo(xImg, yBot); g.stroke();
+          g.beginPath(); g.moveTo(xImg - 6, yBot + 13); g.lineTo(xImg, yBot); g.lineTo(xImg + 6, yBot + 13); g.stroke();
+          g.fillStyle = "#ff5d5d"; g.fillText("hi = " + Math.abs(v.hi).toFixed(1) + " cm", Math.min(xImg + 6, W - 70), Math.min(yBot, H - 16));
+        } else if (!v.real && hiPix > -2500 && hiPix < 2500) {
+          const tip = yTop;
+          seg(pxo, tip, x0, tip, "#ff5d5d", false, Math.max(0, Math.min(1, reveal * 1.3)));
+          seg(x0, tip, xImg, yBot, "#ff5d5d", false, Math.max(0, Math.min(1, (reveal - 0.2) * 1.5)));
+          rayo(pxo, tip, xImg, yBot, "#ffb84d");
+          seg(x0, tip, xImg, yBot, "#3ddc97", true, Math.max(0, Math.min(1, (reveal - 0.2) * 1.5)));
+          g.strokeStyle = "#ffd166"; g.lineWidth = 3;
+          g.beginPath(); g.moveTo(xImg, cy); g.lineTo(xImg, yBot); g.stroke();
+          g.beginPath(); g.moveTo(xImg - 6, yBot - 13); g.lineTo(xImg, yBot); g.lineTo(xImg + 6, yBot - 13); g.stroke();
+          g.fillStyle = "#ffd166"; g.fillText("hi = " + Math.abs(v.hi).toFixed(1) + " cm (virtuelle)", Math.max(xImg - 150, 6), Math.max(yBot, 12));
+        }
+      }
+      g.fillStyle = "#9fb0cf"; g.font = "11px Segoe UI, sans-serif"; g.textAlign = "center";
+      g.fillText("do = " + v.d + " cm · f = " + v.f + " cm", W / 2, H - 8);
+    }
+
+    function labOptGraph() {
+      const cv = $("#opt-graph");
+      if (!cv) return;
+      const g = cv.getContext("2d");
+      const W = cv.width, H = cv.height;
+      g.clearRect(0, 0, W, H);
+      g.fillStyle = "#060912"; g.fillRect(0, 0, W, H);
+      const v = labOptValues();
+      const f = v.f;
+      const doMax = 4 * f;
+      const yR = Math.max(3 * f, 1);
+      const X = (d) => 40 + (d / doMax) * (W - 56);
+      const Y = (di) => H / 2 - (di / yR) * (H / 2 - 14);
+      g.strokeStyle = "rgba(126,195,255,0.18)"; g.lineWidth = 1;
+      g.beginPath(); g.moveTo(0, H / 2); g.lineTo(W, H / 2); g.stroke();
+      g.fillStyle = "#9fb0cf"; g.font = "11px Segoe UI, sans-serif"; g.textAlign = "left";
+      g.fillText("di(do) pour f = " + f + " cm", 6, 12);
+      g.strokeStyle = "rgba(255,93,93,0.5)"; g.setLineDash([4, 4]); g.lineWidth = 1;
+      const xf = X(f);
+      g.beginPath(); g.moveTo(xf, 0); g.lineTo(xf, H); g.stroke(); g.setLineDash([]);
+      g.fillStyle = "#ff5d5d"; g.textAlign = "center";
+      g.fillText("do=f", xf, H - 6);
+      g.strokeStyle = "#00f2fe"; g.lineWidth = 2;
+      g.beginPath();
+      let started = false;
+      for (let d = 0.25 * f; d <= doMax; d += doMax / 200) {
+        if (d > f * 0.94 && d < f * 1.06) { started = false; continue; }
+        const di = (d * f) / (d - f);
+        const y = Y(di);
+        const x = X(d);
+        if (!started) { g.moveTo(x, y); started = true; } else g.lineTo(x, y);
+      }
+      g.stroke();
+      if (!isNaN(v.di) && v.d > 0) {
+        const dx = X(v.d), dy = Y(v.di);
+        g.beginPath(); g.arc(dx, dy, 6, 0, Math.PI * 2);
+        g.fillStyle = "#ffd166"; g.fill();
+        g.strokeStyle = "#ffd166"; g.lineWidth = 2;
+        g.beginPath(); g.arc(dx, dy, 10, 0, Math.PI * 2); g.stroke();
+      }
+    }
+
+    function labOptLoop() {
+      if (labActiveKind !== "optics" || !labState.opt.running) { labRaf = null; return; }
+      labState.opt.reveal = Math.min(1, labState.opt.reveal + 0.04);
+      labOptDraw();
+      labOptGraph();
+      if (labState.opt.reveal >= 1) {
+        labState.opt.running = false;
+        labRunBtn("opt-run", false);
+        labRaf = null;
+        return;
+      }
+      labRaf = requestAnimationFrame(labOptLoop);
+    }
+
+    function labOptBind() {
+      labState.opt.running = false;
+      labState.opt.reveal = 0;
+      const run = $("#opt-run");
+      if (!run) return;
+      run.addEventListener("click", () => {
+        labState.opt.running = !labState.opt.running;
+        if (labState.opt.running) {
+          labState.opt.reveal = 0;
+          labOptLoop();
+        } else {
+          labStopRaf();
+          labOptDraw();
+        }
+        labRunBtn("opt-run", labState.opt.running);
+      });
+      ["#opt-f", "#opt-d", "#opt-h"].forEach(sel => {
+        const el = $(sel);
+        if (el) el.addEventListener("input", () => {
+          if (labState.opt.running) { labState.opt.running = false; labRunBtn("opt-run", false); labStopRaf(); }
+          labOptValues();
+          labOptUpdate();
+          labOptDraw();
+          labOptGraph();
+        });
+      });
+      labOptValues();
+      labOptUpdate();
+      labOptDraw();
+      labOptGraph();
+    }
+
+    // --- Simulation 8 : Orbite planétaire (RUN EXPERIMENT) ---
+    const labPlanC = { G: 6.6743e-11, MSUN: 1.98892e30, AU: 1.495978707e11, EARTH: 5.972e24, DAY: 86400 };
+
+    function labPlanHTML() {
+      return `<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:.8rem; margin-bottom:.8rem;">
+        <label style="color:#ffd166; font-size:.78rem; font-weight:700;">${visionT("labPlanStar")}<br><input type="range" id="plan-M" min="0.5" max="5" step="0.1" value="1" style="width:100%;"></label>
+        <label style="color:#ff5d5d; font-size:.78rem; font-weight:700;">${visionT("labPlanMass")}<br><input type="range" id="plan-m" min="0.1" max="10" step="0.1" value="1" style="width:100%;"></label>
+        <label style="color:#00f2fe; font-size:.78rem; font-weight:700;">${visionT("labPlanRadius")}<br><input type="range" id="plan-a" min="0.3" max="2.2" step="0.1" value="1" style="width:100%;"></label>
+      </div>
+      <div style="margin-bottom:.8rem;"><button id="plan-run" class="select-custom" style="font-weight:800; letter-spacing:1px;">${visionT("labRun")}</button></div>
+      <div style="display:flex; gap:1rem; flex-wrap:wrap; align-items:flex-start;">
+        <canvas id="plan-canvas" width="540" height="480" style="flex:1; min-width:300px; border:1px solid rgba(126,195,255,0.25); border-radius:10px; background:#060912;"></canvas>
+        <div style="width:240px; min-width:205px; display:flex; flex-direction:column; gap:.5rem;">
+          <div style="display:flex; justify-content:space-between; background:rgba(10,20,38,0.8); border:1px solid rgba(126,195,255,0.2); padding:.55rem .8rem; border-radius:10px;"><span style="color:#9fb0cf; font-size:.82rem;">${visionT("labPlanPeriod")} (${visionT("labTheory")})</span><b id="plan-t0" style="color:#00f2fe;">—</b></div>
+          <div style="display:flex; justify-content:space-between; background:rgba(10,20,38,0.8); border:1px solid rgba(126,195,255,0.2); padding:.55rem .8rem; border-radius:10px;"><span style="color:#9fb0cf; font-size:.82rem;">${visionT("labPlanPeriod")} (${visionT("labMeasured")})</span><b id="plan-t1" style="color:#ffd166;">—</b></div>
+          <div style="display:flex; justify-content:space-between; background:rgba(10,20,38,0.8); border:1px solid rgba(126,195,255,0.2); padding:.55rem .8rem; border-radius:10px;"><span style="color:#9fb0cf; font-size:.82rem;">${visionT("labPlanSpeed")}</span><b id="plan-v" style="color:#3ddc97;">—</b></div>
+          <div style="display:flex; justify-content:space-between; background:rgba(10,20,38,0.8); border:1px solid rgba(126,195,255,0.2); padding:.55rem .8rem; border-radius:10px;"><span style="color:#9fb0cf; font-size:.82rem;">${visionT("labPenN")}</span><b id="plan-n" style="color:#fff;">0</b></div>
+        </div>
+      </div>
+      <canvas id="plan-graph" width="560" height="180" style="width:100%; margin-top:.6rem; border:1px solid rgba(126,195,255,0.25); border-radius:10px; background:#060912;"></canvas>
+      <div style="margin-top:.6rem; display:flex; gap:1rem; flex-wrap:wrap;">
+        <span style="background:rgba(0,242,254,0.12); padding:.45rem .8rem; border-radius:9px; color:#00f2fe; font-weight:700; font-size:.85rem;">${visionT("labFormula")} ${visionT("labPlanFormula")}</span>
+        <span style="color:#9fb0cf; font-size:.82rem; flex:1; min-width:220px;">${visionT("labPlanConcl")}</span>
+      </div>`;
+    }
+
+    function labPlanValues() {
+      return {
+        M: parseFloat(($("#plan-M") || { value: 1 }).value) || 1,
+        m: parseFloat(($("#plan-m") || { value: 1 }).value) || 1,
+        a: parseFloat(($("#plan-a") || { value: 1 }).value) || 1
+      };
+    }
+
+    function labPlanMaths(v) {
+      const Mkg = v.M * labPlanC.MSUN;
+      const am = v.a * labPlanC.AU;
+      const T = 2 * Math.PI * Math.sqrt((am * am * am) / (labPlanC.G * Mkg));
+      const Td = T / labPlanC.DAY;
+      const vo = Math.sqrt((labPlanC.G * Mkg) / am) / 1000;
+      return { Mkg, am, T, Td, vo };
+    }
+
+    function labPlanDraw() {
+      const cv = $("#plan-canvas");
+      if (!cv) return;
+      const v = labPlanValues();
+      const W = cv.width, H = cv.height;
+      const g = cv.getContext("2d");
+      const cx = W / 2, cy = H / 2;
+      const scale = Math.min(140, (Math.min(W / 2, H / 2 - 36) - 36) / v.a);
+      const px = (x) => cx + x * scale, py = (y) => cy - y * scale;
+      g.clearRect(0, 0, W, H);
+      g.fillStyle = "#060912"; g.fillRect(0, 0, W, H);
+      g.strokeStyle = "rgba(126,195,255,0.18)"; g.lineWidth = 1;
+      g.beginPath(); g.arc(cx, cy, v.a * scale, 0, 2 * Math.PI); g.stroke();
+      const tr = labState.plan.trail;
+      for (let i = 1; i < tr.length; i++) {
+        g.strokeStyle = "rgba(61,220,151," + (0.05 + (i / tr.length) * 0.45).toFixed(3) + ")";
+        g.lineWidth = 1.5;
+        g.beginPath(); g.moveTo(px(tr[i - 1].x), py(tr[i - 1].y)); g.lineTo(px(tr[i].x), py(tr[i].y)); g.stroke();
+      }
+      const sr = Math.min(9 + v.M * 5, 30);
+      g.beginPath(); g.arc(cx, cy, sr, 0, 2 * Math.PI);
+      g.fillStyle = "#ffd166"; g.fill();
+      g.strokeStyle = "rgba(255,209,102,0.6)"; g.lineWidth = 2; g.stroke();
+      g.fillStyle = "#ffd166"; g.font = "10px Segoe UI, sans-serif"; g.textAlign = "center";
+      g.fillText("M = " + labNum(v.M, 1) + " M☉", cx, cy + sr + 14);
+      const pr = Math.max(3.5, Math.min(9, 3 + Math.log10(v.m * 10)));
+      g.beginPath(); g.arc(px(labState.plan.x), py(labState.plan.y), pr, 0, 2 * Math.PI);
+      g.fillStyle = "#7cc3ff"; g.fill();
+      g.strokeStyle = "rgba(124,195,255,0.7)"; g.lineWidth = 1.5; g.stroke();
+      g.fillStyle = "#9fb0cf"; g.font = "11px Segoe UI, sans-serif"; g.textAlign = "left";
+      g.fillText("a = " + labNum(v.a, 1) + " UA", 8, 16);
+    }
+
+    function labPlanGraph() {
+      const cv = $("#plan-graph");
+      if (!cv) return;
+      const g = cv.getContext("2d");
+      const W = cv.width, H = cv.height;
+      g.clearRect(0, 0, W, H);
+      g.fillStyle = "#060912"; g.fillRect(0, 0, W, H);
+      const v = labPlanValues();
+      const aMax = 2.4;
+      const vMax = (() => { const m = v.M * labPlanC.MSUN; return Math.sqrt((labPlanC.G * m) / (0.3 * labPlanC.AU)) / 1000; })();
+      const X = (a) => 44 + (a / aMax) * (W - 58);
+      const Y = (sp) => H - 26 - (sp / vMax) * (H - 44);
+      g.strokeStyle = "rgba(126,195,255,0.18)"; g.lineWidth = 1;
+      g.beginPath(); g.moveTo(0, H / 2); g.lineTo(W, H / 2); g.stroke();
+      g.fillStyle = "#9fb0cf"; g.font = "11px Segoe UI, sans-serif"; g.textAlign = "left";
+      g.fillText("v(r) = √(GM/r)  en km/s", 6, 12);
+      g.strokeStyle = "#00f2fe"; g.lineWidth = 2;
+      g.beginPath();
+      for (let a = 0.3; a <= aMax; a += 0.005) {
+        const sp = Math.sqrt((labPlanC.G * v.M * labPlanC.MSUN) / (a * labPlanC.AU)) / 1000;
+        const x = X(a), y = Y(sp);
+        if (a === 0.3) g.moveTo(x, y); else g.lineTo(x, y);
+      }
+      g.stroke();
+      const vd = labPlanMaths(v);
+      const dx = X(v.a), dy = Y(vd.vo);
+      g.beginPath(); g.arc(dx, dy, 6, 0, Math.PI * 2);
+      g.fillStyle = "#ffd166"; g.fill();
+      g.strokeStyle = "#ffd166"; g.lineWidth = 2;
+      g.beginPath(); g.arc(dx, dy, 10, 0, Math.PI * 2); g.stroke();
+    }
+
+    function labPlanLoop() {
+      if (labActiveKind !== "planets" || !labState.plan.running) { labRaf = null; return; }
+      const v = labPlanValues();
+      const m = labPlanMaths(v);
+      const timeScale = m.Td / 7;
+      const dt = (1 / 60) * timeScale * labPlanC.DAY;
+      const st = labState.plan;
+      for (let i = 0; i < 8; i++) {
+        const r2 = st.x * st.x + st.y * st.y;
+        const r = Math.sqrt(r2);
+        const ax = -(labPlanC.G * m.Mkg * st.x) / (r2 * r);
+        const ay = -(labPlanC.G * m.Mkg * st.y) / (r2 * r);
+        st.vx += ax * dt / 8;
+        st.vy += ay * dt / 8;
+        st.x += st.vx * dt / 8;
+        st.y += st.vy * dt / 8;
+        st.t += dt / 8;
+      }
+      const prevA = Math.atan2(st.prevY, st.prevX);
+      const curA = Math.atan2(st.y, st.x);
+      let dA = curA - prevA;
+      if (dA > Math.PI) dA -= 2 * Math.PI;
+      if (dA < -Math.PI) dA += 2 * Math.PI;
+      st.totalA += dA;
+      st.prevX = st.x; st.prevY = st.y;
+      st.trail.push({ x: st.x, y: st.y });
+      if (st.trail.length > 260) st.trail.shift();
+      const sp = Math.sqrt(st.vx * st.vx + st.vy * st.vy) / 1000;
+      if (st.totalA >= 2 * Math.PI) {
+        const t1 = st.t * 2 * Math.PI / st.totalA / labPlanC.DAY;
+        st.t1Text = parseFloat(t1.toFixed(1));
+        labSet("plan-t1", t1.toFixed(1) + " j");
+      }
+      labSet("plan-n", Math.floor(st.totalA / (2 * Math.PI)) + " révolution(s)");
+      labSet("plan-v", sp.toFixed(1) + " km/s");
+      labPlanDraw();
+      labPlanGraph();
+      labRaf = requestAnimationFrame(labPlanLoop);
+    }
+
+    function labPlanBind() {
+      labState.plan.running = false;
+      labState.plan.t1Text = null;
+      const run = $("#plan-run");
+      if (!run) return;
+      run.addEventListener("click", () => {
+        labState.plan.running = !labState.plan.running;
+        if (labState.plan.running) {
+          const v = labPlanValues();
+          const m = labPlanMaths(v);
+          const st = labState.plan;
+          st.x = m.am; st.y = 0; st.vx = 0;
+          st.vy = Math.sqrt((labPlanC.G * m.Mkg) / m.am);
+          st.t = 0; st.totalA = 0; st.trail = [];
+          st.prevX = m.am; st.prevY = 0;
+          labSet("plan-t1", "—");
+          labSet("plan-n", "0");
+          labSet("plan-t0", m.Td.toFixed(1) + " j  (~" + labNum(m.Td / 365.25, 2) + " ans)");
+          labPlanLoop();
+        } else {
+          labStopRaf();
+        }
+        labRunBtn("plan-run", labState.plan.running);
+      });
+      ["#plan-M", "#plan-m", "#plan-a"].forEach(sel => {
+        const el = $(sel);
+        if (el) el.addEventListener("input", () => {
+          if (labState.plan.running) { labState.plan.running = false; labRunBtn("plan-run", false); labStopRaf(); labSet("plan-t1", "—"); }
+          const m = labPlanMaths(labPlanValues());
+          labSet("plan-t0", m.Td.toFixed(1) + " j  (~" + labNum(m.Td / 365.25, 2) + " ans)");
+          labSet("plan-v", m.vo.toFixed(1) + " km/s");
+          labPlanDraw();
+          labPlanGraph();
+        });
+      });
+      const m = labPlanMaths(labPlanValues());
+      labSet("plan-t0", m.Td.toFixed(1) + " j  (~" + labNum(m.Td / 365.25, 2) + " ans)");
+      labSet("plan-v", m.vo.toFixed(1) + " km/s");
+      labPlanDraw();
+      labPlanGraph();
+    }
+
+    // --- AI LAB REPORT engine ---
+    function labReport() {
+      const kind = labActiveKind;
+      const body = $("#lab-report-body");
+      const title = $("#lab-report-title");
+      if (!body) return;
+      const simName = labSelect && labSelect.options[labSelect.selectedIndex] ? labSelect.options[labSelect.selectedIndex].text : "";
+      if (title) title.textContent = "🏆 " + visionT("labReportTitle") + " — " + simName;
+      if (["ohm", "genetics", "ph", "em"].indexOf(kind) !== -1) {
+        body.innerHTML = `<div style="background:rgba(126,195,255,0.08); border:1px solid rgba(126,195,255,0.2); border-radius:10px; padding:.8rem 1rem; color:#9fb0cf; font-size:.88rem;">ℹ️ ${visionT("labReportUnavail")}</div>`;
+        return;
+      }
+      const secLabel = [["labRHyp", "#ffd166"], ["labRExp", "#00f2fe"], ["labRObs", "#3ddc97"], ["labRRes", "#ffb84d"], ["labRConc", "#ff5d5d"]];
+      const keys = { pendulum: "labPen", waves: "labWave", optics: "labOpt", planets: "labPlan" };
+      const pk = keys[kind] || "";
+      const vars = {};
+      const nf = (x, d) => labNum(x, d);
+      let extra = "";
+      if (kind === "pendulum") {
+        const p = labPenValues();
+        const t0 = 2 * Math.PI * Math.sqrt(p.L / p.g);
+        const t1 = labState.pen.t1Text || null;
+        const used = t1 !== null ? t1 : t0;
+        Object.assign(vars, { L: nf(p.L, 2), m: String(p.m), a: String(p.a), g: nf(p.g, 2), n: String(Math.floor(labState.pen.zero / 2)), t0: nf(t0, 3), t1: nf(used, 3), e: nf(Math.abs(used - t0) / t0 * 100, 1), f: nf(1 / t0, 2), vmax: nf(Math.sqrt(2 * p.g * p.L * (1 - Math.cos(p.a * Math.PI / 180))), 2) });
+      } else if (kind === "waves") {
+        const v = labWaveValues();
+        const t0 = 1 / v.f;
+        const t1 = labState.wave.t1Text !== undefined ? labState.wave.t1Text : null;
+        const used = t1 !== null ? t1 : t0;
+        Object.assign(vars, { A: nf(v.A, 1), f: nf(v.f, 2), la: nf(v.la, 2), v: nf(v.la * v.f, 2), t: nf(used, 2), e: nf(Math.abs(used - t0) / t0 * 100, 1) });
+      } else if (kind === "optics") {
+        const o = labOptValues();
+        const nat = labOptNat(o);
+        Object.assign(vars, { f0: nf(o.f, 1), d: nf(o.d, 1), h0: nf(o.h, 1), di: isNaN(o.di) ? "∞" : nf(o.di, 1), m: isNaN(o.m) ? "—" : nf(o.m, 2), hi: isNaN(o.hi) ? "—" : nf(Math.abs(o.hi), 1), nat });
+      } else if (kind === "planets") {
+        const v = labPlanValues();
+        const m = labPlanMaths(v);
+        const t1 = labState.plan.t1Text !== undefined ? labState.plan.t1Text : null;
+        const used = t1 !== null ? t1 : m.Td;
+        Object.assign(vars, { M: nf(v.M, 1), m: nf(v.m, 1), a: nf(v.a, 1), t0: nf(m.Td, 1), t1: nf(used, 1), e: nf(Math.abs(used - m.Td) / m.Td * 100, 1), v: nf(m.vo, 1) });
+      }
+      const cells = [];
+      secLabel.forEach(([k, color], i) => {
+        const tpl = visionT(pk + "Hypo") || "";
+        const tplKeys = ["Hypo", "Expe", "Obs", "Res", "Conc"];
+        const txt = labFill(visionT(pk + tplKeys[i]), vars);
+        cells.push(`<div style="border-left:4px solid ${color}; background:rgba(10,20,38,0.6); padding:.7rem .9rem; border-radius:10px;">
+          <div style="color:${color}; font-weight:800; font-size:.85rem; margin-bottom:.25rem;">${visionT(k)}</div>
+          <div style="color:#e8effc; font-size:.88rem; line-height:1.5;">${txt}</div>
+        </div>`);
+      });
+      body.innerHTML = cells.join("");
+    }
+
+    const labReportBtn = $("#lab-report-btn");
+    const labReportEl = $("#lab-report");
+    if (labReportBtn && labReportEl) {
+      labReportBtn.addEventListener("click", () => {
+        labReport();
+        const show = labReportEl.style.display === "none" || labReportEl.style.display === "";
+        labReportEl.style.display = show ? "block" : "none";
+        labReportBtn.style.opacity = show ? "1" : "0.7";
+      });
     }
 
     // ============================================================
