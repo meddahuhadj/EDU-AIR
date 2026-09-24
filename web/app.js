@@ -34,6 +34,30 @@
     });
   });
 
+  // --- Light / Dark Theme Switcher ---
+  const btnThemeToggle = $("#btn-toggle-theme");
+  let savedTheme = (function() {
+    try { return localStorage.getItem("edu_air_theme") || "dark"; }
+    catch(e) { return "dark"; }
+  })();
+
+  function applyThemeMode(mode) {
+    document.documentElement.setAttribute("data-theme", mode);
+    if (btnThemeToggle) {
+      btnThemeToggle.textContent = (mode === "light") ? "🌙" : "☀️";
+      btnThemeToggle.title = (mode === "light") ? "Passer au thème Sombre" : "Passer au thème Clair";
+    }
+    try { localStorage.setItem("edu_air_theme", mode); } catch(e) {}
+  }
+
+  if (btnThemeToggle) {
+    btnThemeToggle.addEventListener("click", () => {
+      savedTheme = (savedTheme === "dark") ? "light" : "dark";
+      applyThemeMode(savedTheme);
+    });
+  }
+  applyThemeMode(savedTheme);
+
   // --- Sidebar & Module View Router ---
   const sidebarItems = $$(".sidebar-item");
   const moduleViews = $$(".module-view");
