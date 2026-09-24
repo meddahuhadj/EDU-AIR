@@ -282,9 +282,9 @@
   // ANNOTATION CANVAS ON PRESENTATION
   // ============================================================
 
-  const drawCanvas = $("#presentation-draw-canvas");
-  if (drawCanvas) {
-    const ctx = drawCanvas.getContext("2d");
+  const presDrawCanvas = $("#presentation-draw-canvas");
+  if (presDrawCanvas) {
+    const ctx = presDrawCanvas.getContext("2d");
     let isDrawing = false;
     let activeTool = "pen";
     let activeColor = "#00f2fe";
@@ -318,21 +318,21 @@
     }
 
     function saveState() {
-      historyStack.push(ctx.getImageData(0, 0, drawCanvas.width, drawCanvas.height));
+      historyStack.push(ctx.getImageData(0, 0, presDrawCanvas.width, presDrawCanvas.height));
       if (historyStack.length > 20) historyStack.shift();
     }
 
     function getCanvasCoords(e) {
-      const rect = drawCanvas.getBoundingClientRect();
+      const rect = presDrawCanvas.getBoundingClientRect();
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
       return {
-        x: (clientX - rect.left) * (drawCanvas.width / rect.width),
-        y: (clientY - rect.top) * (drawCanvas.height / rect.height)
+        x: (clientX - rect.left) * (presDrawCanvas.width / rect.width),
+        y: (clientY - rect.top) * (presDrawCanvas.height / rect.height)
       };
     }
 
-    drawCanvas.addEventListener("mousedown", (e) => {
+    presDrawCanvas.addEventListener("mousedown", (e) => {
       saveState();
       isDrawing = true;
       const pos = getCanvasCoords(e);
@@ -340,7 +340,7 @@
       ctx.moveTo(pos.x, pos.y);
     });
 
-    drawCanvas.addEventListener("mousemove", (e) => {
+    presDrawCanvas.addEventListener("mousemove", (e) => {
       if (!isDrawing) return;
       const pos = getCanvasCoords(e);
 
@@ -377,7 +377,7 @@
           const state = historyStack.pop();
           ctx.putImageData(state, 0, 0);
         } else {
-          ctx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+          ctx.clearRect(0, 0, presDrawCanvas.width, presDrawCanvas.height);
         }
       });
     }
@@ -385,7 +385,7 @@
     if (btnClear) {
       btnClear.addEventListener("click", () => {
         saveState();
-        ctx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+        ctx.clearRect(0, 0, presDrawCanvas.width, presDrawCanvas.height);
       });
     }
   }
