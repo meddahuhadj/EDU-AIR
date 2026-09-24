@@ -23,28 +23,28 @@
 
       <div class="app-status-pills">
         <span class="status-pill active" title="Statut de détection caméra">
-          <span class="dot"></span> <span id="txt-cam-status">Montrez votre main devant la caméra</span>
+          <span class="dot"></span> <span id="txt-cam-status" data-i18n="camStatus">Montrez votre main devant la caméra</span>
         </span>
         <span class="status-pill active" id="pill-live"><span class="dot"></span> En direct</span>
-        <button type="button" class="status-pill" id="pill-mode-cam">📷 Caméra</button>
-        <button type="button" class="status-pill active" id="pill-mode-hand">✋ Main</button>
-        <button type="button" class="status-pill" id="pill-mode-voice">🎙️ Voix</button>
-        <button type="button" class="status-pill active" id="pill-mode-ai">🤖 IA</button>
-        <button type="button" class="status-pill" id="pill-mode-calib">⚙️ Calibrage</button>
-        <button type="button" class="status-pill active" id="pill-mode-surf">📐 Surface</button>
-        <button type="button" class="status-pill" id="pill-mode-safe">🛡️ Mode sûr</button>
+        <button type="button" class="status-pill" id="pill-mode-cam" data-i18n="modeCam">📷 Caméra</button>
+        <button type="button" class="status-pill active" id="pill-mode-hand" data-i18n="modeHand">✋ Main</button>
+        <button type="button" class="status-pill" id="pill-mode-voice" data-i18n="modeVoice">🎙️ Voix</button>
+        <button type="button" class="status-pill active" id="pill-mode-ai" data-i18n="modeAi">🤖 IA</button>
+        <button type="button" class="status-pill" id="pill-mode-calib" data-i18n="modeCalib">⚙️ Calibrage</button>
+        <button type="button" class="status-pill active" id="pill-mode-surf" data-i18n="modeSurf">📐 Surface</button>
+        <button type="button" class="status-pill" id="pill-mode-safe" data-i18n="modeSafe">🛡️ Mode sûr</button>
       </div>
     </div>
 
     <div class="topbar-right">
       <!-- Role Switcher -->
       <select id="app-role-select" class="select-custom" style="padding:0.25rem 0.6rem; font-size:0.78rem;">
-        <option value="teacher">👨‍🏫 Rôle: Enseignant</option>
-        <option value="student">👨‍🎓 Rôle: Élève</option>
-        <option value="tech">🔧 Rôle: Technicien TNI</option>
+        <option value="teacher" data-i18n="roleTeacher">👨‍🏫 Rôle: Enseignant</option>
+        <option value="student" data-i18n="roleStudent">👨‍🎓 Rôle: Élève</option>
+        <option value="tech" data-i18n="roleTech">🔧 Rôle: Technicien TNI</option>
       </select>
 
-      <button type="button" class="btn-app btn-app-primary" id="btn-modal-export-tni" style="padding: 0.35rem 0.7rem; font-size: 0.8rem;">📤 EXPORT TNI / ENT</button>
+      <button type="button" class="btn-app btn-app-primary" id="btn-modal-export-tni" style="padding: 0.35rem 0.7rem; font-size: 0.8rem;" data-i18n="exportTni">📤 EXPORT TNI / ENT</button>
 
       <div class="app-clock" id="app-clock">10:35:00</div>
 
@@ -69,40 +69,40 @@
     <!-- SIDEBAR NAVIGATION -->
     <aside class="app-sidebar" id="app-sidebar">
       <button class="sidebar-item" data-target-view="view-dashboard">
-        <span class="ic">📊</span> <span>Tableau de bord</span>
+        <span class="ic">📊</span> <span data-i18n="navDashboard">Tableau de bord</span>
       </button>
       <button class="sidebar-item" data-target-view="view-whiteboard">
-        <span class="ic">✨</span> <span>Surface Intelligente</span>
+        <span class="ic">✨</span> <span data-i18n="navWhiteboard">Surface Intelligente</span>
       </button>
       <button class="sidebar-item" data-target-view="view-pointer">
-        <span class="ic">🎯</span> <span>Pointeur air</span>
+        <span class="ic">🎯</span> <span data-i18n="navPointer">Pointeur air</span>
       </button>
       <button class="sidebar-item" data-target-view="view-draw">
-        <span class="ic">🎨</span> <span>Dessin air</span>
+        <span class="ic">🎨</span> <span data-i18n="navDraw">Dessin air</span>
       </button>
       <button class="sidebar-item" data-target-view="view-air3d">
-        <span class="ic">🧊</span> <span>Air 3D</span>
+        <span class="ic">🧊</span> <span data-i18n="navAir3d">Air 3D</span>
       </button>
       <button class="sidebar-item" data-target-view="view-vision">
-        <span class="ic">👁️</span> <span>Vision air</span>
+        <span class="ic">👁️</span> <span data-i18n="navVision">Vision air</span>
       </button>
       <button class="sidebar-item" data-target-view="view-labo">
-        <span class="ic">🔬</span> <span>Labo air</span>
+        <span class="ic">🔬</span> <span data-i18n="navLabo">Labo air</span>
       </button>
       <button class="sidebar-item" data-target-view="view-quiz">
-        <span class="ic">📝</span> <span>Quiz air</span>
+        <span class="ic">📝</span> <span data-i18n="navQuiz">Quiz air</span>
       </button>
       <button class="sidebar-item active" data-target-view="view-presentation">
-        <span class="ic">📺</span> <span>Présentation air</span>
+        <span class="ic">📺</span> <span data-i18n="navPresentation">Présentation air</span>
       </button>
       <button class="sidebar-item" data-target-view="view-profai">
-        <span class="ic">🤖</span> <span>Prof IA</span>
+        <span class="ic">🤖</span> <span data-i18n="navProfAi">Prof IA</span>
       </button>
       <button class="sidebar-item" data-target-view="view-calib">
-        <span class="ic">⚙️</span> <span>Calibrage</span>
+        <span class="ic">⚙️</span> <span data-i18n="navCalib">Calibrage</span>
       </button>
       <button class="sidebar-item" data-target-view="view-history">
-        <span class="ic">📜</span> <span>Historique</span>
+        <span class="ic">📜</span> <span data-i18n="navHistory">Historique</span>
       </button>
     </aside>
 
