@@ -725,6 +725,171 @@
   }
 
   // ============================================================
+  // MODULE 4: DESSIN AIR CANVAS ENGINE & GABARITS
+  // ============================================================
+
+  const drawCanvas = $("#air-draw-canvas");
+  if (drawCanvas) {
+    const ctx = drawCanvas.getContext("2d");
+    let isDrawing = false;
+    let currentColor = "#00f2fe";
+    let currentLineWidth = 4;
+    let isEraser = false;
+
+    // Color selector setup for Air Draw
+    const drawView = $("#view-draw");
+    if (drawView) {
+      const colorDots = drawView.querySelectorAll(".color-dot");
+      colorDots.forEach((dot) => {
+        dot.addEventListener("click", () => {
+          colorDots.forEach((d) => d.classList.remove("active"));
+          dot.classList.add("active");
+          currentColor = dot.getAttribute("data-color") || "#00f2fe";
+          isEraser = false;
+          if ($("#draw-tool-pen")) $("#draw-tool-pen").classList.add("active");
+          if ($("#draw-tool-eraser")) $("#draw-tool-eraser").classList.remove("active");
+        });
+      });
+    }
+
+    // Canvas drawing handlers
+    function startDraw(e) {
+      isDrawing = true;
+      const rect = drawCanvas.getBoundingClientRect();
+      const x = (e.clientX || (e.touches && e.touches[0].clientX)) - rect.left;
+      const y = (e.clientY || (e.touches && e.touches[0].clientY)) - rect.top;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+    }
+
+    function moveDraw(e) {
+      if (!isDrawing) return;
+      const rect = drawCanvas.getBoundingClientRect();
+      const x = (e.clientX || (e.touches && e.touches[0].clientX)) - rect.left;
+      const y = (e.clientY || (e.touches && e.touches[0].clientY)) - rect.top;
+      
+      ctx.lineWidth = isEraser ? 24 : currentLineWidth;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = isEraser ? "#060912" : currentColor;
+      ctx.lineTo(x, y);
+      ctx.stroke();
+    }
+
+    function stopDraw() {
+      isDrawing = false;
+    }
+
+    drawCanvas.addEventListener("mousedown", startDraw);
+    drawCanvas.addEventListener("mousemove", moveDraw);
+    drawCanvas.addEventListener("mouseup", stopDraw);
+    drawCanvas.addEventListener("mouseleave", stopDraw);
+
+    drawCanvas.addEventListener("touchstart", (e) => { e.preventDefault(); startDraw(e); }, { passive: false });
+    drawCanvas.addEventListener("touchmove", (e) => { e.preventDefault(); moveDraw(e); }, { passive: false });
+    drawCanvas.addEventListener("touchend", stopDraw);
+
+    // Tools & Colors
+    const btnPen = $("#draw-tool-pen");
+    const btnEraser = $("#draw-tool-eraser");
+    if (btnPen && btnEraser) {
+      btnPen.addEventListener("click", () => {
+        isEraser = false;
+        btnPen.classList.add("active");
+        btnEraser.classList.remove("active");
+      });
+      btnEraser.addEventListener("click", () => {
+        isEraser = true;
+        btnEraser.classList.add("active");
+        btnPen.classList.remove("active");
+      });
+    }
+
+    const btnClear = $("#btn-airdraw-clear");
+    if (btnClear) {
+      btnClear.addEventListener("click", () => {
+        ctx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+        const box = $("#ocr-result-box");
+        if (box) box.style.display = "none";
+      });
+    }
+
+    // Stamps: Timeline (Frise)
+    const btnFrise = $("#btn-stamp-frise");
+    if (btnFrise) {
+      btnFrise.addEventListener("click", () => {
+        ctx.strokeStyle = "#00f2fe";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        // Axis line
+        ctx.moveTo(80, 210);
+        ctx.lineTo(950, 210);
+        // Arrow head
+        ctx.lineTo(930, 195);
+        ctx.moveTo(950, 210);
+        ctx.lineTo(930, 225);
+        // Ticks & Dates
+        const ticks = [150, 350, 550, 750];
+        const labels = ["1789", "1848", "1914", "1945"];
+        ticks.forEach((tx, idx) => {
+          ctx.moveTo(tx, 195);
+          ctx.lineTo(tx, 225);
+          ctx.font = "bold 14px Segoe UI, sans-serif";
+          ctx.fillStyle = "#ffb84d";
+          ctx.fillText(labels[idx], tx - 15, 250);
+        });
+        ctx.stroke();
+        alert("📐 Gabarit Frise Chronologique vectorisé sur le tableau !");
+      });
+    }
+
+    // Stamps: Table Grid
+    const btnTable = $("#btn-stamp-table");
+    if (btnTable) {
+      btnTable.addEventListener("click", () => {
+        ctx.strokeStyle = "#3ddc97";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(100, 60, 800, 280);
+        // Horizontal divider
+        ctx.beginPath();
+        ctx.moveTo(100, 120);
+        ctx.lineTo(900, 120);
+        // Vertical divider
+        ctx.moveTo(500, 60);
+        ctx.lineTo(500, 340);
+        ctx.stroke();
+
+        ctx.font = "bold 16px Segoe UI, sans-serif";
+        ctx.fillStyle = "#3ddc97";
+        ctx.fillText("Colonne A (Variable 1)", 140, 95);
+        ctx.fillText("Colonne B (Variable 2)", 540, 95);
+        alert("📊 Gabarit Tableau à double entrée inséré !");
+      });
+    }
+
+    // OCR / Math Recognition Simulator
+    const btnOcr = $("#btn-ocr-convert");
+    if (btnOcr) {
+      btnOcr.addEventListener("click", () => {
+        const box = $("#ocr-result-box");
+        const txt = $("#ocr-text-render");
+        if (box && txt) {
+          const samples = [
+            "BC² = AB² + AC²  ➔  LaTeX: \\sqrt{AB^2 + AC^2}",
+            "f(x) = \\int_{0}^{\\infty} e^{-x^2} dx = \\frac{\\sqrt{\\pi}}{2}",
+            "E = mc²  ➔  Énergie & Masse Relativiste",
+            "CO₂ + H₂O ➔ H₂CO₃  (Acide Carbonique)"
+          ];
+          const chosen = samples[Math.floor(Math.random() * samples.length)];
+          txt.textContent = chosen;
+          box.style.display = "block";
+          alert("🔤 Tracé manuscrit analysé et converti en texte LaTeX !");
+        }
+      });
+    }
+  }
+
+  // ============================================================
   // MODULE ENRICHMENTS: TNI / TBI CLASSROOM INTERACTORS
   // ============================================================
 

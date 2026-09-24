@@ -333,16 +333,43 @@
 
       <!-- ================= MODULE 4: DESSIN AIR ================= -->
       <div class="module-view" id="view-draw">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem; flex-wrap: wrap; gap: 0.5rem;">
           <h2 style="color: #00f2fe;" data-i18n="drawTitle">🎨 Studio Dessin Air & Gabarits Pédagogiques</h2>
-          <div style="display: flex; gap: 0.5rem;">
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
             <button type="button" class="btn-app btn-app-ghost" id="btn-stamp-frise" data-i18n="btnFrise">📐 Gabarit Frise</button>
             <button type="button" class="btn-app btn-app-ghost" id="btn-stamp-table" data-i18n="btnTable">📊 Gabarit Tableau</button>
             <button type="button" class="btn-app btn-app-primary" id="btn-ocr-convert" data-i18n="btnOcrConvert">🔤 Reconnaissance Texte/LaTeX</button>
           </div>
         </div>
-        <div style="background: rgba(10,20,38,0.8); border: 1px solid rgba(126,195,255,0.2); padding: 1.5rem; border-radius: 14px;">
-          <p style="color: #e8effc;" data-i18n="drawDesc">Tracé artistique avec lissage automatique de courbes, gabarits vectoriels et reconnaissance de formules LaTeX.</p>
+
+        <!-- Annotation Toolbar for Air Draw -->
+        <div class="annotation-toolbar" style="margin-bottom: 0.8rem;">
+          <strong style="color: #9fb0cf; font-size: 0.82rem; margin-right: 0.4rem;">OUTILS DESSIN :</strong>
+          <button type="button" class="tool-chip active" id="draw-tool-pen">✏️ STYLO</button>
+          <button type="button" class="tool-chip" id="draw-tool-eraser">❌ GOMME</button>
+
+          <div class="color-dots-picker" style="margin-inline: 0.5rem;">
+            <span class="color-dot active" data-color="#00f2fe" style="background: #00f2fe;"></span>
+            <span class="color-dot" data-color="#ffb84d" style="background: #ffb84d;"></span>
+            <span class="color-dot" data-color="#3ddc97" style="background: #3ddc97;"></span>
+            <span class="color-dot" data-color="#ff5d5d" style="background: #ff5d5d;"></span>
+            <span class="color-dot" data-color="#ffffff" style="background: #ffffff;"></span>
+          </div>
+
+          <button type="button" class="btn-app btn-app-ghost" id="btn-airdraw-clear" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;">🗑️ Effacer Canvas</button>
+        </div>
+
+        <!-- Drawing Canvas Stage -->
+        <div style="position: relative; width: 100%; height: 420px; background: #060912; border: 2px solid rgba(0,242,254,0.3); border-radius: 14px; overflow: hidden; margin-bottom: 0.8rem;">
+          <canvas id="air-draw-canvas" width="1050" height="420" style="width: 100%; height: 100%; cursor: crosshair;"></canvas>
+        </div>
+
+        <!-- OCR & Math Formula Result Box -->
+        <div id="ocr-result-box" style="display: none; background: rgba(0,242,254,0.1); border: 1px solid rgba(0,242,254,0.4); padding: 1rem; border-radius: 12px;">
+          <h4 style="color: #00f2fe; margin-bottom: 0.3rem;">🔤 Formule & Texte Reconnu :</h4>
+          <div id="ocr-text-render" style="font-size: 1.2rem; font-weight: 700; color: #3ddc97; font-family: monospace;">
+            BC² = AB² + AC²  ➔  LaTeX: \sqrt{AB^2 + AC^2}
+          </div>
         </div>
       </div>
 
