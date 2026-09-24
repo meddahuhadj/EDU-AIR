@@ -712,10 +712,77 @@
       <!-- ================= MODULE 6: VISION AIR ================= -->
       <div class="module-view" id="view-vision">
         <h2 style="color: #00f2fe; margin-bottom: 1rem;" data-i18n="visionTitle">👁️ Vision Air — Correction Direct & Suivi EPS</h2>
-        <div style="background: rgba(10,20,38,0.8); border: 1px solid rgba(126,195,255,0.2); padding: 1.5rem; border-radius: 14px;">
-          <h3 style="color: #fff; margin-bottom: 0.5rem;" data-i18n="visionSubTitle">Superposition Corrective & Analyse de Posture</h3>
-          <p style="color: #9fb0cf; font-size: 0.9rem;" data-i18n="visionDesc">Correction automatique de feuille d'élève sous caméra & Suivi des angles articulaires EPS.</p>
+
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem;">
+          <button type="button" class="btn-app btn-app-primary vision-tab active" id="vtab-correct" data-i18n="visionTabCorrect">📝 Correcteur de feuille</button>
+          <button type="button" class="btn-app btn-app-ghost vision-tab" id="vtab-posture" data-i18n="visionTabPosture">🧍 Suivi EPS</button>
+          <button type="button" class="btn-app btn-app-ghost vision-tab" id="vtab-doc" data-i18n="visionTabDoc">📸 Capture document</button>
         </div>
+
+        <!-- Pane: Correcteur sous caméra -->
+        <div class="vision-pane active" id="vpane-correct">
+          <div class="vision-toolbar">
+            <button type="button" class="tool-chip active" id="vtool-pen" data-i18n="visionToolPen">✏️ Stylo</button>
+            <button type="button" class="tool-chip" id="vtool-eraser" data-i18n="visionToolEraser">❌ Gomme</button>
+            <span class="color-dots-picker" id="vtool-colors" style="margin-inline: 0.5rem;">
+              <span class="color-dot active" data-color="#00f2fe" style="background: #00f2fe;"></span>
+              <span class="color-dot" data-color="#1a73e8" style="background: #1a73e8;"></span>
+              <span class="color-dot" data-color="#ffb84d" style="background: #ffb84d;"></span>
+              <span class="color-dot" data-color="#3ddc97" style="background: #3ddc97;"></span>
+              <span class="color-dot" data-color="#ff5d5d" style="background: #ff5d5d;"></span>
+              <span class="color-dot" data-color="#ffffff" style="background: #ffffff; border: 1px solid #ccc;"></span>
+            </span>
+            <label style="color: #9fb0cf; font-size: 0.78rem; margin-right: -0.3rem;" data-i18n="visionWidth">✏️ Épaisseur</label>
+            <input type="range" id="vtool-width" min="2" max="24" value="5" style="width: 100px;">
+            <button type="button" class="btn-app btn-app-ghost" id="vtool-grid" data-i18n="visionGrid">▦ Grille</button>
+            <button type="button" class="btn-app btn-app-ghost" id="vtool-mirror" data-i18n="visionMirror">🔄 Miroir</button>
+            <button type="button" class="btn-app btn-app-ghost" id="vtool-clear" data-i18n="btnDrawClear">🗑️ Effacer</button>
+            <button type="button" class="btn-app btn-app-primary" id="vtool-save" data-i18n="visionSave">💾 Capturer la correction</button>
+          </div>
+          <div class="vision-stage" id="vstage-correct">
+            <video id="vision-video" autoplay playsinline muted></video>
+            <canvas id="vision-overlay" width="960" height="540"></canvas>
+            <div class="vision-hint" data-i18n="visionHintCorrect">✋ Pincez pour corriger la feuille · Poing fermé = effacer</div>
+          </div>
+          <div class="vision-thumbs" id="vision-gallery"></div>
+        </div>
+
+        <!-- Pane: Suivi Posture EPS -->
+        <div class="vision-pane" id="vpane-posture" style="display: none;">
+          <div class="vision-toolbar">
+            <button type="button" class="btn-app btn-app-primary" id="vposture-toggle" data-i18n="visionPostureStart">▶ Démarrer le suivi</button>
+            <select class="select-custom" id="vposture-consigne" style="width: auto;">
+              <option value="libre" data-i18n="visionConsigneLibre">🎽 Angle libre</option>
+              <option value="coude90" data-i18n="visionConsigneCoude">💪 Bras pliés à 90°</option>
+              <option value="squad" data-i18n="visionConsigneSquad">🦵 Squat / Accroupissement</option>
+              <option value="chaise" data-i18n="visionConsigneChaise">🪑 Position chaise</option>
+            </select>
+            <span class="vision-status" id="vposture-status"></span>
+          </div>
+          <div class="vision-stage" id="vstage-posture">
+            <video id="vision-video-posture" autoplay playsinline muted></video>
+            <canvas id="vision-pose-canvas" width="960" height="540"></canvas>
+            <div class="vision-hint" data-i18n="visionHintPosture">🧍 Placez-vous face caméra, torse, bras et jambes bien visibles</div>
+          </div>
+          <div class="vision-angle-readouts" id="vision-angle-panel"></div>
+        </div>
+
+        <!-- Pane: Capture & redressement document -->
+        <div class="vision-pane" id="vpane-doc" style="display: none;">
+          <div class="vision-toolbar">
+            <button type="button" class="btn-app btn-app-primary" id="vtool-doc-capture" data-i18n="visionDocCapture">📸 Capturer & redresser</button>
+            <button type="button" class="btn-app btn-app-ghost" id="vtool-doc-download" data-i18n="visionDocDownload">💾 Télécharger PNG</button>
+            <button type="button" class="btn-app btn-app-ghost" id="vtool-doc-clear" data-i18n="btnDrawClear">🗑️ Effacer</button>
+          </div>
+          <div class="vision-stage" id="vstage-doc">
+            <video id="vision-video-doc" autoplay playsinline muted></video>
+            <canvas id="vision-doc-canvas" width="960" height="540"></canvas>
+            <div class="vision-hint" data-i18n="visionHintDoc">📄 Posez la feuille à plat sous la caméra puis capturez</div>
+          </div>
+          <div class="vision-thumbs" id="vision-doc-gallery"></div>
+        </div>
+
+        <div class="vision-toast" id="vision-toast"></div>
       </div>
 
       <!-- ================= MODULE 7: LABO AIR ================= -->

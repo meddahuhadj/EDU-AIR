@@ -2314,10 +2314,12 @@
 
     function handleAirGesturesInteraction(x, y, gestureName) {
       const now = Date.now();
+      const activeView = $(".module-view.active-view");
 
       if (isPinching) {
-        const activeView = $(".module-view.active-view");
-        if (activeView) {
+        if (activeView && activeView.id === "view-vision") {
+          drawVisionStroke(x, y);
+        } else if (activeView) {
           const canvas = activeView.querySelector("canvas");
           if (canvas) {
             const rect = canvas.getBoundingClientRect();
@@ -2346,7 +2348,11 @@
       }
 
       if (now - lastGestureTime > 1200) {
-        if (gestureName === "PEACE") {
+        if (activeView && activeView.id === "view-vision") {
+          if (handleVisionAirGesture(gestureName)) {
+            lastGestureTime = now;
+          }
+        } else if (gestureName === "PEACE") {
           const btnNext = $("#btn-pres-next");
           if (btnNext) {
             btnNext.click();
@@ -2360,6 +2366,775 @@
           }
         }
       }
+    }
+
+    /* ============================================================
+       AIR VISION MODULE — Correcteur sous caméra, Suivi EPS, Capture doc
+       ============================================================ */
+    const visionToastEl = $("#vision-toast");
+    const visionState = {
+      mirror: true,
+      grid: false,
+      width: 5,
+      color: "#00f2fe",
+      eraser: false,
+      camAttached: false,
+      postureRunning: false,
+      poseEngine: null,
+      poseLoading: false,
+      posePending: false,
+      poseVisible: false,
+      docResult: null
+    };
+
+    function visionT(key) {
+      try {
+        const lang = localStorage.getItem("edu_air_lang") || "fr";
+        const dict = (window.EDU_AIR_I18N && window.EDU_AIR_I18N.dictionaries) || {};
+        return (dict[lang] && dict[lang][key]) || (dict.fr && dict.fr[key]) || key;
+      } catch (e) { return key; }
+    }
+
+    function visionShowToast(msg) {
+      if (!visionToastEl) return;
+      visionToastEl.textContent = msg;
+      visionToastEl.classList.add("show");
+      clearTimeout(visionToastEl._t);
+      visionToastEl._t = setTimeout(() => visionToastEl.classList.remove("show"), 2600);
+    }
+
+    function visionGetStream() {
+      return (pipVideo && pipVideo.srcObject && pipVideo.srcObject.getVideoTracks &&
+        pipVideo.srcObject.getVideoTracks().length) ? pipVideo.srcObject : null;
+    }
+
+    function visionShareStream() {
+      const stream = visionGetStream();
+      if (stream) {
+        ["#vision-video", "#vision-video-posture", "#vision-video-doc"].forEach(sel => {
+          const v = $(sel);
+          if (v && !v.srcObject) {
+            v.srcObject = stream;
+            visionState.camAttached = true;
+          }
+        });
+      } else if (pipVideo && !pipVideo.srcObject && typeof startCameraTracking === "function") {
+        try { startCameraTracking(); } catch (e) {}
+      }
+    }
+    setInterval(visionShareStream, 1000);
+
+    function visionSelectTab(tabId) {
+      const map = { correct: "vpane-correct", posture: "vpane-posture", doc: "vpane-doc" };
+      const chosen = map[tabId];
+      if (!chosen) return;
+      Object.keys(map).forEach(k => {
+        const p = $("#" + map[k]);
+        if (p) p.style.display = (map[k] === chosen) ? "" : "none";
+      });
+      Object.keys(map).forEach(k => {
+        const b = $("#vtab-" + k);
+        if (!b) return;
+        const isActive = k === tabId;
+        b.classList.toggle("active", isActive);
+        b.classList.toggle("btn-app-primary", isActive);
+        b.classList.toggle("btn-app-ghost", !isActive);
+      });
+      if (tabId === "posture") startVisionPosture();
+      if (tabId !== "posture") stopVisionPosture();
+      visionShareStream();
+    }
+    ["correct", "posture", "doc"].forEach(t => {
+      const b = $("#vtab-" + t);
+      if (b) b.addEventListener("click", () => visionSelectTab(t));
+    });
+
+    // ----- Correcteur sous caméra : outils & dessin -----
+    function visionSetTool(tool) {
+      visionState.eraser = tool === "eraser";
+      const pen = $("#vtool-pen"), eras = $("#vtool-eraser");
+      if (pen) pen.classList.toggle("active", !visionState.eraser);
+      if (eras) eras.classList.toggle("active", visionState.eraser);
+    }
+    const vPenBtn = $("#vtool-pen");
+    if (vPenBtn) vPenBtn.addEventListener("click", () => visionSetTool("pen"));
+    const vEraseBtn = $("#vtool-eraser");
+    if (vEraseBtn) vEraseBtn.addEventListener("click", () => visionSetTool("eraser"));
+
+    const vColors = $("#vtool-colors");
+    if (vColors) {
+      vColors.querySelectorAll(".color-dot").forEach(dot => {
+        dot.addEventListener("click", () => {
+          vColors.querySelectorAll(".color-dot").forEach(d => d.classList.remove("active"));
+          dot.classList.add("active");
+          visionState.color = dot.getAttribute("data-color") || "#00f2fe";
+          visionSetTool("pen");
+        });
+      });
+    }
+
+    const vWidth = $("#vtool-width");
+    if (vWidth) {
+      vWidth.addEventListener("input", () => {
+        visionState.width = parseInt(vWidth.value, 10) || 5;
+      });
+    }
+
+    const vGridBtn = $("#vtool-grid");
+    if (vGridBtn) {
+      vGridBtn.addEventListener("click", () => {
+        visionState.grid = !visionState.grid;
+        vGridBtn.style.opacity = visionState.grid ? "1" : "0.55";
+        visionShowToast(visionT("visionToastGrid"));
+      });
+    }
+
+    const vMirrorBtn = $("#vtool-mirror");
+    if (vMirrorBtn) {
+      vMirrorBtn.addEventListener("click", () => {
+        visionState.mirror = !visionState.mirror;
+        ["#vision-video", "#vision-video-posture", "#vision-video-doc"].forEach(sel => {
+          const v = $(sel);
+          if (v) v.style.transform = visionState.mirror ? "scaleX(-1)" : "none";
+        });
+        vMirrorBtn.style.opacity = visionState.mirror ? "1" : "0.55";
+        visionShowToast(visionT("visionToastMirror"));
+      });
+    }
+
+    function visionDrawGrid(ctx, canvas) {
+      if (!visionState.grid || !ctx || !canvas) return;
+      ctx.save();
+      ctx.strokeStyle = "rgba(0,242,254,0.18)";
+      ctx.lineWidth = 1;
+      const stepX = canvas.width / 3;
+      for (let i = 1; i < 3; i++) {
+        ctx.beginPath();
+        ctx.moveTo(stepX * i, 0);
+        ctx.lineTo(stepX * i, canvas.height);
+        ctx.stroke();
+      }
+      const stepY = canvas.height / 3;
+      for (let i = 1; i < 3; i++) {
+        ctx.beginPath();
+        ctx.moveTo(0, stepY * i);
+        ctx.lineTo(canvas.width, stepY * i);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function clearVisionCanvas() {
+      const canvas = $("#vision-overlay");
+      if (!canvas) return;
+      canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
+      visionShowToast(visionT("visionToastClear"));
+    }
+    const vClearBtn = $("#vtool-clear");
+    if (vClearBtn) vClearBtn.addEventListener("click", clearVisionCanvas);
+
+    function drawVisionStroke(x, y) {
+      const pane = $("#vpane-correct");
+      if (!pane || pane.style.display === "none") return;
+      const canvas = $("#vision-overlay");
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      if (!rect || rect.width === 0) return;
+      if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) return;
+      const canvasX = (x - rect.left) * (canvas.width / rect.width);
+      const canvasY = (y - rect.top) * (canvas.height / rect.height);
+      const ctx = canvas.getContext("2d");
+      ctx.save();
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      if (visionState.eraser) {
+        ctx.globalCompositeOperation = "destination-out";
+        ctx.strokeStyle = "rgba(0,0,0,1)";
+        ctx.lineWidth = Math.max(8, visionState.width * 3);
+      } else {
+        ctx.strokeStyle = visionState.color;
+        ctx.lineWidth = visionState.width;
+      }
+      if (!canvas._isAirDrawing) {
+        canvas._isAirDrawing = true;
+        ctx.beginPath();
+        ctx.moveTo(canvasX, canvasY);
+      } else {
+        ctx.lineTo(canvasX, canvasY);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function visionCompositeCapture() {
+      const video = $("#vision-video");
+      const overlay = $("#vision-overlay");
+      const out = document.createElement("canvas");
+      out.width = 960;
+      out.height = 540;
+      const ctx = out.getContext("2d");
+      if (video && video.videoWidth) ctx.drawImage(video, 0, 0, out.width, out.height);
+      else ctx.fillStyle = "#040710", ctx.fillRect(0, 0, out.width, out.height);
+      if (overlay) ctx.drawImage(overlay, 0, 0);
+      visionDrawGrid(ctx, out);
+      return out;
+    }
+
+    function downloadCanvas(canvas, filename) {
+      try {
+        const link = document.createElement("a");
+        link.download = filename;
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+        return true;
+      } catch (e) { return false; }
+    }
+
+    function visionAddThumbnail(url, gallerySel, title) {
+      const gallery = $(gallerySel);
+      if (!gallery) return;
+      const wrap = document.createElement("div");
+      wrap.style.cssText = "position:relative; display:inline-flex;";
+      const img = document.createElement("img");
+      img.src = url;
+      img.title = title || "";
+      img.addEventListener("click", () => { try { window.open(url, "_blank"); } catch (e) {} });
+      const del = document.createElement("button");
+      del.type = "button";
+      del.textContent = "✕";
+      del.style.cssText = "position:absolute; top:-6px; right:-6px; background:#ff5d5d; color:#fff; border:none; border-radius:50%; width:20px; height:20px; font-size:11px; line-height:1; cursor:pointer;";
+      del.addEventListener("click", () => wrap.remove());
+      wrap.appendChild(img);
+      wrap.appendChild(del);
+      gallery.appendChild(wrap);
+    }
+
+    function saveVisionCorrection() {
+      if (!visionGetStream()) {
+        visionShowToast(visionT("visionToastNoCam"));
+        visionShareStream();
+        return;
+      }
+      const out = visionCompositeCapture();
+      const url = out.toDataURL("image/png");
+      downloadCanvas(out, "edu-air-correction.png");
+      visionAddThumbnail(url, "#vision-gallery", "Correction");
+      visionShowToast(visionT("visionToastSaved"));
+    }
+    const vSaveBtn = $("#vtool-save");
+    if (vSaveBtn) vSaveBtn.addEventListener("click", saveVisionCorrection);
+
+    // ----- Capture document : détection quadrilatère + redressement -----
+    function docGrabFrame() {
+      const video = $("#vision-video-doc");
+      const out = document.createElement("canvas");
+      const w = video && video.videoWidth ? video.videoWidth : 960;
+      const h = video && video.videoHeight ? video.videoHeight : 540;
+      out.width = w;
+      out.height = h;
+      const ctx = out.getContext("2d", { willReadFrequently: true });
+      if (video && video.videoWidth) ctx.drawImage(video, 0, 0, w, h);
+      return out;
+    }
+
+    function ptDistSeg(p, a, b) {
+      const dx = b[0] - a[0], dy = b[1] - a[1];
+      const len2 = dx * dx + dy * dy;
+      if (len2 === 0) return Math.hypot(p[0] - a[0], p[1] - a[1]);
+      let t = ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / len2;
+      t = Math.max(0, Math.min(1, t));
+      return Math.hypot(p[0] - (a[0] + t * dx), p[1] - (a[1] + t * dy));
+    }
+
+    function simplifyPoly(points, epsilon) {
+      const marked = new Array(points.length).fill(false);
+      marked[0] = marked[points.length - 1] = true;
+      const stack = [[0, points.length - 1]];
+      while (stack.length) {
+        const seg = stack.pop();
+        const s = seg[0], e = seg[1];
+        if (e - s <= 1) continue;
+        let maxD = 0, idx = -1;
+        for (let i = s + 1; i < e; i++) {
+          const d = ptDistSeg(points[i], points[s], points[e]);
+          if (d > maxD) { maxD = d; idx = i; }
+        }
+        if (idx !== -1 && maxD > epsilon) {
+          marked[idx] = true;
+          stack.push([s, idx]);
+          stack.push([idx, e]);
+        }
+      }
+      return points.filter((_, i) => marked[i]);
+    }
+
+    function hullPerimeter(pts) {
+      let p = 0;
+      for (let i = 0; i < pts.length; i++) {
+        const a = pts[i], b = pts[(i + 1) % pts.length];
+        p += Math.hypot(b[0] - a[0], b[1] - a[1]);
+      }
+      return p;
+    }
+
+    function monotoneChain(points) {
+      const p = points.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+      const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+      const lower = [];
+      for (const pt of p) {
+        while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], pt) <= 0) lower.pop();
+        lower.push(pt);
+      }
+      const upper = [];
+      for (let i = p.length - 1; i >= 0; i--) {
+        const pt = p[i];
+        while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], pt) <= 0) upper.pop();
+        upper.push(pt);
+      }
+      lower.pop();
+      upper.pop();
+      return lower.concat(upper);
+    }
+
+    function quadArea(pts) {
+      let s = 0;
+      for (let i = 0; i < pts.length; i++) {
+        const a = pts[i], b = pts[(i + 1) % pts.length];
+        s += a[0] * b[1] - b[0] * a[1];
+      }
+      return Math.abs(s) / 2;
+    }
+
+    function boundingBoxArea(pts) {
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      pts.forEach(p => {
+        if (p[0] < minX) minX = p[0];
+        if (p[0] > maxX) maxX = p[0];
+        if (p[1] < minY) minY = p[1];
+        if (p[1] > maxY) maxY = p[1];
+      });
+      return (maxX - minX) * (maxY - minY);
+    }
+
+    function orderCorners(pts) {
+      const cx = pts.reduce((s, p) => s + p[0], 0) / pts.length;
+      const cy = pts.reduce((s, p) => s + p[1], 0) / pts.length;
+      return pts.slice().sort((a, b) => Math.atan2(a[1] - cy, a[0] - cx) - Math.atan2(b[1] - cy, b[0] - cx));
+    }
+
+    function processDocDetection(srcCanvas) {
+      const SW = 160;
+      const scaleFactor = srcCanvas.width / SW;
+      const SH = Math.max(1, Math.round(srcCanvas.height / scaleFactor));
+      if (SH < 10) return null;
+      const small = document.createElement("canvas");
+      small.width = SW;
+      small.height = SH;
+      const sctx = small.getContext("2d", { willReadFrequently: true });
+      sctx.drawImage(srcCanvas, 0, 0, SW, SH);
+      const px = sctx.getImageData(0, 0, SW, SH).data;
+      const grad = new Float32Array(SW * SH);
+      let maxG = 0;
+      for (let y = 1; y < SH - 1; y++) {
+        for (let x = 1; x < SW - 1; x++) {
+          const i = (y * SW + x) * 4;
+          const l = (y * SW + (x - 1)) * 4;
+          const r = (y * SW + (x + 1)) * 4;
+          const u = ((y - 1) * SW + x) * 4;
+          const d = ((y + 1) * SW + x) * 4;
+          const gx = px[r] - px[l];
+          const gy = px[d] - px[u];
+          const g = Math.sqrt(gx * gx + gy * gy);
+          grad[y * SW + x] = g;
+          if (g > maxG) maxG = g;
+        }
+      }
+      const thr = maxG * 0.18;
+      const pts = [];
+      for (let i = 0; i < grad.length; i++) {
+        if (grad[i] >= thr) pts.push([(i % SW) * scaleFactor, Math.floor(i / SW) * scaleFactor]);
+      }
+      if (pts.length < 8) return null;
+      const hull = monotoneChain(pts);
+      if (hull.length < 4) return null;
+      const corners = simplifyPoly(hull, hullPerimeter(hull) * 0.02);
+      if (corners.length < 4) return null;
+      const quad = corners.slice(0, 4);
+      const conf = quadArea(quad) / (boundingBoxArea(quad) || 1);
+      if (conf < 0.25) return null;
+      return orderCorners(quad);
+    }
+
+    function solveHomography(srcPts, dstPts) {
+      const A = [], B = [];
+      for (let i = 0; i < 4; i++) {
+        const sx = srcPts[i][0], sy = srcPts[i][1];
+        const dx = dstPts[i][0], dy = dstPts[i][1];
+        A.push([dx, dy, 1, 0, 0, 0, -dx * sx, -dy * sx]);
+        B.push(sx);
+        A.push([0, 0, 0, dx, dy, 1, -dx * sy, -dy * sy]);
+        B.push(sy);
+      }
+      const h = gaussSolve(A, B);
+      return [h[0], h[1], h[2], h[3], h[4], h[5], h[6], h[7], 1];
+    }
+
+    function gaussSolve(A, B) {
+      const n = B.length;
+      const M = A.map((row, i) => row.concat(B[i]));
+      for (let col = 0; col < n; col++) {
+        let piv = col;
+        for (let r = col + 1; r < n; r++) {
+          if (Math.abs(M[r][col]) > Math.abs(M[piv][col])) piv = r;
+        }
+        if (Math.abs(M[piv][col]) < 1e-12) continue;
+        const tmp = M[col]; M[col] = M[piv]; M[piv] = tmp;
+        const div = M[col][col];
+        for (let j = col; j <= n; j++) M[col][j] /= div;
+        for (let r = 0; r < n; r++) {
+          if (r === col) continue;
+          const f = M[r][col];
+          if (Math.abs(f) < 1e-14) continue;
+          for (let j = col; j <= n; j++) M[r][j] -= f * M[col][j];
+        }
+      }
+      return M.map(r => r[n]);
+    }
+
+    function warpPerspective(src, H, outW, outH) {
+      const out = document.createElement("canvas");
+      out.width = outW;
+      out.height = outH;
+      const octx = out.getContext("2d");
+      const sx = src.width, sy = src.height;
+      const srcData = src.getContext("2d", { willReadFrequently: true }).getImageData(0, 0, sx, sy);
+      const oid = octx.createImageData(outW, outH);
+      const sd = srcData.data, od = oid.data;
+      for (let y = 0; y < outH; y++) {
+        for (let x = 0; x < outW; x++) {
+          const den = H[6] * x + H[7] * y + H[8];
+          if (Math.abs(den) < 1e-9) continue;
+          const u = (H[0] * x + H[1] * y + H[2]) / den;
+          const v = (H[3] * x + H[4] * y + H[5]) / den;
+          if (u < 0 || u > sx - 1 || v < 0 || v > sy - 1) continue;
+          const x0 = Math.floor(u), y0 = Math.floor(v);
+          const x1 = Math.min(x0 + 1, sx - 1), y1 = Math.min(y0 + 1, sy - 1);
+          const fx = u - x0, fy = v - y0;
+          const i00 = (y0 * sx + x0) * 4, i10 = (y0 * sx + x1) * 4;
+          const i01 = (y1 * sx + x0) * 4, i11 = (y1 * sx + x1) * 4;
+          const oi = (y * outW + x) * 4;
+          for (let c = 0; c < 3; c++) {
+            const v00 = sd[i00 + c], v10 = sd[i10 + c], v01 = sd[i01 + c], v11 = sd[i11 + c];
+            od[oi + c] = Math.round(
+              v00 * (1 - fx) * (1 - fy) + v10 * fx * (1 - fy) + v01 * (1 - fx) * fy + v11 * fx * fy
+            );
+          }
+          od[oi + 3] = 255;
+        }
+      }
+      octx.putImageData(oid, 0, 0);
+      return out;
+    }
+
+    function captureVisionDoc() {
+      if (!visionGetStream()) {
+        visionShowToast(visionT("visionToastNoCam"));
+        visionShareStream();
+        return;
+      }
+      const raw = docGrabFrame();
+      let result = raw;
+      let rectified = false;
+      if (raw.width > 10 && raw.height > 10) {
+        try {
+          const corners = processDocDetection(raw);
+          if (corners) {
+            const dTop = Math.hypot(corners[1][0] - corners[0][0], corners[1][1] - corners[0][1]);
+            const dBot = Math.hypot(corners[3][0] - corners[2][0], corners[3][1] - corners[2][1]);
+            const dL = Math.hypot(corners[3][0] - corners[0][0], corners[3][1] - corners[0][1]);
+            const dR = Math.hypot(corners[2][0] - corners[1][0], corners[2][1] - corners[1][1]);
+            const w = Math.max(dTop, dBot);
+            const hLen = Math.max(dL, dR);
+            const ratio = w / (hLen || 1);
+            let outW = 1000;
+            let outH = Math.round(1000 / ratio);
+            if (outH < 200) { outH = 800; outW = Math.round(800 * ratio); }
+            outW = Math.min(outW, 1600);
+            outH = Math.min(outH, 1600);
+            const dst = [[0, 0], [outW, 0], [outW, outH], [0, outH]];
+            const H = solveHomography(corners, dst);
+            result = warpPerspective(raw, H, outW, outH);
+            rectified = true;
+          }
+        } catch (e) {
+          rectified = false;
+        }
+      }
+      visionState.docResult = result;
+      const canvas = $("#vision-doc-canvas");
+      if (canvas) {
+        const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const rw = result.width, rh = result.height;
+        const scale = Math.min(canvas.width / rw, canvas.height / rh);
+        const dw = rw * scale, dh = rh * scale;
+        ctx.drawImage(result, (canvas.width - dw) / 2, (canvas.height - dh) / 2, dw, dh);
+      }
+      const url = result.toDataURL("image/png");
+      visionAddThumbnail(url, "#vision-doc-gallery", rectified ? "OK" : "RAW");
+      visionShowToast(rectified ? visionT("visionToastCaptureOk") : visionT("visionToastCaptureFallback"));
+    }
+    const vDocCaptureBtn = $("#vtool-doc-capture");
+    if (vDocCaptureBtn) vDocCaptureBtn.addEventListener("click", captureVisionDoc);
+    const vDocDlBtn = $("#vtool-doc-download");
+    if (vDocDlBtn) {
+      vDocDlBtn.addEventListener("click", () => {
+        if (!visionState.docResult) { visionShowToast(visionT("visionToastDocFirst")); return; }
+        downloadCanvas(visionState.docResult, "edu-air-document-redresse.png");
+      });
+    }
+    const vDocClearBtn = $("#vtool-doc-clear");
+    if (vDocClearBtn) {
+      vDocClearBtn.addEventListener("click", () => {
+        const canvas = $("#vision-doc-canvas");
+        if (canvas) canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
+        visionState.docResult = null;
+        const g = $("#vision-doc-gallery");
+        if (g) g.innerHTML = "";
+      });
+    }
+
+    // ----- Suivi EPS / Posture (MediaPipe Pose chargé à la demande) -----
+    const POSE_CONNECTIONS = [
+      [11, 12], [12, 14], [14, 16], [11, 13], [13, 15],
+      [11, 23], [12, 24], [23, 24], [23, 25], [25, 27],
+      [24, 26], [26, 28]
+    ];
+
+    function poseAngles(landmarks) {
+      const L = landmarks;
+      const rad = 180 / Math.PI;
+      const ang = (a, b, c) => {
+        const dx1 = L[a].x - L[b].x, dy1 = L[a].y - L[b].y;
+        const dx2 = L[c].x - L[b].x, dy2 = L[c].y - L[b].y;
+        let t = Math.atan2(dy2, dx2) - Math.atan2(dy1, dx1);
+        t = Math.abs(t * rad);
+        return t > 180 ? 360 - t : t;
+      };
+      const midHip = { x: (L[23].x + L[24].x) / 2, y: (L[23].y + L[24].y) / 2 };
+      const midSh = { x: (L[11].x + L[12].x) / 2, y: (L[11].y + L[12].y) / 2 };
+      const dx = midSh.x - midHip.x, dy = midSh.y - midHip.y;
+      const tronc = Math.abs(90 - Math.atan2(Math.abs(dx), Math.abs(dy)) * rad);
+      return {
+        epauleG: ang(13, 11, 23), epauleD: ang(14, 12, 24),
+        coudeG: ang(11, 13, 15), coudeD: ang(12, 14, 16),
+        hancheG: ang(11, 23, 25), hancheD: ang(12, 24, 26),
+        genouG: ang(23, 25, 27), genouD: ang(24, 26, 28),
+        tronc: tronc
+      };
+    }
+
+    function visionConsigne() {
+      const sel = $("#vposture-consigne");
+      return sel ? sel.value : "libre";
+    }
+
+    function angColorFor(key, ang) {
+      const cfgMap = {
+        coude90: { keys: ["coudeG", "coudeD"], r: [70, 115] },
+        squad: { keys: ["genouG", "genouD"], r: [60, 130] },
+        chaise: { keys: ["genouG", "genouD", "hancheG", "hancheD"], r: [70, 120] }
+      };
+      const cfg = cfgMap[visionConsigne()];
+      if (cfg && cfg.keys.indexOf(key) !== -1) {
+        return (ang >= cfg.r[0] && ang <= cfg.r[1]) ? "#3ddc97" : "#ff5d5d";
+      }
+      return (ang >= 70 && ang <= 165) ? "#3ddc97" : "#ffb84d";
+    }
+
+    function drawVisionPose(landmarks) {
+      const canvas = $("#vision-pose-canvas");
+      if (!canvas) return;
+      const W = canvas.width, H = canvas.height;
+      const ctx = canvas.getContext("2d");
+      ctx.clearRect(0, 0, W, H);
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = "#00f2fe";
+      ctx.shadowColor = "#00f2fe";
+      ctx.shadowBlur = 8;
+      POSE_CONNECTIONS.forEach((pair) => {
+        const p1 = landmarks[pair[0]], p2 = landmarks[pair[1]];
+        if (!p1 || !p2) return;
+        ctx.beginPath();
+        ctx.moveTo((1 - p1.x) * W, p1.y * H);
+        ctx.lineTo((1 - p2.x) * W, p2.y * H);
+        ctx.stroke();
+      });
+      ctx.shadowBlur = 0;
+      landmarks.forEach((p, i) => {
+        if (!p) return;
+        if (i === 0) return;
+        ctx.beginPath();
+        ctx.arc((1 - p.x) * W, p.y * H, 3, 0, 2 * Math.PI);
+        ctx.fillStyle = "#3ddc97";
+        ctx.fill();
+      });
+      const a = poseAngles(landmarks);
+      const labelJoints = {
+        epauleG: [11, a.epauleG], epauleD: [12, a.epauleD],
+        coudeG: [13, a.coudeG], coudeD: [14, a.coudeD],
+        hancheG: [23, a.hancheG], hancheD: [24, a.hancheD],
+        genouG: [25, a.genouG], genouD: [26, a.genouD]
+      };
+      ctx.font = "bold 13px Segoe UI, sans-serif";
+      Object.keys(labelJoints).forEach(k => {
+        const item = labelJoints[k];
+        const p = landmarks[item[0]];
+        if (!p) return;
+        const x = (1 - p.x) * W, y = p.y * H;
+        ctx.fillStyle = angColorFor(k, item[1]);
+        ctx.fillText(Math.round(item[1]) + "°", x + 8, y - 8);
+      });
+    }
+
+    function updateVisionAngles(lm) {
+      const a = poseAngles(lm);
+      const panel = $("#vision-angle-panel");
+      if (panel) {
+        const labels = {
+          tronc: visionT("visionAngleBack"),
+          epauleG: visionT("visionAngleShoulder") + " G", epauleD: visionT("visionAngleShoulder") + " D",
+          coudeG: visionT("visionAngleElbow") + " G", coudeD: visionT("visionAngleElbow") + " D",
+          hancheG: visionT("visionAngleHip") + " G", hancheD: visionT("visionAngleHip") + " D",
+          genouG: visionT("visionAngleKnee") + " G", genouD: visionT("visionAngleKnee") + " D"
+        };
+        panel.innerHTML = "";
+        Object.keys(labels).forEach(k => {
+          const chip = document.createElement("span");
+          chip.className = "vision-angle-chip";
+          chip.style.color = angColorFor(k, a[k]);
+          const lab = document.createElement("span");
+          lab.textContent = labels[k];
+          const val = document.createElement("span");
+          val.className = "val";
+          val.textContent = Math.round(a[k]) + "°";
+          chip.appendChild(lab);
+          chip.appendChild(val);
+          panel.appendChild(chip);
+        });
+      }
+      const cfgMap = {
+        coude90: { keys: ["coudeG", "coudeD"], r: [70, 115] },
+        squad: { keys: ["genouG", "genouD"], r: [60, 130] },
+        chaise: { keys: ["genouG", "genouD", "hancheG", "hancheD"], r: [70, 120] }
+      };
+      let ok = true;
+      const cfg = cfgMap[visionConsigne()];
+      if (cfg) {
+        for (const k of cfg.keys) {
+          if (a[k] < cfg.r[0] || a[k] > cfg.r[1]) { ok = false; break; }
+        }
+      }
+      const st = $("#vposture-status");
+      if (st) {
+        st.textContent = ok ? "🟢 " + visionT("visionStatusOk") : "🔴 " + visionT("visionStatusFix");
+        st.style.color = ok ? "#3ddc97" : "#ff5d5d";
+      }
+    }
+
+    function loadVisionPose() {
+      if (window.Pose || visionState.poseEngine) return Promise.resolve(true);
+      if (visionState.poseLoading) return Promise.resolve(false);
+      visionState.poseLoading = true;
+      return new Promise(resolve => {
+        const s = document.createElement("script");
+        s.src = "https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js";
+        s.async = true;
+        s.onload = () => {
+          visionState.poseLoading = false;
+          try {
+            visionState.poseEngine = new window.Pose({
+              locateFile: (f) => "https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/" + f
+            });
+            visionState.poseEngine.setOptions({
+              modelComplexity: 1,
+              smoothLandmarks: true,
+              minDetectionConfidence: 0.5,
+              minTrackingConfidence: 0.5
+            });
+            visionState.poseEngine.onResults(res => {
+              visionState.posePending = false;
+              const lm = res && res.poseLandmarks;
+              visionState.poseVisible = !!lm;
+              if (lm && visionState.postureRunning) {
+                drawVisionPose(lm);
+                updateVisionAngles(lm);
+              }
+            });
+            resolve(true);
+          } catch (e) {
+            visionState.poseEngine = null;
+            resolve(false);
+          }
+        };
+        s.onerror = () => { visionState.poseLoading = false; resolve(false); };
+        document.head.appendChild(s);
+      });
+    }
+
+    async function startVisionPosture() {
+      if (visionState.postureRunning) return;
+      const ok = await loadVisionPose();
+      if (!ok) { visionShowToast(visionT("visionToastPoseFail")); return; }
+      visionState.postureRunning = true;
+      const btn = $("#vposture-toggle");
+      if (btn) btn.textContent = "⏸ " + visionT("visionPostureStop");
+      visionShowToast(visionT("visionToastPoseStart"));
+      visionPostureLoop();
+    }
+
+    function stopVisionPosture() {
+      visionState.postureRunning = false;
+      const btn = $("#vposture-toggle");
+      if (btn) btn.textContent = "▶ " + visionT("visionPostureStart");
+    }
+
+    function visionPostureLoop() {
+      if (!visionState.postureRunning) return;
+      const video = $("#vision-video-posture");
+      if (video && video.readyState >= 2 && !visionState.posePending && visionState.poseEngine && !document.hidden) {
+        visionState.posePending = true;
+        try { visionState.poseEngine.send({ image: video }); } catch (e) { visionState.posePending = false; }
+      }
+      requestAnimationFrame(visionPostureLoop);
+    }
+    const vPostureBtn = $("#vposture-toggle");
+    if (vPostureBtn) {
+      vPostureBtn.addEventListener("click", () => {
+        if (visionState.postureRunning) stopVisionPosture();
+        else startVisionPosture();
+      });
+    }
+
+    function handleVisionAirGesture(gestureName) {
+      const paneIds = ["vpane-correct", "vpane-posture", "vpane-doc"];
+      const activePane = paneIds.find(id => {
+        const el = $("#" + id);
+        return el && el.style.display !== "none";
+      });
+      if (gestureName === "PEACE") {
+        if (activePane === "vpane-doc") { captureVisionDoc(); return true; }
+        if (activePane === "vpane-correct") { saveVisionCorrection(); return true; }
+      }
+      if (gestureName === "FIST") {
+        const canvas = $("#vision-overlay");
+        if (canvas && canvas.getContext("2d")) {
+          canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
+          visionShowToast(visionT("visionToastClear"));
+          return true;
+        }
+      }
+      return false;
     }
 
     function processHandLandmarks(landmarks) {
