@@ -2180,6 +2180,12 @@
     let handsEngine = null;
     let isMpProcessing = false;
     let lastMpFrameSuccessTime = 0;
+    let cameraStarted = false;
+    let swipeWindow = [];
+    let lastNavTime = 0;
+    const NAV_COOLDOWN_MS = 1000;
+    const SWIPE_THRESHOLD = 0.14;
+    const SWIPE_WINDOW_MS = 500;
 
     // Toggle PiP WebCam visibility
     if (btnTogglePip && pipWebcamBox) {
@@ -2383,6 +2389,10 @@
       currentGesture = gest.name;
       isPinching = gest.name === "PINCH";
 
+      const swinging = gest.name !== "PINCH" && gest.name !== "FIST";
+      const nav = detectSwipe(lm[8].x, swinging);
+      if (nav) triggerNavigation(nav);
+
       if (airPointer) {
         airPointer.style.transform = `translate3d(${smoothedX}px, ${smoothedY}px, 0)`;
         airPointer.classList.add("active");
@@ -2426,6 +2436,50 @@
       }
     }
 
+    // --- Swipe navigation: wave the open hand right (next) / left (previous).
+    // The direction uses camera-space X so it stays intuitive whichever way the
+    // webcam is mirrored, and it works for both the MediaPipe and the fallback
+    // optical detector (they both feed a normalized 0..1 camera X).
+    function detectSwipe(camX, handOpen) {
+      const now = Date.now();
+      if (!handOpen) {
+        swipeWindow.length = 0;
+        return null;
+      }
+      swipeWindow.push({ x: camX, t: now });
+      while (swipeWindow.length && now - swipeWindow[0].t > SWIPE_WINDOW_MS) {
+        swipeWindow.shift();
+      }
+      if (swipeWindow.length < 3) return null;
+      const first = swipeWindow[0];
+      const lastS = swipeWindow[swipeWindow.length - 1];
+      const dt = lastS.t - first.t;
+      if (dt < 40 || dt > SWIPE_WINDOW_MS) return null;
+      const dx = lastS.x - first.x;
+      if (Math.abs(dx) < SWIPE_THRESHOLD) return null;
+      if (now - lastNavTime < NAV_COOLDOWN_MS) return null;
+      lastNavTime = now;
+      return dx > 0 ? "SWIPE_RIGHT" : "SWIPE_LEFT";
+    }
+
+    function triggerNavigation(swipe) {
+      if (swipe === "SWIPE_RIGHT") {
+        const btnNext = $("#btn-slide-next") || $("#btn-pres-next");
+        if (btnNext) {
+          btnNext.click();
+          window.updateGestureHUD("SWIPE_RIGHT", 96);
+          if (txtCamStatus) txtCamStatus.textContent = "👉 Balayage droit : slide suivante";
+        }
+      } else if (swipe === "SWIPE_LEFT") {
+        const btnPrev = $("#btn-slide-prev");
+        if (btnPrev) {
+          btnPrev.click();
+          window.updateGestureHUD("SWIPE_LEFT", 96);
+          if (txtCamStatus) txtCamStatus.textContent = "👈 Balayage gauche : slide précédente";
+        }
+      }
+    }
+
     // --- Standalone 60 FPS Optical Motion & Skin Hand Analyzer ---
     const fallbackCanvas = document.createElement("canvas");
     fallbackCanvas.width = 160;
@@ -2435,6 +2489,10 @@
 
     function processStandaloneHandAnalysis(videoEl) {
       if (!videoEl || videoEl.readyState < 2 || !fallbackCtx) return;
+
+      // Fallback detector only: once MediaPipe has answered recently, stop the
+      // crude optical classifier so it never clobbers the 3D landmark output.
+      if (handsEngine && Date.now() - lastMpFrameSuccessTime < 900) return;
 
       const width = 160;
       const height = 120;
@@ -2557,6 +2615,9 @@
         }
 
         handleAirGesturesInteraction(smoothedX, smoothedY, gestName);
+
+        const nav = detectSwipe(normX, gestName !== "PINCH" && gestName !== "FIST");
+        if (nav) triggerNavigation(nav);
       } else {
         if (Date.now() - lastMpFrameSuccessTime > 800) {
           onNoHandDetected();
@@ -2564,33 +2625,47 @@
       }
     }
 
-    function initMediaPipeHands() {
-      if (typeof window.Hands !== "undefined") {
-        try {
-          handsEngine = new window.Hands({
-            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${file}`
-          });
-          handsEngine.setOptions({
-            maxNumHands: 1,
-            modelComplexity: 1,
-            minDetectionConfidence: 0.5,
-            minTrackingConfidence: 0.5
-          });
-          handsEngine.onResults((results) => {
-            if (results && results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-              processHandLandmarks(results.multiHandLandmarks);
-            }
-          });
-          console.log("✅ Moteur MediaPipe Hands initialisé.");
-          return true;
-        } catch (e) {
-          console.warn("MediaPipe Hands init warning:", e);
+    function initMediaPipeHands(retriesLeft = 5) {
+      if (handsEngine) return true;
+      if (typeof window.Hands === "undefined") {
+        // The MediaPipe <script> may still be loading (slow / offline cache).
+        if (retriesLeft > 0) {
+          setTimeout(() => initMediaPipeHands(retriesLeft - 1), 400);
+        } else if (txtCamStatus) {
+          txtCamStatus.textContent = "Mode secours (MediaPipe indisponible)";
+        }
+        return false;
+      }
+      try {
+        handsEngine = new window.Hands({
+          locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${file}`
+        });
+        handsEngine.setOptions({
+          maxNumHands: 1,
+          modelComplexity: 1,
+          minDetectionConfidence: 0.5,
+          minTrackingConfidence: 0.5
+        });
+        handsEngine.onResults((results) => {
+          if (results && results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+            lastMpFrameSuccessTime = Date.now();
+            processHandLandmarks(results.multiHandLandmarks);
+          }
+        });
+        console.log("✅ Moteur MediaPipe Hands initialisé.");
+        return true;
+      } catch (e) {
+        console.warn("MediaPipe Hands init warning:", e);
+        if (retriesLeft > 0) {
+          setTimeout(() => initMediaPipeHands(retriesLeft - 1), 800);
         }
       }
       return false;
     }
 
     function startCameraTracking() {
+      if (cameraStarted) return;   // never open a second stream / engine
+      cameraStarted = true;
       if (pipVideo) {
         pipVideo.muted = true;
         pipVideo.setAttribute("playsinline", "");
@@ -2611,10 +2686,11 @@
 
           function frameLoop() {
             if (pipVideo && pipVideo.readyState >= 2 && handTrackerActive) {
-              // 1. Always run standalone 60 FPS optical tracking
+              // 1. Fallback optical 60 FPS tracking (self-guards: skipped while
+              //    MediaPipe is answering, so it can't clobber 3D landmarks).
               processStandaloneHandAnalysis(pipVideo);
 
-              // 2. Concurrently refine with MediaPipe 3D landmarks if available
+              // 2. Primary detector: MediaPipe 3D landmarks.
               if (handsEngine && !isMpProcessing) {
                 isMpProcessing = true;
                 handsEngine.send({ image: pipVideo }).catch(() => {}).finally(() => {
@@ -2628,14 +2704,17 @@
         })
         .catch((err) => {
           console.warn("Erreur d'accès WebCam:", err.message);
+          cameraStarted = false;   // allow retry via the status pill / click
           if (txtCamStatus) txtCamStatus.textContent = "⚠️ Caméra bloquée — Cliquez pour autoriser";
         });
+      } else {
+        cameraStarted = false;
+        if (txtCamStatus) txtCamStatus.textContent = "⚠️ Caméra inaccessible par ce navigateur";
       }
     }
 
-    // Start camera tracking
+    // Start camera tracking (single init — guarded in startCameraTracking)
     startCameraTracking();
-    setTimeout(startCameraTracking, 600);
 
     // Allow Manual Pointer Simulation on Canvas when moving mouse with Shift key pressed
     document.addEventListener("mousemove", (e) => {
