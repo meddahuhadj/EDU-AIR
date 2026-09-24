@@ -57,6 +57,44 @@
     }
     applyThemeMode(savedTheme);
 
+    // --- Fullscreen Mode Toggle (TNI / TBI Classroom Mode) ---
+    const btnFullscreen = $("#btn-toggle-fullscreen");
+    const btnWbFullscreen = $("#btn-wb-fullscreen");
+
+    function toggleFullscreenMode() {
+      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+        const docEl = document.documentElement;
+        if (docEl.requestFullscreen) {
+          docEl.requestFullscreen();
+        } else if (docEl.webkitRequestFullscreen) {
+          docEl.webkitRequestFullscreen();
+        }
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+          document.webkitExitFullscreen();
+        }
+      }
+    }
+
+    if (btnFullscreen) btnFullscreen.addEventListener("click", toggleFullscreenMode);
+    if (btnWbFullscreen) btnWbFullscreen.addEventListener("click", toggleFullscreenMode);
+
+    function handleFSChange() {
+      const isFS = !!(document.fullscreenElement || document.webkitFullscreenElement);
+      if (btnFullscreen) {
+        btnFullscreen.textContent = isFS ? "🗗" : "⛶";
+        btnFullscreen.title = isFS ? "Quitter le Plein écran (TNI)" : "Passer en Plein écran (TNI)";
+      }
+      if (btnWbFullscreen) {
+        btnWbFullscreen.textContent = isFS ? "🗗 Quitter Plein écran" : "⛶ Plein écran";
+      }
+    }
+
+    document.addEventListener("fullscreenchange", handleFSChange);
+    document.addEventListener("webkitfullscreenchange", handleFSChange);
+
     // --- Sidebar & Module View Router ---
     const sidebarItems = $$(".sidebar-item");
     const moduleViews = $$(".module-view");
