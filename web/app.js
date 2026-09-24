@@ -2391,38 +2391,51 @@
       }
     }
 
-    // Fallback skin/motion hand tracker
+    // Motion & skin fallback hand tracker
     const fallbackCanvas = document.createElement("canvas");
     fallbackCanvas.width = 160;
     fallbackCanvas.height = 120;
     const fallbackCtx = fallbackCanvas.getContext("2d", { willReadFrequently: true });
+    let prevFramePixels = null;
 
     function processFallbackHandTracker(videoEl) {
-      if (!videoEl || videoEl.readyState < 2 || !fallbackCtx) return;
-      fallbackCtx.drawImage(videoEl, 0, 0, 160, 120);
-      const frame = fallbackCtx.getImageData(0, 0, 160, 120);
+      if (!videoEl || videoEl.readyState < 1 || !fallbackCtx) return;
+
+      const width = 160;
+      const height = 120;
+      fallbackCtx.drawImage(videoEl, 0, 0, width, height);
+      const frame = fallbackCtx.getImageData(0, 0, width, height);
       const data = frame.data;
 
       let sumX = 0, sumY = 0, count = 0;
 
       for (let i = 0; i < data.length; i += 4) {
         const r = data[i], g = data[i+1], b = data[i+2];
-        const isSkin = (r > 60 && g > 40 && b > 20 && r > g && r > b && (Math.max(r, g, b) - Math.min(r, g, b) > 15));
-        if (isSkin) {
+        const isSkin = (r > 45 && g > 30 && b > 15 && r > g && r > b);
+
+        let isMotion = false;
+        if (prevFramePixels && prevFramePixels[i] !== undefined) {
+          const diff = Math.abs(r - prevFramePixels[i]) + Math.abs(g - prevFramePixels[i+1]) + Math.abs(b - prevFramePixels[i+2]);
+          if (diff > 35) isMotion = true;
+        }
+
+        if (isSkin || isMotion) {
           const pixelIndex = i / 4;
-          const px = pixelIndex % 160;
-          const py = Math.floor(pixelIndex / 160);
+          const px = pixelIndex % width;
+          const py = Math.floor(pixelIndex / width);
           sumX += px;
           sumY += py;
           count++;
         }
       }
 
-      if (count > 80) {
+      prevFramePixels = new Uint8ClampedArray(data);
+
+      if (count > 40) {
         const avgX = sumX / count;
         const avgY = sumY / count;
-        const normX = avgX / 160;
-        const normY = avgY / 120;
+        const normX = avgX / width;
+        const normY = avgY / height;
 
         if (pipCanvas) {
           if (pipCanvas.width !== pipCanvas.clientWidth || pipCanvas.height !== pipCanvas.clientHeight) {
@@ -2432,8 +2445,8 @@
           const ctx = pipCanvas.getContext("2d");
           ctx.clearRect(0, 0, pipCanvas.width, pipCanvas.height);
           ctx.beginPath();
-          ctx.arc(normX * pipCanvas.width, normY * pipCanvas.height, 14, 0, 2 * Math.PI);
-          ctx.fillStyle = "rgba(0, 242, 254, 0.4)";
+          ctx.arc(normX * pipCanvas.width, normY * pipCanvas.height, 12, 0, 2 * Math.PI);
+          ctx.fillStyle = "rgba(0, 242, 254, 0.5)";
           ctx.strokeStyle = "#00f2fe";
           ctx.lineWidth = 2;
           ctx.fill();
@@ -2443,8 +2456,8 @@
         const rawX = (1 - normX) * window.innerWidth;
         const rawY = normY * window.innerHeight;
 
-        smoothedX += (rawX - smoothedX) * 0.25;
-        smoothedY += (rawY - smoothedY) * 0.25;
+        smoothedX += (rawX - smoothedX) * 0.3;
+        smoothedY += (rawY - smoothedY) * 0.3;
 
         if (airPointer) {
           airPointer.style.transform = `translate3d(${smoothedX}px, ${smoothedY}px, 0)`;
@@ -2473,7 +2486,7 @@
       s1.crossOrigin = "anonymous";
       s1.onload = () => {
         const s2 = document.createElement("script");
-        s2.src = "https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js";
+        s2.src = "https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.js";
         s2.crossOrigin = "anonymous";
         s2.onload = () => {
           console.log("✅ Scripts MediaPipe chargés avec succès.");
@@ -2488,7 +2501,7 @@
       if (typeof window.Hands !== "undefined") {
         try {
           handsEngine = new window.Hands({
-            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${file}`
           });
           handsEngine.setOptions({
             maxNumHands: 1,
@@ -2514,19 +2527,23 @@
       return false;
     }
 
-    // Initialize Camera Stream & Detection Loop
+    // Fail-proof Instant Camera Initialization & Tracking Loop
     if (pipVideo && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      navigator.mediaDevices.getUserMedia({ video: true })
+      navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" } })
         .then((stream) => {
           pipVideo.srcObject = stream;
-          pipVideo.onloadedmetadata = () => {
-            pipVideo.play();
+
+          let loopStarted = false;
+          function startCameraTracking() {
+            if (loopStarted) return;
+            loopStarted = true;
+            pipVideo.play().catch(() => {});
             initMediaPipeHands();
 
             let processingFrame = false;
             async function videoProcessLoop() {
-              if (pipVideo && pipVideo.readyState >= 2 && handTrackerActive) {
-                if (handsEngine && !processingFrame) {
+              if (pipVideo && pipVideo.readyState >= 1 && handTrackerActive) {
+                if (handsEngine && pipVideo.readyState >= 2 && !processingFrame) {
                   processingFrame = true;
                   try {
                     await handsEngine.send({ image: pipVideo });
@@ -2534,14 +2551,19 @@
                     processFallbackHandTracker(pipVideo);
                   }
                   processingFrame = false;
-                } else if (!handsEngine) {
+                } else {
                   processFallbackHandTracker(pipVideo);
                 }
               }
               requestAnimationFrame(videoProcessLoop);
             }
             requestAnimationFrame(videoProcessLoop);
-          };
+          }
+
+          pipVideo.onloadedmetadata = startCameraTracking;
+          pipVideo.onloadeddata = startCameraTracking;
+          setTimeout(startCameraTracking, 300);
+          setTimeout(startCameraTracking, 1200);
         })
         .catch((err) => {
           console.log("Webcam notice:", err.message);
