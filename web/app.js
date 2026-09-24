@@ -2178,6 +2178,8 @@
     let smoothedY = window.innerHeight / 2;
     let lastGestureTime = 0;
     let handsEngine = null;
+    let isMpProcessing = false;
+    let lastMpFrameSuccessTime = 0;
 
     // Toggle PiP WebCam visibility
     if (btnTogglePip && pipWebcamBox) {
@@ -2196,6 +2198,14 @@
         if (txtCamStatus) {
           txtCamStatus.textContent = handTrackerActive ? "Montrez votre main devant la caméra" : "📷 Suivi Main Désactivé";
         }
+      });
+    }
+
+    // Re-trigger camera on clicking camera status text
+    if (txtCamStatus) {
+      txtCamStatus.style.cursor = "pointer";
+      txtCamStatus.addEventListener("click", () => {
+        startCameraTracking();
       });
     }
 
@@ -2257,7 +2267,6 @@
     }
 
     function classifyHandGestureRotationInvariant(lm) {
-      // Rotation-invariant extension check relative to wrist (lm[0])
       const wrist = lm[0];
       const distIndexTip = Math.hypot(lm[8].x - wrist.x, lm[8].y - wrist.y);
       const distIndexMCP = Math.hypot(lm[5].x - wrist.x, lm[5].y - wrist.y);
@@ -2275,7 +2284,6 @@
       const distPinkyMCP = Math.hypot(lm[17].x - wrist.x, lm[17].y - wrist.y);
       const pinkyExtended = distPinkyTip > distPinkyMCP * 1.35;
 
-      // Pinch distance between index tip (#8) and thumb tip (#4)
       const pinchDist = Math.hypot(lm[8].x - lm[4].x, lm[8].y - lm[4].y);
       const pinchActive = pinchDist < 0.085;
 
@@ -2301,7 +2309,6 @@
     function handleAirGesturesInteraction(x, y, gestureName) {
       const now = Date.now();
 
-      // 1. Drawing / Annotation on Whiteboard & Air Draw canvases
       if (isPinching) {
         const activeView = $(".module-view.active-view");
         if (activeView) {
@@ -2332,7 +2339,6 @@
         $$("canvas").forEach(c => { c._isAirDrawing = false; });
       }
 
-      // 2. Gesture Trigger Actions with cooldown
       if (now - lastGestureTime > 1200) {
         if (gestureName === "PEACE") {
           const btnNext = $("#btn-pres-next");
@@ -2356,6 +2362,7 @@
         return;
       }
 
+      lastMpFrameSuccessTime = Date.now();
       const lm = landmarks[0];
       if (pipCanvas) {
         if (pipCanvas.width !== pipCanvas.clientWidth || pipCanvas.height !== pipCanvas.clientHeight) {
@@ -2366,8 +2373,6 @@
         drawHandSkeleton(ctx, lm, pipCanvas.width, pipCanvas.height);
       }
 
-      // Calculate screen position from Index tip (#8)
-      // Mirroring adjustment (camera scaleX(-1))
       const rawX = (1 - lm[8].x) * window.innerWidth;
       const rawY = lm[8].y * window.innerHeight;
 
@@ -2378,7 +2383,6 @@
       currentGesture = gest.name;
       isPinching = gest.name === "PINCH";
 
-      // Position Air Pointer Cursor
       if (airPointer) {
         airPointer.style.transform = `translate3d(${smoothedX}px, ${smoothedY}px, 0)`;
         airPointer.classList.add("active");
@@ -2390,7 +2394,6 @@
         }
       }
 
-      // Update Header Badges
       if (txtCamStatus) {
         txtCamStatus.textContent = gest.label;
       }
@@ -2423,15 +2426,15 @@
       }
     }
 
-    // Motion & skin fallback hand tracker
+    // --- Standalone 60 FPS Optical Motion & Skin Hand Analyzer ---
     const fallbackCanvas = document.createElement("canvas");
     fallbackCanvas.width = 160;
     fallbackCanvas.height = 120;
     const fallbackCtx = fallbackCanvas.getContext("2d", { willReadFrequently: true });
     let prevFramePixels = null;
 
-    function processFallbackHandTracker(videoEl) {
-      if (!videoEl || videoEl.readyState < 1 || !fallbackCtx) return;
+    function processStandaloneHandAnalysis(videoEl) {
+      if (!videoEl || videoEl.readyState < 2 || !fallbackCtx) return;
 
       const width = 160;
       const height = 120;
@@ -2440,34 +2443,53 @@
       const data = frame.data;
 
       let sumX = 0, sumY = 0, count = 0;
+      let minPixelY = height, topFingertipX = width / 2;
+      let minX = width, maxX = 0, minY = height, maxY = 0;
 
       for (let i = 0; i < data.length; i += 4) {
         const r = data[i], g = data[i+1], b = data[i+2];
-        const isSkin = (r > 45 && g > 30 && b > 15 && r > g && r > b);
+
+        // Enhanced YCbCr / Normalized RGB Skin thresholding
+        const isSkin = (r > 50 && g > 35 && b > 20 && r > g && r > b && (Math.max(r,g,b) - Math.min(r,g,b) > 12));
 
         let isMotion = false;
         if (prevFramePixels && prevFramePixels[i] !== undefined) {
           const diff = Math.abs(r - prevFramePixels[i]) + Math.abs(g - prevFramePixels[i+1]) + Math.abs(b - prevFramePixels[i+2]);
-          if (diff > 35) isMotion = true;
+          if (diff > 30) isMotion = true;
         }
 
         if (isSkin || isMotion) {
           const pixelIndex = i / 4;
           const px = pixelIndex % width;
           const py = Math.floor(pixelIndex / width);
+
           sumX += px;
           sumY += py;
           count++;
+
+          if (px < minX) minX = px;
+          if (px > maxX) maxX = px;
+          if (py < minY) minY = py;
+          if (py > maxY) maxY = py;
+
+          if (py < minPixelY) {
+            minPixelY = py;
+            topFingertipX = px;
+          }
         }
       }
 
       prevFramePixels = new Uint8ClampedArray(data);
 
-      if (count > 40) {
+      if (count > 25) {
         const avgX = sumX / count;
         const avgY = sumY / count;
-        const normX = avgX / width;
-        const normY = avgY / height;
+
+        const targetX = (minPixelY < avgY - 5) ? topFingertipX : avgX;
+        const targetY = minPixelY;
+
+        const normX = targetX / width;
+        const normY = targetY / height;
 
         if (pipCanvas) {
           if (pipCanvas.width !== pipCanvas.clientWidth || pipCanvas.height !== pipCanvas.clientHeight) {
@@ -2476,57 +2498,69 @@
           }
           const ctx = pipCanvas.getContext("2d");
           ctx.clearRect(0, 0, pipCanvas.width, pipCanvas.height);
+
+          const cX = normX * pipCanvas.width;
+          const cY = normY * pipCanvas.height;
+
           ctx.beginPath();
-          ctx.arc(normX * pipCanvas.width, normY * pipCanvas.height, 12, 0, 2 * Math.PI);
-          ctx.fillStyle = "rgba(0, 242, 254, 0.5)";
+          ctx.arc(cX, cY, 14, 0, 2 * Math.PI);
+          ctx.fillStyle = "rgba(0, 242, 254, 0.25)";
           ctx.strokeStyle = "#00f2fe";
-          ctx.lineWidth = 2;
+          ctx.lineWidth = 2.5;
           ctx.fill();
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.moveTo(cX - 8, cY); ctx.lineTo(cX + 8, cY);
+          ctx.moveTo(cX, cY - 8); ctx.lineTo(cX, cY + 8);
+          ctx.strokeStyle = "#00f2fe";
+          ctx.lineWidth = 1.5;
           ctx.stroke();
         }
 
         const rawX = (1 - normX) * window.innerWidth;
         const rawY = normY * window.innerHeight;
 
-        smoothedX += (rawX - smoothedX) * 0.3;
-        smoothedY += (rawY - smoothedY) * 0.3;
+        smoothedX += (rawX - smoothedX) * 0.35;
+        smoothedY += (rawY - smoothedY) * 0.35;
+
+        const blobWidth = maxX - minX;
+        const blobHeight = maxY - minY;
+        let gestCode = "☝️ Pointeur Air";
+        let gestName = "POINT";
+
+        if (blobWidth < 25 && blobHeight < 25) {
+          gestCode = "🤏 Pincement";
+          gestName = "PINCH";
+          isPinching = true;
+        } else if (blobWidth > 55 && blobHeight > 45) {
+          gestCode = "🖐️ Paume Ouverte";
+          gestName = "PALM";
+          isPinching = false;
+        } else {
+          isPinching = false;
+        }
 
         if (airPointer) {
           airPointer.style.transform = `translate3d(${smoothedX}px, ${smoothedY}px, 0)`;
           airPointer.classList.add("active");
-          if (airCursorLabel) airCursorLabel.textContent = "✋ Main Détectée";
+          airPointer.classList.toggle("pinching", isPinching);
+          airPointer.classList.toggle("palm", gestName === "PALM");
+          if (airCursorLabel) airCursorLabel.textContent = gestCode;
         }
-        if (txtCamStatus) txtCamStatus.textContent = "✨ Main détectée — Pointeur Air Actif";
+
+        if (txtCamStatus) txtCamStatus.textContent = `✨ Main Détectée — ${gestCode}`;
         if (pipStatusTag) {
-          pipStatusTag.textContent = "🟢 MAIN DÉTECTÉE";
+          pipStatusTag.textContent = `🟢 MAIN : ${gestCode}`;
           pipStatusTag.style.color = "#3ddc97";
         }
-      } else {
-        if (!handsEngine) onNoHandDetected();
-      }
-    }
 
-    // MediaPipe Hands Initialization with dynamic script loading fallback
-    function loadMediaPipeScripts(callback) {
-      if (typeof window.Hands !== "undefined") {
-        if (callback) callback();
-        return;
+        handleAirGesturesInteraction(smoothedX, smoothedY, gestName);
+      } else {
+        if (Date.now() - lastMpFrameSuccessTime > 1000) {
+          onNoHandDetected();
+        }
       }
-      console.log("📦 Chargement dynamique des scripts MediaPipe...");
-      const s1 = document.createElement("script");
-      s1.src = "https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js";
-      s1.crossOrigin = "anonymous";
-      s1.onload = () => {
-        const s2 = document.createElement("script");
-        s2.src = "https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.js";
-        s2.crossOrigin = "anonymous";
-        s2.onload = () => {
-          console.log("✅ Scripts MediaPipe chargés avec succès.");
-          if (callback) callback();
-        };
-        document.head.appendChild(s2);
-      };
-      document.head.appendChild(s1);
     }
 
     function initMediaPipeHands() {
@@ -2545,7 +2579,9 @@
             if (results && results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
               processHandLandmarks(results.multiHandLandmarks);
             } else {
-              onNoHandDetected();
+              if (Date.now() - lastMpFrameSuccessTime > 800) {
+                onNoHandDetected();
+              }
             }
           });
           console.log("✅ Moteur MediaPipe Hands initialisé.");
@@ -2553,79 +2589,53 @@
         } catch (e) {
           console.warn("MediaPipe Hands init warning:", e);
         }
-      } else {
-        loadMediaPipeScripts(() => { initMediaPipeHands(); });
       }
       return false;
     }
 
-    // Fail-proof Camera Utility Initialization (Uses MediaPipe Camera Utils when available)
     function startCameraTracking() {
+      if (pipVideo) {
+        pipVideo.muted = true;
+        pipVideo.setAttribute("playsinline", "");
+        pipVideo.setAttribute("autoplay", "");
+      }
+
       initMediaPipeHands();
 
-      if (typeof window.Camera !== "undefined" && pipVideo) {
-        try {
-          const camera = new window.Camera(pipVideo, {
-            onFrame: async () => {
-              if (pipVideo && pipVideo.readyState >= 2 && handTrackerActive) {
-                if (handsEngine) {
-                  try {
-                    await handsEngine.send({ image: pipVideo });
-                  } catch (e) {
-                    processFallbackHandTracker(pipVideo);
-                  }
-                } else {
-                  processFallbackHandTracker(pipVideo);
-                }
-              }
-            },
-            width: 640,
-            height: 480
-          });
-          camera.start().then(() => {
-            console.log("📷 MediaPipe Camera Utility démarré avec succès.");
-          }).catch(err => {
-            console.warn("Camera Utility fallback:", err);
-            fallbackGetUserMediaLoop();
-          });
-          return;
-        } catch (err) {
-          console.warn("Camera init exception:", err);
-        }
-      }
-      fallbackGetUserMediaLoop();
-    }
-
-    function fallbackGetUserMediaLoop() {
-      if (pipVideo && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" } })
-          .then((stream) => {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" }
+        })
+        .then((stream) => {
+          if (pipVideo) {
             pipVideo.srcObject = stream;
             pipVideo.play().catch(() => {});
+          }
 
-            let processingFrame = false;
-            async function videoProcessLoop() {
-              if (pipVideo && pipVideo.readyState >= 1 && handTrackerActive) {
-                if (handsEngine && pipVideo.readyState >= 2 && !processingFrame) {
-                  processingFrame = true;
-                  try {
-                    await handsEngine.send({ image: pipVideo });
-                  } catch (err) {
-                    processFallbackHandTracker(pipVideo);
-                  }
-                  processingFrame = false;
-                } else {
-                  processFallbackHandTracker(pipVideo);
-                }
+          function frameLoop() {
+            if (pipVideo && pipVideo.readyState >= 2 && handTrackerActive) {
+              if (handsEngine && !isMpProcessing) {
+                isMpProcessing = true;
+                Promise.race([
+                  handsEngine.send({ image: pipVideo }),
+                  new Promise((_, reject) => setTimeout(() => reject(new Error("MP Timeout")), 250))
+                ]).catch(() => {
+                  processStandaloneHandAnalysis(pipVideo);
+                }).finally(() => {
+                  isMpProcessing = false;
+                });
+              } else if (!handsEngine || Date.now() - lastMpFrameSuccessTime > 400) {
+                processStandaloneHandAnalysis(pipVideo);
               }
-              requestAnimationFrame(videoProcessLoop);
             }
-            requestAnimationFrame(videoProcessLoop);
-          })
-          .catch((err) => {
-            console.log("Webcam notice:", err.message);
-            if (txtCamStatus) txtCamStatus.textContent = "📷 Activez la caméra pour le contrôle gestuel";
-          });
+            requestAnimationFrame(frameLoop);
+          }
+          requestAnimationFrame(frameLoop);
+        })
+        .catch((err) => {
+          console.warn("Erreur d'accès WebCam:", err.message);
+          if (txtCamStatus) txtCamStatus.textContent = "⚠️ Caméra bloquée — Cliquez pour autoriser";
+        });
       }
     }
 
