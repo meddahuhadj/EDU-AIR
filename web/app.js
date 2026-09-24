@@ -566,6 +566,80 @@
         });
       }
 
+      // Geometric Instruments Selection & Dragging Engine
+      const geoSelect = $("#wb-geo-tools-select");
+      const geoOverlays = {
+        ruler: $("#geo-ruler-overlay"),
+        protractor: $("#geo-protractor-overlay"),
+        square: $("#geo-square-overlay"),
+        compass: $("#geo-compass-overlay")
+      };
+
+      if (geoSelect) {
+        geoSelect.addEventListener("change", (e) => {
+          const tool = e.target.value;
+          Object.keys(geoOverlays).forEach(k => {
+            if (geoOverlays[k]) geoOverlays[k].style.display = (k === tool) ? "block" : "none";
+          });
+        });
+      }
+
+      $$(".btn-geo-close").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const targetId = btn.getAttribute("data-close-geo");
+          const overlay = $(`#${targetId}`);
+          if (overlay) overlay.style.display = "none";
+          if (geoSelect) geoSelect.value = "none";
+        });
+      });
+
+      Object.values(geoOverlays).forEach(el => {
+        if (!el) return;
+        let isDraggingGeo = false;
+        let gStartX = 0;
+        let gStartY = 0;
+        let initialLeft = 0;
+        let initialTop = 0;
+
+        el.addEventListener("mousedown", (e) => {
+          if (e.target.tagName === "BUTTON") return;
+          isDraggingGeo = true;
+          gStartX = e.clientX;
+          gStartY = e.clientY;
+          initialLeft = el.offsetLeft;
+          initialTop = el.offsetTop;
+        });
+
+        window.addEventListener("mousemove", (e) => {
+          if (!isDraggingGeo) return;
+          const dx = e.clientX - gStartX;
+          const dy = e.clientY - gStartY;
+          el.style.left = `${initialLeft + dx}px`;
+          el.style.top = `${initialTop + dy}px`;
+        });
+
+        window.addEventListener("mouseup", () => { isDraggingGeo = false; });
+
+        el.addEventListener("touchstart", (e) => {
+          if (e.target.tagName === "BUTTON") return;
+          isDraggingGeo = true;
+          gStartX = e.touches[0].clientX;
+          gStartY = e.touches[0].clientY;
+          initialLeft = el.offsetLeft;
+          initialTop = el.offsetTop;
+        }, { passive: true });
+
+        window.addEventListener("touchmove", (e) => {
+          if (!isDraggingGeo || !e.touches) return;
+          const dx = e.touches[0].clientX - gStartX;
+          const dy = e.touches[0].clientY - gStartY;
+          el.style.left = `${initialLeft + dx}px`;
+          el.style.top = `${initialTop + dy}px`;
+        }, { passive: true });
+
+        window.addEventListener("touchend", () => { isDraggingGeo = false; });
+      });
+
       // Specialty Backgrounds
       const wbBgSelect = $("#wb-bg-select");
       if (wbBgSelect) {
