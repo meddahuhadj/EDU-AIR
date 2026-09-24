@@ -1,1359 +1,661 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html lang="fr" dir="ltr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>HADJ NO-TOUCH AI — Control the computer without touching it</title>
-  <meta name="description" content="HADJ NO-TOUCH AI turns your webcam into a virtual interaction plane. Hand gestures, voice and gaze drive Windows — hands-free, private, camera frames stay local.">
+  <title>EDU-AIR SMART SURFACE — Contrôle Aérien & Surface Intelligente pour la Classe</title>
+  <meta name="description" content="EDU-AIR Smart Surface transforme la caméra en plan d'interaction tactile et aérien sans contact. Whiteboard, diaporamas, quiz, labo 3D et assistant IA.">
   <meta name="theme-color" content="#060912">
   <meta name="color-scheme" content="dark">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="NO-TOUCH AI">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="stylesheet" href="styles.css">
 </head>
-<body>
-  <a class="skip-link" href="#main" data-i18n="skip">Skip to content</a>
+<body class="smart-app-shell">
 
-  <div class="backdrop" aria-hidden="true">
-    <div class="backdrop-glow" aria-hidden="true"></div>
-    <div class="backdrop-grid" aria-hidden="true"></div>
-  </div>
-  <div class="grain" aria-hidden="true"></div>
-
-  <header class="site-header" id="top">
-    <nav class="nav container" aria-label="Primary navigation" data-i18n-aria="nav.aria">
-      <a class="brand" href="#top" aria-label="HADJ NO-TOUCH AI — home" data-i18n-aria="nav.homeAria">
-        <span class="brand-mark" aria-hidden="true">H</span>
-        <span class="brand-word">
-          <span class="brand-name">HADJ</span>
-          <span class="brand-sub">NO-TOUCH AI</span>
-        </span>
+  <!-- ================= APP HEADER TOPBAR ================= -->
+  <header class="app-topbar" id="app-topbar">
+    <div class="topbar-left">
+      <a class="topbar-brand" href="#app" id="app-home-link">
+        <span class="mark">H</span>
+        <span>EDU-AIR <small style="color: #00f2fe; font-size: 0.75rem; font-weight: 600;">SMART SURFACE</small></span>
       </a>
 
-      <button type="button" class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation menu">
-        <span></span><span></span><span></span>
-      </button>
-
-      <ul class="nav-links" id="nav-links" role="list">
-        <li class="nav-dropdown">
-          <a href="#how" class="nav-drop-trigger">🚀 Démo & IA ▾</a>
-          <ul class="nav-drop-menu">
-            <li><a href="#how">01. Pipeline IA</a></li>
-            <li><a href="#gestures">02. Gestes Aériens</a></li>
-            <li><a href="#try">03. Démo Interactive</a></li>
-            <li><a href="#tni-vs-eduair">04. Matrix TNI vs EDU-AIR</a></li>
-          </ul>
-        </li>
-        <li class="nav-dropdown">
-          <a href="#teacher-dashboard" class="nav-drop-trigger">🎓 Espace Enseignant ▾</a>
-          <ul class="nav-drop-menu">
-            <li><a href="#teacher-dashboard">Tableau de Bord & Quiz</a></li>
-            <li><a href="#curriculum">Alignement Curriculaire</a></li>
-            <li><a href="#carousel-section">Carrousel Pédagogique</a></li>
-          </ul>
-        </li>
-        <li class="nav-dropdown">
-          <a href="#rgpd-security" class="nav-drop-trigger">🛡️ RGPD & Tarifs ▾</a>
-          <ul class="nav-drop-menu">
-            <li><a href="#rgpd-security">Protection Mineurs & RGPD</a></li>
-            <li><a href="#pricing">Tarifs Établissement</a></li>
-            <li><a href="#download">Télécharger EDU-AIR</a></li>
-          </ul>
-        </li>
-      </ul>
-
-      <div class="nav-actions">
-        <div class="lang-switcher" id="lang-switcher">
-          <button type="button" class="btn btn-ghost btn-lang" id="lang-btn" aria-haspopup="true" aria-expanded="false" data-i18n-aria="lang.label" aria-label="Language — English">
-            <span class="btn-ic lang-ic" aria-hidden="true">Aأ</span>
-            <span class="lang-current" id="lang-current">EN</span>
-          </button>
-          <ul class="lang-menu" id="lang-menu" role="menu" aria-label="Select language">
-            <li role="none"><button type="button" role="menuitem" data-lang="en" class="lang-opt">English</button></li>
-            <li role="none"><button type="button" role="menuitem" data-lang="fr" class="lang-opt">Français</button></li>
-            <li role="none"><button type="button" role="menuitem" data-lang="ar" class="lang-opt">العربية</button></li>
-            <li role="none"><button type="button" role="menuitem" data-lang="nl" class="lang-opt">Nederlands</button></li>
-          </ul>
-        </div>
-        <button type="button" class="btn btn-ghost btn-install" id="install-btn" hidden>
-          <span class="btn-ic" aria-hidden="true">↓</span> <span data-i18n="nav.install">Install</span>
-        </button>
-        <a class="btn btn-primary" id="run-win-btn" target="_blank" rel="noopener"
-           href="https://github.com/meddahuhadj/HADJ-NO-TOUCH-AI/releases/download/v2.0-beta/HADJ-NO-TOUCH-AI-Windows.zip">
-          <span class="btn-ic win-ic" aria-hidden="true">▣</span> <span data-i18n="nav.run">Run on Windows</span>
-        </a>
+      <div class="app-status-pills">
+        <span class="status-pill active" title="Statut de détection caméra">
+          <span class="dot"></span> <span id="txt-cam-status">Montrez votre main devant la caméra</span>
+        </span>
+        <span class="status-pill active" id="pill-live"><span class="dot"></span> En direct</span>
+        <button type="button" class="status-pill" id="pill-mode-cam">📷 Caméra</button>
+        <button type="button" class="status-pill active" id="pill-mode-hand">✋ Main</button>
+        <button type="button" class="status-pill" id="pill-mode-voice">🎙️ Voix</button>
+        <button type="button" class="status-pill active" id="pill-mode-ai">🤖 IA</button>
+        <button type="button" class="status-pill" id="pill-mode-calib">⚙️ Calibrage</button>
+        <button type="button" class="status-pill active" id="pill-mode-surf">📐 Surface</button>
+        <button type="button" class="status-pill" id="pill-mode-safe">🛡️ Mode sûr</button>
       </div>
-    </nav>
+    </div>
+
+    <div class="topbar-right">
+      <!-- Role Switcher -->
+      <select id="app-role-select" class="select-custom" style="padding:0.25rem 0.6rem; font-size:0.78rem;">
+        <option value="teacher">👨‍🏫 Rôle: Enseignant</option>
+        <option value="student">👨‍🎓 Rôle: Élève</option>
+        <option value="tech">🔧 Rôle: Technicien TNI</option>
+      </select>
+
+      <button type="button" class="btn-app btn-app-primary" id="btn-modal-export-tni" style="padding: 0.35rem 0.7rem; font-size: 0.8rem;">📤 EXPORT TNI / ENT</button>
+
+      <div class="app-clock" id="app-clock">10:35:00</div>
+
+      <div class="topbar-quick-btns">
+        <button type="button" class="btn-app btn-app-ghost" id="btn-toggle-pip" title="Afficher/Masquer WebCam">📷</button>
+        <button type="button" class="btn-app btn-app-ghost" id="btn-toggle-theme" title="Changer de thème">☀️</button>
+        <button type="button" class="btn-app btn-app-ghost" id="btn-toggle-audio" title="Commandes vocales">🎤</button>
+      </div>
+
+      <div class="lang-switch-pills">
+        <button type="button" class="lang-pill" data-lang="en">EN</button>
+        <button type="button" class="lang-pill active" data-lang="fr">FR</button>
+        <button type="button" class="lang-pill" data-lang="nl">NL</button>
+        <button type="button" class="lang-pill" data-lang="ar">ع</button>
+      </div>
+    </div>
   </header>
 
-  <main id="main">
+  <!-- ================= APP BODY & SIDEBAR ================= -->
+  <div class="app-body-container">
 
-    <!-- ============ HERO ============ -->
-    <section class="hero" aria-labelledby="hero-title">
-      <div class="supergraphic" aria-hidden="true">NO-TOUCH</div>
-      <div class="container hero-grid">
+    <!-- SIDEBAR NAVIGATION -->
+    <aside class="app-sidebar" id="app-sidebar">
+      <button class="sidebar-item" data-target-view="view-dashboard">
+        <span class="ic">📊</span> <span>Tableau de bord</span>
+      </button>
+      <button class="sidebar-item" data-target-view="view-whiteboard">
+        <span class="ic">✨</span> <span>Surface Intelligente</span>
+      </button>
+      <button class="sidebar-item" data-target-view="view-pointer">
+        <span class="ic">🎯</span> <span>Pointeur air</span>
+      </button>
+      <button class="sidebar-item" data-target-view="view-draw">
+        <span class="ic">🎨</span> <span>Dessin air</span>
+      </button>
+      <button class="sidebar-item" data-target-view="view-air3d">
+        <span class="ic">🧊</span> <span>Air 3D</span>
+      </button>
+      <button class="sidebar-item" data-target-view="view-vision">
+        <span class="ic">👁️</span> <span>Vision air</span>
+      </button>
+      <button class="sidebar-item" data-target-view="view-labo">
+        <span class="ic">🔬</span> <span>Labo air</span>
+      </button>
+      <button class="sidebar-item" data-target-view="view-quiz">
+        <span class="ic">📝</span> <span>Quiz air</span>
+      </button>
+      <button class="sidebar-item active" data-target-view="view-presentation">
+        <span class="ic">📺</span> <span>Présentation air</span>
+      </button>
+      <button class="sidebar-item" data-target-view="view-profai">
+        <span class="ic">🤖</span> <span>Prof IA</span>
+      </button>
+      <button class="sidebar-item" data-target-view="view-calib">
+        <span class="ic">⚙️</span> <span>Calibrage</span>
+      </button>
+      <button class="sidebar-item" data-target-view="view-history">
+        <span class="ic">📜</span> <span>Historique</span>
+      </button>
+    </aside>
 
-        <div class="hero-copy">
-          <p class="eyebrow reveal" data-i18n="hero.eyebrow">Contactless computer control · Camera-local</p>
-          <h1 class="hero-title reveal" id="hero-title" style="--d:.05s" data-i18n-html="hero.title">
-            Control the computer <span class="grad-text">without touching it.</span>
-          </h1>
-          <p class="hero-sub reveal" style="--d:.12s" data-i18n="hero.sub">
-            HADJ NO-TOUCH AI turns your webcam into a virtual interaction plane.
-            Hand gestures, voice and gaze drive Windows — hands-free, private,
-            and yours. No sensors, no touching — camera frames stay on your machine.
-          </p>
+    <!-- MAIN VIEWPORT CONTAINER -->
+    <main class="app-main-viewport" id="app-main-viewport">
 
-          <div class="hero-cta reveal" style="--d:.2s">
-            <a class="btn btn-primary btn-lg" id="download-btn" target="_blank" rel="noopener"
-               href="https://github.com/meddahuhadj/HADJ-NO-TOUCH-AI/releases/download/v2.0-beta/HADJ-NO-TOUCH-AI-Windows.zip">
-              <span class="btn-ic win-ic" aria-hidden="true">▣</span> <span data-i18n="hero.download">Download for Windows</span>
-            </a>
-            <a class="btn btn-ghost btn-lg" href="#try" data-i18n="hero.demo">Try the demo</a>
+      <!-- ================= MODULE 9: PRÉSENTATION AIR (DEFAULT ACTIVE VIEW) ================= -->
+      <div class="module-view active-view" id="view-presentation">
+        
+        <!-- Diaporama Header Toolbar -->
+        <div class="mod-header-bar">
+          <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+            <strong style="color: #00f2fe; font-size: 0.9rem;">DIAPORAMA :</strong>
+            <select class="select-custom" id="presentation-deck-select">
+              <option value="pythagore">Maths : Théorème de Pythagore (5 slides)</option>
+              <option value="heart">SVT : Anatomie du Cœur & Circulation (4 slides)</option>
+              <option value="physics">Physique : Circuit Électrique & Loi d'Ohm (3 slides)</option>
+              <option value="history">Histoire : La Révolution Française 1789 (4 slides)</option>
+              <option value="gslides">🔗 Google Slides en direct</option>
+            </select>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-modal-add-slide">➕ Ajouter slide</button>
           </div>
 
-          <div class="download-note glass reveal" id="download-note" hidden>
-            <p><strong data-i18n="hero.noteTitle">Windows 10 / 11 (x64)</strong> · <span data-i18n="hero.noteBody">packaged as a native desktop app, downloaded as a ZIP
-            from GitHub Releases. Needs only a webcam + microphone — MediaPipe and the intent engine run
-            locally, on this machine.</span></p>
-            <p class="note-meta" data-i18n-html="hero.noteMeta">After install there is no telemetry and no account, and the app downloads
-            nothing at runtime. Note: voice recognition uses Google's cloud API by default — pick Vosk or
-            SAPI for fully local recognition. Verify the binary with
-            <code>SHA-256&nbsp;CAF27A9BE6B7CABE747A2FF817D9B5CA83142F6472F7C15D56EB20D29D98F188</code>.</p>
+          <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+            <button type="button" class="btn-app btn-app-primary" id="btn-modal-import-pptx">📁 IMPORTER PPTX / PDF</button>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-modal-gslides">🔗 GOOGLE SLIDES</button>
           </div>
-
-          <ul class="trust-chips" role="list" aria-label="Product facts">
-            <li class="chip reveal" style="--d:.26s" data-i18n-html="hero.chip1"><span class="chip-dot" aria-hidden="true"></span>EN / FR / AR / NL voice</li>
-            <li class="chip reveal" style="--d:.32s" data-i18n-html="hero.chip2"><span class="chip-dot" aria-hidden="true"></span>Webcam only</li>
-            <li class="chip reveal" style="--d:.38s" data-i18n-html="hero.chip3"><span class="chip-dot" aria-hidden="true"></span>Camera stays local</li>
-            <li class="chip reveal" style="--d:.44s" data-i18n-html="hero.chip4"><span class="chip-dot" aria-hidden="true"></span>Privacy-first</li>
-          </ul>
         </div>
 
-        <!-- Live interaction plane -->
-        <div class="demo-panel glass reveal" id="demo-plane" style="--d:.18s"
-             data-i18n-aria="hero.demoAria"
-             aria-label="Live demo of the virtual interaction plane — your mouse stands in for the air-pointer">
-          <div class="demo-topbar">
-            <span class="led"><i aria-hidden="true"></i><span id="cam-status-text">DEMO ANIMÉE</span></span>
-            <span class="topbar-mid">HADJ-OS // TRACKING</span>
-            <button type="button" class="btn btn-xs btn-primary" id="btn-toggle-cam">🎥 Activer WebCam (Optionnel)</button>
+        <!-- Annotation Toolbar -->
+        <div class="annotation-toolbar">
+          <strong style="color: #9fb0cf; font-size: 0.82rem; margin-right: 0.4rem;">ANNOTATION :</strong>
+          <button type="button" class="tool-chip active" id="tool-pen">✏️ STYLO</button>
+          <button type="button" class="tool-chip" id="tool-highlighter">🖍️ SURLIGNEUR</button>
+          <button type="button" class="tool-chip" id="tool-eraser">❌ GOMME</button>
+
+          <div class="color-dots-picker" style="margin-inline: 0.5rem;">
+            <span class="color-dot active" data-color="#00f2fe" style="background: #00f2fe;"></span>
+            <span class="color-dot" data-color="#1a73e8" style="background: #1a73e8;"></span>
+            <span class="color-dot" data-color="#ff9800" style="background: #ff9800;"></span>
+            <span class="color-dot" data-color="#f44336" style="background: #f44336;"></span>
+            <span class="color-dot" data-color="#4caf50" style="background: #4caf50;"></span>
+            <input type="color" id="custom-color-picker" value="#00f2fe" style="width: 24px; height: 24px; border: none; background: transparent; cursor: pointer;">
           </div>
 
-          <div class="demo-wrap" id="demo-wrap">
-            <canvas id="plane" aria-hidden="true"></canvas>
+          <select class="select-custom" id="shape-draw-select" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">
+            <option value="none">📐 SHAPES ▾</option>
+            <option value="circle">⭕ Cercle</option>
+            <option value="rect">⬛ Rectangle</option>
+            <option value="triangle">🔺 Triangle</option>
+            <option value="arrow">➔ Flèche</option>
+          </select>
 
-            <div class="demo-target">
-              <span class="tgt-eyebrow" data-i18n="hero.target">TARGET 01 · CLICK ZONE</span>
-              <button type="button" class="tgt-btn" id="click-test" data-demo-target="clicktest">
-                <span data-i18n="hero.pinchBtn">PINCH TO CLICK</span>
-              </button>
-              <span class="tgt-status" id="click-status" data-i18n="demo.ready">ready</span>
+          <button type="button" class="btn-app btn-app-ghost" id="btn-draw-undo" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;">↩ Annuler</button>
+          <button type="button" class="btn-app btn-app-ghost" id="btn-draw-clear" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;">🗑️ Effacer</button>
+        </div>
+
+        <!-- Slide Presentation Canvas Stage -->
+        <div class="slide-canvas-box" id="slide-canvas-container">
+          
+          <!-- Slide SVG / HTML Content Display -->
+          <div class="slide-content-stage" id="slide-content-render">
+            <!-- Rendered dynamically by app.js -->
+          </div>
+
+          <!-- Drawing Annotation Layer Canvas -->
+          <canvas class="drawing-canvas-overlay" id="presentation-draw-canvas" width="960" height="480"></canvas>
+
+          <!-- Spotlight Overlay -->
+          <div class="spotlight-mask" id="spotlight-mask-layer"></div>
+
+          <!-- Loupe Zoom Lens -->
+          <div class="loupe-lens-box" id="loupe-lens-layer">
+            <canvas id="loupe-canvas-render" width="180" height="180"></canvas>
+          </div>
+        </div>
+
+        <!-- Slide Bottom Navigation & Toggle Bar -->
+        <div class="slide-bottom-bar">
+          <div class="slide-nav-group">
+            <button type="button" class="btn-app btn-app-primary" id="btn-slide-prev">◀ Préc</button>
+            <span class="slide-counter-badge" id="slide-counter-display">2 / 5</span>
+            <button type="button" class="btn-app btn-app-primary" id="btn-slide-next">Suiv ▶</button>
+          </div>
+
+          <div style="font-size: 0.85rem; color: #00f2fe; font-weight: 600;">
+            ✋ Montrez votre main devant la caméra pour naviguer
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 0.6rem;">
+            <button type="button" class="btn-app btn-app-ghost" id="btn-toggle-spotlight">🔦 SPOTLIGHT</button>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-toggle-loupe">🔍 LOUPE ZOOM</button>
+          </div>
+        </div>
+
+        <!-- MINUTEUR DE CLASSE TNI (GESTION DU TEMPS) -->
+        <div class="timer-widget-card" id="timer-widget-card">
+          <div style="display: flex; align-items: center; gap: 0.6rem;">
+            <span style="font-size: 1.4rem;">⏱️</span>
+            <div>
+              <div class="timer-title">MINUTEUR DE CLASSE TNI (GESTION DU TEMPS)</div>
+              <div style="font-size: 0.78rem; color: #9fb0cf;">Alerte visuelle et sonore ambiante pour le contrôle du temps en classe</div>
             </div>
           </div>
 
-          <div class="hud" role="status" aria-live="off" aria-label="Live tracking readout">
-            <div class="hud-cell"><span class="hud-label" data-i18n="demo.hud.mode">MODE</span><span class="hud-val" id="hud-mode">POINT</span></div>
-            <div class="hud-cell"><span class="hud-label" data-i18n="demo.hud.gesture">GESTURE</span><span class="hud-val" id="hud-gesture">POINT</span></div>
-            <div class="hud-cell"><span class="hud-label" data-i18n="demo.hud.x">X</span><span class="hud-val tabnum" id="hud-x">0.00</span></div>
-            <div class="hud-cell"><span class="hud-label" data-i18n="demo.hud.y">Y</span><span class="hud-val tabnum" id="hud-y">0.00</span></div>
-            <div class="hud-cell hud-wide"><span class="hud-label" data-i18n="demo.hud.conf">CONF</span>
-              <span class="hud-val tabnum" id="hud-conf">0.98</span>
-              <span class="conf-bar" aria-hidden="true"><i id="hud-confbar"></i></span>
-            </div>
-            <div class="hud-cell" id="hud-fps-cell" style="display: none;"><span class="hud-label">FPS</span><span class="hud-val tabnum" id="hud-fps">--</span></div>
-            <div class="hud-cell"><span class="hud-label" data-i18n="demo.hud.clicks">CLICKS</span><span class="hud-val tabnum" id="hud-clicks">0</span></div>
+          <div class="timer-presets-group">
+            <button type="button" class="timer-preset-btn" data-preset="60">1 min</button>
+            <button type="button" class="timer-preset-btn active" data-preset="180">3 min</button>
+            <button type="button" class="timer-preset-btn" data-preset="300">5 min</button>
+            <button type="button" class="timer-preset-btn" data-preset="600">10 min</button>
+            <button type="button" class="timer-preset-btn" data-preset="900">15 min</button>
           </div>
 
-          <p class="demo-hint" id="demo-hint" data-i18n-html="demo.hint">
-            mouse = air pointer · <strong>hold left</strong> = pinch→click ·
-            <kbd>space</kbd> = palm mode · wheel = scroll
-          </p>
-          <noscript>
-            <p class="noscript-note" data-i18n="demo.noscript">The live demo needs JavaScript. The Windows app itself works entirely on
-            your machine, no browser required.</p>
-          </noscript>
+          <div class="timer-digits-display" id="class-timer-digits">03:00</div>
+
+          <div style="display: flex; gap: 0.5rem;">
+            <button type="button" class="btn-app btn-app-primary" id="btn-timer-start-pause">▶ DÉMARRER</button>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-timer-reset">🔄 RÉINITIALISER</button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ================= MODULE 1: TABLEAU DE BORD ================= -->
+      <div class="module-view" id="view-dashboard">
+        <h2 style="color: #00f2fe; margin-bottom: 1rem;">📊 Tableau de bord & Santé du Parc TNI</h2>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+          <div style="background: rgba(10,20,38,0.8); border: 1px solid rgba(126,195,255,0.2); padding: 1.25rem; border-radius: 12px;">
+            <div style="font-size: 0.8rem; color: #9fb0cf;">Classe Active</div>
+            <div style="font-size: 1.4rem; font-weight: 800; color: #fff;">4ème B — Mathématiques</div>
+          </div>
+          <div style="background: rgba(10,20,38,0.8); border: 1px solid rgba(126,195,255,0.2); padding: 1.25rem; border-radius: 12px;">
+            <div style="font-size: 0.8rem; color: #9fb0cf;">Taux de Participation</div>
+            <div style="font-size: 1.4rem; font-weight: 800; color: #3ddc97;">94% (+12%)</div>
+          </div>
+          <div style="background: rgba(10,20,38,0.8); border: 1px solid rgba(126,195,255,0.2); padding: 1.25rem; border-radius: 12px;">
+            <div style="font-size: 0.8rem; color: #9fb0cf;">FPS Suivi Caméra</div>
+            <div style="font-size: 1.4rem; font-weight: 800; color: #00f2fe;">60 FPS (Sub-pixel)</div>
+          </div>
+          <div style="background: rgba(10,20,38,0.8); border: 1px solid rgba(126,195,255,0.2); padding: 1.25rem; border-radius: 12px;">
+            <div style="font-size: 0.8rem; color: #9fb0cf;">Temps de Session</div>
+            <div style="font-size: 1.4rem; font-weight: 800; color: #ffb84d;">42:15 min</div>
+          </div>
+        </div>
+
+        <!-- Santé du parc TNI -->
+        <div style="background: rgba(10,20,38,0.85); border: 1px solid rgba(0,242,254,0.3); padding: 1.5rem; border-radius: 14px; margin-bottom: 1.5rem;">
+          <h3 style="color: #00f2fe; margin-bottom: 1rem;">🏥 Santé du Parc TNI de l'Établissement</h3>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem;">
+            <div style="background: rgba(6,9,18,0.6); padding: 1rem; border-radius: 10px; border-left: 4px solid #3ddc97;">
+              <strong style="color: #fff;">Salle 101 — SMART Board</strong>
+              <div style="font-size: 0.82rem; color: #9fb0cf; margin-top: 0.3rem;">Dernière calibration : Aujourd'hui (08:30)</div>
+              <span style="font-size: 0.75rem; color: #3ddc97; font-weight: 700;">🟢 Précision : 0.2mm (Excellente)</span>
+            </div>
+            <div style="background: rgba(6,9,18,0.6); padding: 1rem; border-radius: 10px; border-left: 4px solid #3ddc97;">
+              <strong style="color: #fff;">Salle 204 — Promethean ActivBoard</strong>
+              <div style="font-size: 0.82rem; color: #9fb0cf; margin-top: 0.3rem;">Dernière calibration : Hier (16:15)</div>
+              <span style="font-size: 0.75rem; color: #3ddc97; font-weight: 700;">🟢 Précision : 0.4mm (Excellente)</span>
+            </div>
+            <div style="background: rgba(6,9,18,0.6); padding: 1rem; border-radius: 10px; border-left: 4px solid #ffb84d;">
+              <strong style="color: #fff;">Labo SVT — Epson BrightLink</strong>
+              <div style="font-size: 0.82rem; color: #9fb0cf; margin-top: 0.3rem;">Dernière calibration : Il y a 7 jours</div>
+              <span style="font-size: 0.75rem; color: #ffb84d; font-weight: 700;">🟡 Dérive détectée (Calibrage conseillé)</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="background: rgba(10,20,38,0.8); border: 1px solid rgba(126,195,255,0.2); padding: 1.5rem; border-radius: 14px;">
+          <h3 style="color: #fff; margin-bottom: 1rem;">⚡ Accès Rapide & Exports TNI</h3>
+          <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+            <button type="button" class="btn-app btn-app-primary" id="dash-quick-whiteboard">✨ Surface Intelligente</button>
+            <button type="button" class="btn-app btn-app-ghost" id="dash-quick-quiz">📝 Lancer Quiz Instantané</button>
+            <button type="button" class="btn-app btn-app-ghost" id="dash-quick-export">📥 Exporter Package ENT / SCORM</button>
+          </div>
         </div>
       </div>
 
-      <div class="scroll-cue" aria-hidden="true"><span></span><span data-i18n="hero.scroll">SCROLL</span></div>
-    </section>
-
-    <!-- ============ CLASSROOM VIDEO ============ -->
-    <section class="section" id="classroom" aria-labelledby="classroom-title">
-      <div class="container">
-        <div class="section-head reveal">
-          <p class="eyebrow" data-i18n="video.eyebrow">In the classroom · 45 seconds</p>
-          <h2 id="classroom-title" data-i18n-html="video.title">See it where it lives — <span class="grad-text">a real classroom.</span></h2>
-          <p class="lede" data-i18n="video.lede">Not a render. Ambient noise, a projector, a teacher moving between desks.
-          Shot on the stable build — watch it drive slides with gestures and voice.</p>
+      <!-- ================= MODULE 2: SURFACE INTELLIGENTE ================= -->
+      <div class="module-view" id="view-whiteboard">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+          <h2 style="color: #00f2fe;">✨ Surface Intelligente — Tableau Blanc Tactile</h2>
+          <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+            <select class="select-custom" id="wb-bg-select">
+              <option value="dark">Fond Sombre</option>
+              <option value="grid">Grille Quadrillée</option>
+              <option value="music">🎼 Portée Musicale</option>
+              <option value="map">🗺️ Carte Muette (Géo)</option>
+              <option value="graph">📏 Papier Millimétré</option>
+              <option value="timeline">⏳ Ligne du Temps</option>
+            </select>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-lock-layer">🔒 Verrouiller Calque Prof</button>
+            <button type="button" class="btn-app btn-app-primary" id="btn-wb-save">💾 Exporter PNG</button>
+          </div>
         </div>
 
-        <!-- The player auto-activates when assets/classroom-demo.mp4 is present (see app.js).
-             Put the 45s classroom capture there and it shows here automatically. -->
-        <figure class="classroom-player glass reveal" id="classroom-player" hidden>
-          <video id="classroom-video" controls preload="metadata" playsinline
-                 data-i18n-aria="video.caption" aria-label="Classroom demo">
-            <source src="assets/classroom-demo.mp4" type="video/mp4">
-          </video>
-        </figure>
-
-        <div class="classroom-fallback glass reveal" id="classroom-fallback">
-          <h3 data-i18n="video.fallbackTitle">Classroom video coming soon.</h3>
-          <p data-i18n-html="video.fallbackBody">We’re editing the on-site capture. Until it drops, the interactive demo below already
-          shows the gesture interaction — no install, no upload.</p>
-          <a class="btn btn-primary" href="#try" data-i18n="video.fallbackCta">Try the live demo</a>
+        <div style="position: relative; width: 100%; height: 520px; background: #080d1a; border: 2px solid rgba(0,242,254,0.3); border-radius: 14px; overflow: hidden;" id="wb-canvas-container">
+          <canvas id="whiteboard-full-canvas" width="1100" height="520" style="width:100%; height:100%; cursor: crosshair;"></canvas>
         </div>
       </div>
-    </section>
 
-    <!-- ============ STATS ============ -->
-    <section class="stats" aria-label="Product statistics">
-      <div class="container">
-        <ul class="stat-strip" role="list">
-          <li class="stat reveal"><span class="stat-num">13</span><span class="stat-label" data-i18n="stats.profiles">auto profiles</span></li>
-          <li class="stat reveal stat-2" style="--d:.07s"><span class="stat-num">4</span><span class="stat-label" data-i18n="stats.languages">languages</span></li>
-          <li class="stat reveal stat-3" style="--d:.14s"><span class="stat-num">1</span><span class="stat-label" data-i18n="stats.webcam">webcam</span></li>
-          <li class="stat reveal stat-4" style="--d:.21s"><span class="stat-num">0</span><span class="stat-label" data-i18n="stats.touch">touch</span></li>
-        </ul>
-      </div>
-    </section>
-
-    <!-- ============ EDU-AIR VS TNI COMPARISON ============ -->
-    <section class="section" id="tni-vs-eduair" aria-labelledby="tni-title">
-      <div class="container">
-        <div class="section-head reveal">
-          <p class="eyebrow">Comparison Matrix & ROI Calculator</p>
-          <h2 id="tni-title">L'Application <span class="grad-text">EDU-AIR</span> vs Tableau TNI Classique</h2>
-          <p class="lede">Découvrez pourquoi EDU-AIR Smart Surface surpasse les tableaux numériques interactifs physiques traditionnels tout en économisant jusqu'à 95% de votre budget équipement.</p>
+      <!-- ================= MODULE 3: POINTEUR AIR ================= -->
+      <div class="module-view" id="view-pointer">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+          <h2 style="color: #00f2fe;">🎯 Pointeur Air — Test & Laser Virtuel</h2>
+          <button type="button" class="btn-app btn-app-primary" id="btn-pointer-laser-mode">🔴 Mode Laser Virtuel (Designation)</button>
         </div>
 
-        <div class="tni-grid reveal">
-          <!-- Interactive ROI Calculator Card -->
-          <div class="tni-calc-card glass">
-            <h3>🧮 Calculateur d'Économies Établissement</h3>
-            <p>Estimez les économies réalisées en remplaçant les TNI physiques par la solution logicielle EDU-AIR.</p>
-            <div class="calc-inputs">
-              <label for="calc-rooms">Nombre de classes à équiper :</label>
-              <input type="range" id="calc-rooms" min="1" max="50" value="10" oninput="updateROICalculator(this.value)">
-              <span class="calc-val"><strong id="calc-rooms-val">10</strong> classes</span>
-            </div>
-            <div class="calc-results">
-              <div class="calc-res-item">
-                <span class="res-label">Coût TNI Physique (2 500 €/classe)</span>
-                <span class="res-num res-tni" id="calc-tni-cost">25 000 €</span>
-              </div>
-              <div class="calc-res-item">
-                <span class="res-label">Coût EDU-AIR (Logiciel + Webcam)</span>
-                <span class="res-num res-edu" id="calc-edu-cost">300 €</span>
-              </div>
-              <div class="calc-res-highlight">
-                <span>Économie Totale Réalisée :</span>
-                <strong id="calc-savings">24 700 € (98.8%)</strong>
-              </div>
+        <div style="background: rgba(10,20,38,0.8); border: 1px solid rgba(126,195,255,0.2); padding: 1.5rem; border-radius: 14px; margin-bottom: 1rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <p>Déplacez votre pointeur dans la zone ci-dessous pour tester la sensibilité et la précision.</p>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+              <span style="font-size: 0.8rem; color: #9fb0cf;">Curseur Utilisateur :</span>
+              <button class="btn-app btn-app-ghost" style="padding: 0.2rem 0.5rem; color: #00f2fe;">User 1 (Cyan)</button>
+              <button class="btn-app btn-app-ghost" style="padding: 0.2rem 0.5rem; color: #ffb84d;">User 2 (Amber)</button>
             </div>
           </div>
 
-          <!-- Key Advantages Grid -->
-          <div class="tni-matrix-wrap glass">
-            <table class="tni-table" role="grid">
-              <thead>
-                <tr>
-                  <th>Critère</th>
-                  <th>📱 Application EDU-AIR</th>
-                  <th>📺 Tableau TNI / TBI</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><strong>Matériel Requis</strong></td>
-                  <td><span class="badge badge-green">0 € (PC + Webcam)</span></td>
-                  <td><span class="badge badge-red">2 000 €–8 000 €</span></td>
-                </tr>
-                <tr>
-                  <td><strong>Hygiène & Contact</strong></td>
-                  <td>100% Sans contact (Air Pointer)</td>
-                  <td>Contact direct / Stylos à batterie</td>
-                </tr>
-                <tr>
-                  <td><strong>Ergonomics & Fatigue</strong></td>
-                  <td>Mode Micro-gestes anti-fatigue</td>
-                  <td>Déplacements continus au mur</td>
-                </tr>
-                <tr>
-                  <td><strong>IA & Formes</strong></td>
-                  <td>Dessin auto + Voix Trilingue</td>
-                  <td>Tableau blanc basique</td>
-                </tr>
-                <tr>
-                  <td><strong>Export du Cours</strong></td>
-                  <td>1-Clic PNG / PDF automatique</td>
-                  <td>Capture manuelle complexe</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ============ HOW IT WORKS ============ -->
-    <section class="section" id="how" aria-labelledby="how-title">
-      <div class="container">
-        <div class="section-head reveal">
-          <p class="eyebrow" data-i18n="how.eyebrow">01 / Pipeline</p>
-          <h2 id="how-title" data-i18n-html="how.title">From webcam to Windows<br>control in one line of motion.</h2>
-          <p class="lede" data-i18n="how.lede">Four local stages. Camera frames never leave your machine — every frame is handled
-          on-device by bundled models and the runtime you already have.</p>
-        </div>
-
-        <ol class="pipe" role="list">
-          <li class="pipe-card glass reveal">
-            <span class="pipe-no">01</span>
-            <span class="pipe-tag" data-i18n="how.s1tag">MediaPipe input layer</span>
-            <h3 data-i18n="how.s1title">Webcam + Mic</h3>
-            <p data-i18n="how.s1text">Your camera streams frames locally into the tracking layer; the microphone feeds the voice
-            engine (Google by default, or Vosk/SAPI for on-device recognition). Resolution and rate adapt to
-            the machine so tracking stays smooth.</p>
-            <span class="pipe-node" aria-hidden="true"></span>
-          </li>
-          <li class="pipe-card glass reveal" style="--d:.07s">
-            <span class="pipe-no">02</span>
-            <span class="pipe-tag" data-i18n="how.s2tag">MediaPipe landmarks</span>
-            <h3 data-i18n="how.s2title">Track</h3>
-            <p data-i18n="how.s2text">Hands, face and pose landmarks are extracted at ~30&nbsp;fps — 21 points per hand — with
-            per-camera calibration for lighting and distance.</p>
-            <span class="pipe-node" aria-hidden="true"></span>
-          </li>
-          <li class="pipe-card glass reveal" style="--d:.14s">
-            <span class="pipe-no">03</span>
-            <span class="pipe-tag" data-i18n="how.s3tag">Intent engine</span>
-            <h3 data-i18n="how.s3title">Understand</h3>
-            <p data-i18n="how.s3text">Gesture + voice phrases are mapped onto a small set of intents with confidence scoring and
-            debounce, so false triggers stay rare.</p>
-            <span class="pipe-node" aria-hidden="true"></span>
-          </li>
-          <li class="pipe-card glass reveal" style="--d:.21s">
-            <span class="pipe-no">04</span>
-            <span class="pipe-tag" data-i18n="how.s4tag">Windows control layer</span>
-            <h3 data-i18n="how.s4title">Act</h3>
-            <p data-i18n="how.s4text">Intent becomes a native action — mouse, keyboard, media keys, window and virtual-desktop
-            control — through the OS API.</p>
-            <span class="pipe-node pipe-node-end" aria-hidden="true"></span>
-          </li>
-        </ol>
-      </div>
-    </section>
-
-    <!-- ============ GESTURES ============ -->
-    <section class="section" id="gestures" aria-labelledby="gestures-title">
-      <div class="container">
-        <div class="section-head reveal">
-          <p class="eyebrow" data-i18n="gestures.eyebrow">02 / Gesture library</p>
-          <h2 id="gestures-title" data-i18n="gestures.title">Nine gestures. That’s the whole vocabulary.</h2>
-          <p class="lede" data-i18n="gestures.lede">Small, deliberate moves — each one filtered, debounced and confidence-scored
-          before it reaches the Windows control layer.</p>
-        </div>
-
-        <ul class="gesture-grid" role="list">
-          <li class="gesture-card glass reveal">
-            <div class="gi-wrap" aria-hidden="true">
-              <svg viewBox="0 0 48 48" class="gi">
-                <g fill="none" stroke="rgba(159,176,207,.55)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                  <ellipse cx="16" cy="33" rx="7.5" ry="9.5" transform="rotate(28 16 33)"/>
-                  <path d="M12 30 L10 20"/>
-                  <path d="M15 29 L14 19"/>
-                  <path d="M18 28 L18 18"/>
-                  <path d="M17 30 L9 27"/>
-                </g>
-                <g fill="none" stroke="var(--cyan)" stroke-width="3" stroke-linecap="round">
-                  <path d="M21 26 L24 13"/>
-                  <circle cx="24" cy="13" r="4.4" stroke-dasharray="3.2 2.2" opacity=".9"/>
-                </g>
-                <path d="M32 8 L40 18 L36.4 16.6 L34.9 21 L32.9 15.4 Z" fill="var(--cyan)" stroke="none"/>
-              </svg>
-            </div>
-            <div class="gesture-body">
-              <h3 data-i18n="g1.title">Move</h3>
-              <p class="gesture-trigger" data-i18n="g1.trigger">Index finger up</p>
-              <p class="gesture-note" data-i18n="g1.note">Precision pointer — filtered and smoothed. Sub-pixel feel on a 1080p screen.</p>
-            </div>
-            <span class="gesture-meta">conf 0.97 · debounce 90&nbsp;ms</span>
-          </li>
-          <li class="gesture-card glass reveal" style="--d:.05s">
-            <div class="gi-wrap" aria-hidden="true">
-              <svg viewBox="0 0 48 48" class="gi">
-                <g fill="none" stroke="rgba(159,176,207,.55)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                  <ellipse cx="16" cy="33" rx="7.5" ry="9.5" transform="rotate(28 16 33)"/>
-                  <path d="M12 30 L10 20"/>
-                  <path d="M15 29 L14 19"/>
-                  <path d="M18 28 L20 20"/>
-                </g>
-                <g fill="none" stroke="var(--cyan)" stroke-width="3" stroke-linecap="round">
-                  <path d="M22 25 L26 15"/>
-                  <path d="M13 27 L26 15"/>
-                  <circle cx="26" cy="15" r="5" stroke-dasharray="3.4 2.2"/>
-                </g>
-                <circle cx="26" cy="15" r="1.8" fill="var(--cyan)" stroke="none"/>
-              </svg>
-            </div>
-            <div class="gesture-body">
-              <h3 data-i18n="g2.title">Click</h3>
-              <p class="gesture-trigger" data-i18n="g2.trigger">Pinch · index + thumb</p>
-              <p class="gesture-note" data-i18n="g2.note">Tap for a click. Hold to keep the button pressed — the origin of
-              pinch-to-hold interactions.</p>
-            </div>
-            <span class="gesture-meta">conf 0.99 · debounce 120&nbsp;ms</span>
-          </li>
-          <li class="gesture-card glass reveal" style="--d:.1s">
-            <div class="gi-wrap" aria-hidden="true">
-              <svg viewBox="0 0 48 48" class="gi">
-                <g fill="none" stroke="rgba(159,176,207,.55)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                  <ellipse cx="13" cy="31" rx="6.5" ry="8.5" transform="rotate(28 13 31)" opacity=".7"/>
-                  <ellipse cx="35" cy="31" rx="6.5" ry="8.5" transform="rotate(-28 35 31)" opacity=".7"/>
-                </g>
-                <g fill="none" stroke="var(--cyan)" stroke-width="3" stroke-linecap="round">
-                  <path d="M15 21 L18 14"/>
-                  <path d="M9 19 L18 14"/>
-                  <circle cx="18" cy="14" r="4" stroke-dasharray="2.6 1.8"/>
-                  <path d="M33 21 L30 14"/>
-                  <path d="M39 19 L30 14"/>
-                  <circle cx="30" cy="14" r="4" stroke-dasharray="2.6 1.8"/>
-                </g>
-                <circle cx="18" cy="14" r="1.5" fill="var(--cyan)" stroke="none"/>
-                <circle cx="30" cy="14" r="1.5" fill="var(--cyan)" stroke="none"/>
-              </svg>
-            </div>
-            <div class="gesture-body">
-              <h3 data-i18n="g3.title">Double-click</h3>
-              <p class="gesture-trigger" data-i18n="g3.trigger">Double pinch</p>
-              <p class="gesture-note" data-i18n="g3.note">Two quick taps, like the habit you already have. Opens files and apps.</p>
-            </div>
-            <span class="gesture-meta">conf 0.98 · window 260&nbsp;ms</span>
-          </li>
-          <li class="gesture-card glass reveal" style="--d:.15s">
-            <div class="gi-wrap" aria-hidden="true">
-              <svg viewBox="0 0 48 48" class="gi">
-                <g fill="none" stroke="rgba(159,176,207,.55)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                  <ellipse cx="13" cy="31" rx="6.5" ry="8.5" transform="rotate(28 13 31)" opacity=".7"/>
-                  <rect x="29" y="7" width="15" height="14" rx="2.5" stroke-dasharray="3 2.4"/>
-                </g>
-                <g fill="none" stroke="var(--cyan)" stroke-width="3" stroke-linecap="round">
-                  <path d="M14 22 L16 17"/>
-                  <path d="M8 20 L16 17"/>
-                  <circle cx="16" cy="17" r="4.2" stroke-dasharray="2.8 2"/>
-                  <path d="M23 26 L37 26"/>
-                  <path d="M31 21 L37 26 L31 31"/>
-                </g>
-                <circle cx="16" cy="17" r="1.6" fill="var(--cyan)" stroke="none"/>
-                <rect x="36" y="19" width="3.4" height="3.4" rx=".8" fill="var(--cyan)" stroke="none"/>
-              </svg>
-            </div>
-            <div class="gesture-body">
-              <h3 data-i18n="g4.title">Drag</h3>
-              <p class="gesture-trigger" data-i18n="g4.trigger">Pinch + hold + move</p>
-              <p class="gesture-note" data-i18n="g4.note">Grab windows, files and slider handles. Release the pinch to drop.</p>
-            </div>
-            <span class="gesture-meta">conf 0.96 · debounce 140&nbsp;ms</span>
-          </li>
-          <li class="gesture-card glass reveal" style="--d:.2s">
-            <div class="gi-wrap" aria-hidden="true">
-              <svg viewBox="0 0 48 48" class="gi">
-                <g fill="none" stroke="rgba(159,176,207,.55)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                  <ellipse cx="13" cy="33" rx="6.5" ry="8.5" transform="rotate(28 13 33)" opacity=".7"/>
-                  <path d="M22 20 L26 14" opacity=".7"/>
-                </g>
-                <g fill="none" stroke="var(--cyan)" stroke-width="3" stroke-linecap="round">
-                  <path d="M14 24 L17 18"/>
-                  <path d="M8 22 L17 18"/>
-                  <circle cx="17" cy="18" r="4.2" stroke-dasharray="2.8 2"/>
-                  <rect x="28" y="11" width="16" height="22" rx="3"/>
-                  <path d="M31 17 h9"/><path d="M31 22 h10"/><path d="M31 27 h6"/>
-                </g>
-                <circle cx="17" cy="18" r="1.6" fill="var(--cyan)" stroke="none"/>
-              </svg>
-            </div>
-            <div class="gesture-body">
-              <h3 data-i18n="g5.title">Right-click</h3>
-              <p class="gesture-trigger" data-i18n="g5.trigger">Thumb + middle</p>
-              <p class="gesture-note" data-i18n="g5.note">Context menu on demand — for power users who refuse to live without it.</p>
-            </div>
-            <span class="gesture-meta">conf 0.95 · debounce 120&nbsp;ms</span>
-          </li>
-          <li class="gesture-card glass reveal" style="--d:.25s">
-            <div class="gi-wrap" aria-hidden="true">
-              <svg viewBox="0 0 48 48" class="gi">
-                <g fill="none" stroke="rgba(159,176,207,.55)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                  <ellipse cx="17" cy="33" rx="7" ry="8.5" transform="rotate(-10 17 33)"/>
-                  <path d="M19 26 L20 13"/>
-                  <path d="M16 25 L15 14"/>
-                  <path d="M13 26 L11 16"/>
-                  <path d="M10 28 L7 19"/>
-                  <path d="M17 30 L8 26"/>
-                </g>
-                <path d="M19 26 L20 13" fill="none" stroke="var(--cyan)" stroke-width="3" stroke-linecap="round"/>
-                <g fill="none" stroke="var(--cyan)" stroke-width="3" stroke-linecap="round">
-                  <path d="M28 20 L33 14 L38 20"/>
-                  <path d="M28 30 L33 36 L38 30"/>
-                </g>
-              </svg>
-            </div>
-            <div class="gesture-body">
-              <h3 data-i18n="g6.title">Scroll</h3>
-              <p class="gesture-trigger" data-i18n="g6.trigger">Open palm, vertical</p>
-              <p class="gesture-note" data-i18n="g6.note">Palm up, glide the hand — the plane maps hand height to scroll velocity.</p>
-            </div>
-            <span class="gesture-meta">conf 0.97 · inertia on</span>
-          </li>
-          <li class="gesture-card glass reveal" style="--d:.3s">
-            <div class="gi-wrap" aria-hidden="true">
-              <svg viewBox="0 0 48 48" class="gi">
-                <g fill="none" stroke="rgba(159,176,207,.55)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                  <ellipse cx="17" cy="33" rx="7" ry="8.5" transform="rotate(-10 17 33)"/>
-                  <path d="M19 26 L22 15"/>
-                  <path d="M16 25 L18 15"/>
-                  <path d="M13 26 L14 16"/>
-                  <path d="M10 28 L9 19"/>
-                  <path d="M17 30 L8 26"/>
-                </g>
-                <path d="M19 26 L22 13" fill="none" stroke="var(--cyan)" stroke-width="3" stroke-linecap="round"/>
-                <g fill="none" stroke="var(--cyan)" stroke-width="3" stroke-linecap="round">
-                  <path d="M29 15 L34 21 L29 27"/>
-                  <path d="M35 15 L40 21 L35 27"/>
-                </g>
-              </svg>
-            </div>
-            <div class="gesture-body">
-              <h3 data-i18n="g7.title">Swipe</h3>
-              <p class="gesture-trigger" data-i18n="g7.trigger">Swipe, left / right</p>
-              <p class="gesture-note" data-i18n="g7.note">Next and previous — slides, pages, browser tabs. Velocity-aware.</p>
-            </div>
-            <span class="gesture-meta">conf 0.94 · edge zones</span>
-          </li>
-          <li class="gesture-card glass reveal" style="--d:.35s">
-            <div class="gi-wrap" aria-hidden="true">
-              <svg viewBox="0 0 48 48" class="gi">
-                <g fill="none" stroke="rgba(159,176,207,.55)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                  <ellipse cx="18" cy="33" rx="7" ry="8.5" transform="rotate(-10 18 33)"/>
-                  <path d="M20 26 L21 14"/>
-                  <path d="M17 25 L17 15"/>
-                  <path d="M14 26 L13 16"/>
-                  <path d="M11 28 L9 20"/>
-                  <path d="M18 30 L9 26"/>
-                </g>
-                <circle cx="18" cy="31" r="13.5" fill="none" stroke="var(--amber)" stroke-width="2.4" stroke-dasharray="3 3" opacity=".9"/>
-                <g fill="none" stroke="var(--amber)" stroke-width="3" stroke-linecap="round">
-                  <path d="M34 17 v9"/>
-                  <path d="M40 17 v9"/>
-                </g>
-              </svg>
-            </div>
-            <div class="gesture-body">
-              <h3 data-i18n="g8.title">Pause</h3>
-              <p class="gesture-trigger" data-i18n="g8.trigger">Palm held flat</p>
-              <p class="gesture-note" data-i18n="g8.note">Hold the palm open for one beat — control halts until you lower it.</p>
-            </div>
-            <span class="gesture-meta">conf 0.90 · hold 800&nbsp;ms</span>
-          </li>
-          <li class="gesture-card glass reveal" style="--d:.4s">
-            <div class="gi-wrap" aria-hidden="true">
-              <svg viewBox="0 0 48 48" class="gi">
-                <g fill="none" stroke="rgba(159,176,207,.55)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                  <ellipse cx="16" cy="33" rx="9" ry="10" transform="rotate(-14 16 33)"/>
-                  <path d="M10 24 L7 22"/>
-                  <path d="M14 24 L13 21"/>
-                  <path d="M18 25 L19 22"/>
-                  <path d="M22 27 L25 25.5"/>
-                </g>
-                <g fill="none" stroke="var(--cyan)" stroke-width="3" stroke-linecap="round">
-                  <path d="M31 23 v-5 a6.5 6.5 0 0 1 13 0 v5"/>
-                  <rect x="29" y="23" width="17" height="13" rx="3"/>
-                </g>
-                <circle cx="37.5" cy="29" r="2.2" fill="var(--cyan)" stroke="none"/>
-                <path d="M37.5 29 L37.5 32.5" stroke="var(--cyan)" stroke-width="2.4" stroke-linecap="round"/>
-              </svg>
-            </div>
-            <div class="gesture-body">
-              <h3 data-i18n="g9.title">Lock</h3>
-              <p class="gesture-trigger" data-i18n="g9.trigger">Fist</p>
-              <p class="gesture-note" data-i18n="g9.note">Instant lock screen. The gesture everyone knows by instinct.</p>
-            </div>
-            <span class="gesture-meta">conf 0.88 · confirm req</span>
-          </li>
-        </ul>
-      </div>
-    </section>
-
-    <!-- ============ VOICE ============ -->
-    <section class="section" id="voice" aria-labelledby="voice-title">
-      <div class="container">
-        <div class="section-head reveal">
-          <p class="eyebrow" data-i18n="voice.eyebrow">03 / Voice layer</p>
-          <h2 id="voice-title" data-i18n="voice.title">Say it. Or just point.</h2>
-          <p class="lede" data-i18n="voice.lede">A local intent engine maps recognized phrases onto the same intents as gestures.
-          Recognition itself runs on Google's cloud by default, or fully local with Vosk/SAPI.
-          Example commands, four languages, one vocabulary.</p>
-        </div>
-
-        <div class="voice-table glass reveal" role="table" data-i18n-aria="voice.tableAria" aria-label="Voice commands by language">
-          <div class="vrow vhead" role="row">
-            <span class="vcol vtask" role="columnheader" data-i18n="voice.colTask">Task</span>
-            <span class="vcol" role="columnheader" data-i18n="voice.colEn">English</span>
-            <span class="vcol" role="columnheader" data-i18n="voice.colFr">Français</span>
-            <span class="vcol" role="columnheader" data-i18n="voice.colAr">العربية</span>
-            <span class="vcol" role="columnheader" data-i18n="voice.colNl">Nederlands</span>
-          </div>
-          <div class="vrow" role="row">
-            <span class="vcol vtask" role="rowheader" data-i18n="voice.r1.task">Open an app</span>
-            <span class="vcol" role="cell">“open chrome”</span>
-            <span class="vcol" role="cell">“ouvre chrome”</span>
-            <span class="vcol vcell-arabic" dir="rtl" role="cell">“افتح كروم”</span>
-            <span class="vcol" role="cell">“open chrome”</span>
-          </div>
-          <div class="vrow" role="row">
-            <span class="vcol vtask" role="rowheader" data-i18n="voice.r2.task">Write a note</span>
-            <span class="vcol" role="cell">“type: call back at…”</span>
-            <span class="vcol" role="cell">“note : rappeler…”</span>
-            <span class="vcol vcell-arabic" dir="rtl" role="cell">“اكتب ملاحظة”</span>
-            <span class="vcol" role="cell">“type: bel terug om…”</span>
-          </div>
-          <div class="vrow" role="row">
-            <span class="vcol vtask" role="rowheader" data-i18n="voice.r3.task">Next slide</span>
-            <span class="vcol" role="cell">“next slide”</span>
-            <span class="vcol" role="cell">“diapositive suivante”</span>
-            <span class="vcol vcell-arabic" dir="rtl" role="cell">“الشريحة التالية”</span>
-            <span class="vcol" role="cell">“volgende dia”</span>
-          </div>
-          <div class="vrow" role="row">
-            <span class="vcol vtask" role="rowheader" data-i18n="voice.r4.task">Scroll down</span>
-            <span class="vcol" role="cell">“scroll down”</span>
-            <span class="vcol" role="cell">“descends la page”</span>
-            <span class="vcol vcell-arabic" dir="rtl" role="cell">“مرّر للأسفل”</span>
-            <span class="vcol" role="cell">“scroll naar beneden”</span>
-          </div>
-          <div class="vrow" role="row">
-            <span class="vcol vtask" role="rowheader" data-i18n="voice.r5.task">Pause media</span>
-            <span class="vcol" role="cell">“pause the music”</span>
-            <span class="vcol" role="cell">“mets en pause”</span>
-            <span class="vcol vcell-arabic" dir="rtl" role="cell">“أوقف الموسيقى”</span>
-            <span class="vcol" role="cell">“zet de muziek stil”</span>
-          </div>
-          <div class="vrow" role="row">
-            <span class="vcol vtask" role="rowheader" data-i18n="voice.r6.task">Freeze everything</span>
-            <span class="vcol" role="cell">“freeze”</span>
-            <span class="vcol" role="cell">“bloque tout”</span>
-            <span class="vcol vcell-arabic" dir="rtl" role="cell">“تجمّد”</span>
-            <span class="vcol" role="cell">“bevries alles”</span>
-          </div>
-        </div>
-
-        <div class="voice-callout glass reveal">
-          <span class="callout-ic" aria-hidden="true">♪</span>
-          <div>
-            <h3 data-i18n="voice.callTitle">Voice-first “hands busy” mode</h3>
-            <p data-i18n="voice.callText">When your hands are full — gloves, tools, a plate — voice alone can drive the machine.
-            The same intent engine, zero gestures required. <span class="flag-beta" data-i18n="voice.callBeta">FR / AR / NL at beta level</span></p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ============ MODES ============ -->
-    <section class="section" id="modes" aria-labelledby="modes-title">
-      <div class="container">
-        <div class="section-head reveal">
-          <p class="eyebrow" data-i18n="modes.eyebrow">04 / Modes &amp; profiles</p>
-          <h2 id="modes-title" data-i18n="modes.title">Tuned for how you actually work.</h2>
-          <p class="lede" data-i18n="modes.lede">Thirteen auto profiles switch gesture sensitivity, dead zones and voice
-          behaviour per environment — most never need touching.</p>
-        </div>
-
-        <div class="mode-grid">
-          <article class="mode-card glass reveal">
-            <span class="mode-num">M.01</span>
-            <h3 data-i18n="modes.m1.title">Hands Busy</h3>
-            <p data-i18n="modes.m1.text">Voice-first. Gloves, food, tools. Gestures limited to a reserved safe set.</p>
-            <ul class="mode-points" role="list"><li data-i18n="modes.m1.p1">Voice leads</li><li data-i18n="modes.m1.p2">Amber-tier gestures only</li></ul>
-          </article>
-          <article class="mode-card glass reveal" style="--d:.05s">
-            <span class="mode-num">M.02</span>
-            <h3 data-i18n="modes.m2.title">Industrial</h3>
-            <p data-i18n="modes.m2.text">HMI panels &amp; line work. Big dead zones, slow deliberate moves, high debounce.</p>
-            <ul class="mode-points" role="list"><li data-i18n="modes.m2.p1">Extended dead zones</li><li data-i18n="modes.m2.p2">Slow-mode tracking</li></ul>
-          </article>
-          <article class="mode-card glass reveal" style="--d:.1s">
-            <span class="mode-num">M.03</span>
-            <h3 data-i18n="modes.m3.title">Medical</h3>
-            <p data-i18n="modes.m3.text">Sterile-room browsing and paperwork. Time-limit triggers, hands stay clean.</p>
-            <p class="mode-disclaimer" data-i18n="modes.m3.disc">Not a clinical device — no diagnosis, no treatment, no monitoring
-            of patients.</p>
-          </article>
-          <article class="mode-card glass reveal" style="--d:.15s">
-            <span class="mode-num">M.04</span>
-            <h3 data-i18n="modes.m4.title">Presentation</h3>
-            <p data-i18n="modes.m4.text">Slide decks, laser-pointer lane, precision click zones far from the screen edges.</p>
-            <ul class="mode-points" role="list"><li data-i18n="modes.m4.p1">Laser lane active</li><li data-i18n="modes.m4.p2">Click zones tuned</li></ul>
-          </article>
-          <article class="mode-card glass reveal" style="--d:.2s">
-            <span class="mode-num">M.05</span>
-            <h3 data-i18n="modes.m5.title">Media</h3>
-            <p data-i18n="modes.m5.text">Fullscreen video with timeline scrub, volume by palm height, swipe for tracks.</p>
-            <ul class="mode-points" role="list"><li data-i18n="modes.m5.p1">Scrub gestures</li><li data-i18n="modes.m5.p2">Palm = volume</li></ul>
-          </article>
-          <article class="mode-card glass reveal" style="--d:.25s">
-            <span class="mode-num">M.06</span>
-            <h3 data-i18n="modes.m6.title">Accessibility</h3>
-            <p data-i18n="modes.m6.text">Large hit zones, dwell-to-click, switch-friendly. Fewer, kinder gestures.</p>
-            <ul class="mode-points" role="list"><li data-i18n="modes.m6.p1">Dwell-to-click</li><li data-i18n="modes.m6.p2">Big targets</li></ul>
-          </article>
-          <article class="mode-card glass reveal" style="--d:.3s">
-            <span class="mode-num">M.07</span>
-            <h3 data-i18n="modes.m7.title">Browser / PDF</h3>
-            <p data-i18n="modes.m7.text">Scroll + zoom profiles mapped to palm distance, tab swipes, page-turn pinches.</p>
-            <ul class="mode-points" role="list"><li data-i18n="modes.m7.p1">Zoom by distance</li><li data-i18n="modes.m7.p2">Tab swipe</li></ul>
-          </article>
-          <article class="mode-card glass mode-card-wide reveal" style="--d:.35s">
-            <span class="mode-num">M.08+</span>
-            <h3 data-i18n="modes.m8.title">CAD · Kiosk · Custom</h3>
-            <p data-i18n="modes.m8.text">CAD orbit and precision pick, locked kiosk floors, and fully remappable custom profiles.
-            Five more profiles ship out of the box — all thirteen auto-detect context when enabled.</p>
-            <div class="mode-metrics" aria-hidden="true">
-              <span>13</span><i></i><span data-i18n="modes.m8.mem">MEM</span><span data-i18n="modes.m8.profiles">PROFILES</span><span>4</span><i></i><span data-i18n="modes.m8.voice">VOICE</span><span>1</span><i></i><span data-i18n="modes.m8.cam">CAM</span>
-            </div>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <!-- ============ LIVE DEMO REPEAT ============ -->
-    <section class="section section-demo" id="try" aria-labelledby="try-title">
-      <div class="container">
-        <div class="section-head reveal">
-          <p class="eyebrow" data-i18n="try.eyebrow">05 / Live plane</p>
-          <h2 id="try-title" data-i18n="try.title">Try it — right here.</h2>
-          <p class="lede" data-i18n-html="try.lede">The mouse is your air-pointer. Push left and hold to pinch-click, wheel over the
-          document to scroll, hit <kbd>space</kbd> for palm mode (wheel scrolls big steps). Works on touch:
-          tap to click, drag to move.</p>
-        </div>
-
-        <div class="try-grid">
-          <figure class="media-card glass reveal" data-i18n-aria="try.mediaAria" aria-label="Demo media player — controls respond to pinch clicks">
-            <div class="media-top">
-              <span class="led led-green"><i aria-hidden="true"></i><span data-i18n="try.mediaOutput">OUTPUT</span></span>
-              <span class="topbar-mid" id="media-title">flightpath.wav — side A</span>
-              <span class="topbar-scale" id="media-time" aria-hidden="true">0:00 / 0:14</span>
-            </div>
-            <div class="media-visual" aria-hidden="true">
-              <span class="wave wave-1"></span><span class="wave wave-2"></span><span class="wave wave-3"></span>
-              <span class="wave wave-4"></span><span class="wave wave-5"></span><span class="wave wave-6"></span>
-              <span class="wave wave-7"></span><span class="wave wave-8"></span><span class="wave wave-9"></span>
-            </div>
-            <div class="media-controls">
-              <button type="button" class="media-btn" data-demo-target="media-prev" data-i18n-aria="try.prevAria" aria-label="Previous track">⏮</button>
-              <button type="button" class="media-btn media-main" id="media-play" data-demo-target="media-play" aria-pressed="false" data-i18n-aria="try.playAria" aria-label="Play or pause">
-                <span class="play-ic" aria-hidden="true">▶</span><span class="sr-only" data-i18n="try.playPause">Play or pause</span>
-              </button>
-              <button type="button" class="media-btn" data-demo-target="media-next" data-i18n-aria="try.nextAria" aria-label="Next track">⏭</button>
-            </div>
-            <div class="media-progress" aria-hidden="true"><i id="media-fill"></i></div>
-            <figcaption class="fig-cap" id="media-cap" data-i18n="try.mediaStart">Pinch-click the play button. It’s a real button — keyboard works too.</figcaption>
-          </figure>
-
-          <div class="doc-card glass reveal" style="--d:.1s">
-            <div class="doc-head">
-              <span class="led"><i aria-hidden="true"></i><span data-i18n="try.docLabel">DOC</span></span>
-              <span class="topbar-mid" id="doc-title" data-i18n="try.docTitle">quickstart.txt — scrollable</span>
-              <span class="topbar-scale" id="doc-pos" aria-hidden="true">L:0001</span>
-            </div>
-            <div class="doc-panel" id="doc-panel" tabindex="0" data-i18n-aria="try.docAria" aria-label="Scrollable quick-start document. Wheel scrolls; palm mode scrolls in large steps.">
-              <h3 data-i18n="try.quickTitle">QUICKSTART — CONTACTLESS SETUP</h3>
-              <ol>
-                <li data-i18n-html="try.step1"><strong>Install</strong> the Windows app. MediaPipe runtime and language packs bundle in.</li>
-                <li data-i18n-html="try.step2"><strong>Calibrate.</strong> Sit at your desk, raise one hand. The plane locks your arm’s
-                reachable box and maps it to the full screen.</li>
-                <li data-i18n-html="try.step3"><strong>Point.</strong> Index finger raised = move. Notice the plane tracks from the
-                shoulder, not the palm — small wrist work, big screen travel.</li>
-                <li data-i18n-html="try.step4"><strong>Pinch to click.</strong> Index + thumb closing. Hold to grab, release to drop.</li>
-                <li data-i18n-html="try.step5"><strong>Scroll.</strong> Open palm, glide vertically. Wheel-speed follows hand height.</li>
-                <li data-i18n-html="try.step6"><strong>Voice.</strong> Say “open chrome”. Recognition stays on-device when you pick the Vosk or
-                SAPI engine (the default Google engine needs internet); the intent engine then maps the phrase
-                locally, so accents are fine.</li>
-                <li data-i18n-html="try.step7"><strong>Emergency stop.</strong> Press <kbd>CTRL</kbd>+<kbd>ALT</kbd>+<kbd>H</kbd> any time
-                — everything freezes. Press it again to resume.</li>
-              </ol>
-              <p data-i18n="try.afterLine">That’s the whole system. Every action above is the same intent pipeline the demo plane
-              shows: gesture or voice → intent engine → Windows control layer.</p>
-            </div>
-            <p class="fig-cap" data-i18n-html="try.figCap1">Wheel over this panel to scroll it. <strong>Space</strong> then wheel = big palm-mode steps.</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ============ CARROUSEL PÉDAGOGIQUE ============ -->
-    <section class="section" id="carousel-section" aria-labelledby="carousel-title">
-      <div class="container">
-        <div class="section-head reveal">
-          <p class="eyebrow">Parcours & Modules Interactifs</p>
-          <h2 id="carousel-title">Carrousel Pédagogique <span class="grad-text">Prêt pour la Classe</span></h2>
-          <p class="lede">Explorez des cas d'usage réels adaptés aux programmes scolaires : Mathématiques, Sciences, Histoire-Géo et Quiz interactifs.</p>
-        </div>
-
-        <div class="pedago-carousel glass reveal" id="pedago-carousel">
-          <div class="carousel-nav-bar">
-            <button type="button" class="btn btn-ghost carousel-prev" id="car-prev" aria-label="Diapositive précédente">◀ Précédent</button>
-            <span class="carousel-indicator"><strong id="car-current">1</strong> / <strong>4</strong></span>
-            <button type="button" class="btn btn-ghost carousel-next" id="car-next" aria-label="Diapositive suivante">Suivant ▶</button>
-          </div>
-
-          <div class="carousel-slides">
-            <!-- Slide 1: Maths -->
-            <div class="carousel-slide active" data-slide="1">
-              <div class="slide-badge">📐 Mathématiques — Cycle 4 & Lycée</div>
-              <h3>Géométrie Dynamique & Reconnaissance de Formes</h3>
-              <p>L'enseignant ou l'élève trace à la main un cercle ou un triangle dans l'air. L'IA EDU-AIR convertit instantanément le tracé en une figure géométrique parfaite avec mesure des angles et calcul d'aire en temps réel.</p>
-              <div class="slide-demo-box">
-                <div class="shape-preview shape-circle">⭕ Cercle parfait ajusté (r = 4.2 cm, Aire = 55.4 cm²)</div>
-                <div class="shape-preview shape-rect">⬛ Rectangle calibré (a = 8 cm, b = 5 cm, P = 26 cm)</div>
-              </div>
-            </div>
-
-            <!-- Slide 2: Sciences -->
-            <div class="carousel-slide" data-slide="2">
-              <div class="slide-badge">🧪 Sciences & SVT — Collège & Lycée</div>
-              <h3>Manipulation 3D & Schémas Anatomiques</h3>
-              <p>Explorez les systèmes biologiques ou les molécules chimiques sans aucun contact direct. Tournez la molécule d'eau avec un geste de pince et zoomez à la voix (*"Zoomer sur le noyau"*).</p>
-              <div class="slide-demo-box">
-                <div class="molecule-view">🔬 Modèle Moléculaire : H₂O (Angle de liaison 104.5°) — Manipulation Gestuelle Active</div>
-              </div>
-            </div>
-
-            <!-- Slide 3: Histoire-Geo -->
-            <div class="carousel-slide" data-slide="3">
-              <div class="slide-badge">🗺️ Histoire-Géographie — Tous Cycles</div>
-              <h3>Cartographie Interactive & Repères Historiques</h3>
-              <p>Naviguez sur des cartes haute résolution par balayage de la main. Annoter les reliefs, surligner les axes de transport et basculer entre les époques historiques à la voix.</p>
-              <div class="slide-demo-box">
-                <div class="map-view">🗺️ Carte de l'Europe — Surlignage Aérien en Direct & Zoom Vocal</div>
-              </div>
-            </div>
-
-            <!-- Slide 4: Quiz -->
-            <div class="carousel-slide" data-slide="4">
-              <div class="slide-badge">📝 Quiz & Interaction Classe</div>
-              <h3>Quiz Vocal & Vote Interactif en Temps Réel</h3>
-              <p>Lancez un Quiz d'évaluation en 1 seconde à la voix (*"Démarrer le quiz"*). Les élèves répondent et le système affiche instantanément la répartition des réponses A / B / C / D.</p>
-              <div class="slide-demo-box">
-                <div class="quiz-view">
-                  <strong>Question : Quelle est la vitesse de la lumière ?</strong>
-                  <div class="quiz-opts">
-                    <span class="opt opt-a">A) 300 000 km/s (85% des votes)</span>
-                    <span class="opt">B) 150 000 km/s (10%)</span>
-                    <span class="opt">C) 1 000 000 km/s (5%)</span>
-                  </div>
-                </div>
-              </div>
+          <div style="width: 100%; height: 350px; background: #060912; border: 2px dashed rgba(0,242,254,0.4); border-radius: 12px; display: flex; align-items: center; justify-content: center; position: relative;" id="pointer-test-zone">
+            <div style="text-align: center;">
+              <span style="font-size: 3rem;">🎯</span>
+              <p style="color: #00f2fe; font-weight: 700; margin-top: 0.5rem;" id="pointer-mode-label">Mode Pointeur Laser Actif</p>
+              <p style="font-size: 0.85rem; color: #9fb0cf;">Pincez (index + pouce) pour cliquer sur les cibles</p>
             </div>
           </div>
         </div>
       </div>
-    </section>
 
-    <!-- ============ TABLEAU DE BORD ENSEIGNANT ============ -->
-    <section class="section" id="teacher-dashboard" aria-labelledby="dash-title">
-      <div class="container">
-        <div class="section-head reveal">
-          <p class="eyebrow">Outils Pédagogiques Enseignant</p>
-          <h2 id="dash-title">Tableau de Bord <span class="grad-text">Enseignant</span></h2>
-          <p class="lede">Pilotez vos séances de cours, suivez l'engagement des élèves et exportez vos supports annotés en un clic.</p>
+      <!-- ================= MODULE 4: DESSIN AIR ================= -->
+      <div class="module-view" id="view-draw">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap;">
+          <h2 style="color: #00f2fe;">🎨 Studio Dessin Air & Gabarits Pédagogiques</h2>
+          <div style="display: flex; gap: 0.5rem;">
+            <button type="button" class="btn-app btn-app-ghost" id="btn-stamp-frise">📐 Gabarit Frise</button>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-stamp-table">📊 Gabarit Tableau</button>
+            <button type="button" class="btn-app btn-app-primary" id="btn-ocr-convert">🔤 Reconnaissance Texte/LaTeX</button>
+          </div>
+        </div>
+        <div style="background: rgba(10,20,38,0.8); border: 1px solid rgba(126,195,255,0.2); padding: 1.5rem; border-radius: 14px;">
+          <p style="color: #e8effc;">Tracé artistique avec lissage automatique de courbes, gabarits vectoriels et reconnaissance de formules LaTeX ($\sqrt{a^2 + b^2}$).</p>
+        </div>
+      </div>
+
+      <!-- ================= MODULE 5: AIR 3D ================= -->
+      <div class="module-view" id="view-air3d">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+          <h2 style="color: #00f2fe;">🧊 Visualiseur 3D Interactif Scolaire</h2>
+          <div style="display: flex; gap: 0.5rem;">
+            <button type="button" class="btn-app btn-app-ghost" id="btn-3d-coupe">✂️ Mode Coupe</button>
+            <button type="button" class="btn-app btn-app-primary" id="btn-3d-snapshot">📸 Capture 3D Annotée</button>
+          </div>
         </div>
 
-        <div class="dash-grid reveal">
-          <div class="dash-card glass">
-            <div class="dash-card-head">
-              <span class="dash-ic">📝</span>
-              <h3>Gestionnaire de Quiz & Votes</h3>
+        <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
+          <button type="button" class="btn-app btn-app-primary" id="btn-3d-h2o">💧 Molécule H₂O</button>
+          <button type="button" class="btn-app btn-app-ghost" id="btn-3d-cell">🧫 Cellule Végétale</button>
+          <button type="button" class="btn-app btn-app-ghost" id="btn-3d-tecto">🌍 Tectonique des Plaques</button>
+          <button type="button" class="btn-app btn-app-ghost" id="btn-3d-orbit">🪐 Système Solaire</button>
+        </div>
+
+        <div style="width: 100%; height: 420px; background: #040710; border: 2px solid rgba(0,242,254,0.3); border-radius: 14px; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center;" id="canvas-3d-holder">
+          <canvas id="air3d-canvas" width="800" height="420" style="cursor: grab;"></canvas>
+        </div>
+      </div>
+
+      <!-- ================= MODULE 6: VISION AIR ================= -->
+      <div class="module-view" id="view-vision">
+        <h2 style="color: #00f2fe; margin-bottom: 1rem;">👁️ Vision Air — Correction Direct & Suivi EPS</h2>
+        <div style="background: rgba(10,20,38,0.8); border: 1px solid rgba(126,195,255,0.2); padding: 1.5rem; border-radius: 14px;">
+          <h3 style="color: #fff; margin-bottom: 0.5rem;">Superposition Corrective & Analyse de Posture</h3>
+          <p style="color: #9fb0cf; font-size: 0.9rem;">Correction automatique de feuille d'élève sous caméra & Suivi des angles articulaires EPS.</p>
+        </div>
+      </div>
+
+      <!-- ================= MODULE 7: LABO AIR ================= -->
+      <div class="module-view" id="view-labo">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap;">
+          <h2 style="color: #00f2fe;">🔬 Labo Air — Simulations STEM</h2>
+          <select class="select-custom" id="lab-sim-select">
+            <option value="ohm">⚡ Électricité (Loi d'Ohm U = R × I)</option>
+            <option value="genetics">🧬 Génétique (Tableau de Punnett)</option>
+            <option value="ph">🧪 Chimie (Titrage Acide-Base & pH)</option>
+            <option value="em">🧲 Électromagnétisme (Champ & Boussole)</option>
+          </select>
+        </div>
+
+        <div style="background: rgba(10,20,38,0.8); border: 1px solid rgba(126,195,255,0.2); padding: 1.5rem; border-radius: 14px;">
+          <h3 style="color: #fff; margin-bottom: 1rem;" id="lab-sim-title">⚡ Simulation Circuit Électrique (Loi d'Ohm U = R × I)</h3>
+          
+          <div style="display: flex; gap: 2rem; align-items: center; flex-wrap: wrap;">
+            <div>
+              <label style="font-weight: 700; color: #00f2fe;">Tension U (Volts) : <span id="val-u">9V</span></label>
+              <input type="range" id="slider-u" min="1" max="24" value="9" style="width: 200px; display: block; margin-top: 0.5rem;">
             </div>
-            <p>Créez vos séries de questions QCM ou utilisez la banque de questions conforme aux programmes. Déclenchement vocal direct.</p>
-            <div class="dash-actions-demo">
-              <button type="button" class="btn btn-sm btn-primary">➕ Nouveau Quiz</button>
-              <button type="button" class="btn btn-sm btn-ghost">📊 Voir Résultats</button>
+            <div>
+              <label style="font-weight: 700; color: #ffb84d;">Résistance R (Ohms) : <span id="val-r">10Ω</span></label>
+              <input type="range" id="slider-r" min="1" max="100" value="10" style="width: 200px; display: block; margin-top: 0.5rem;">
+            </div>
+            <div style="font-size: 1.2rem; font-weight: 800; color: #3ddc97;">
+              Courant I = <span id="val-i">0.90 A</span>
             </div>
           </div>
 
-          <div class="dash-card glass">
-            <div class="dash-card-head">
-              <span class="dash-ic">💾</span>
-              <h3>Historique & Exports de Cours</h3>
-            </div>
-            <p>Retrouvez toutes vos sessions annotées. Téléchargez le tableau blanc en PNG haute définition ou générez un compte-rendu PDF pour la classe.</p>
-            <div class="dash-actions-demo">
-              <button type="button" class="btn btn-sm btn-primary">📥 Exporter en PNG</button>
-              <button type="button" class="btn btn-sm btn-ghost">📁 Imprimer le PDF</button>
-            </div>
+          <div style="margin-top: 1.2rem; background: rgba(0,242,254,0.1); padding: 0.8rem; border-radius: 8px; font-weight: 600; color: #00f2fe; display: flex; justify-content: space-between;">
+            <span>Valeur Théorique : 0.90 A</span>
+            <span>% Écart Calculé : 0.0% (Conforme)</span>
           </div>
 
-          <div class="dash-card glass">
-            <div class="dash-card-head">
-              <span class="dash-ic">📈</span>
-              <h3>Engagement & Suivi de Classe</h3>
-            </div>
-            <p>Mesurez le taux de participation aux quiz et conservez des statistiques anonymisées pour adapter votre rythme de cours.</p>
-            <div class="dash-actions-demo">
-              <span class="badge badge-green">Taux moyen de réussite : 88%</span>
-            </div>
+          <div style="margin-top: 1.5rem; text-align: center; padding: 2rem; background: #060912; border-radius: 12px; border: 1px solid rgba(0,242,254,0.3);">
+            <div id="bulb-glow" style="width: 60px; height: 60px; border-radius: 50%; background: #ffea00; margin: 0 auto; box-shadow: 0 0 30px #ffea00; transition: all 0.2s ease;"></div>
+            <p style="margin-top: 0.8rem; font-weight: 700; color: #fff;">Luminosité Ampoule en Temps Réel</p>
           </div>
         </div>
       </div>
-    </section>
 
-    <!-- ============ ALIGNEMENT CURRICULAIRE ============ -->
-    <section class="section" id="curriculum" aria-labelledby="curr-title">
-      <div class="container">
-        <div class="section-head reveal">
-          <p class="eyebrow">Programmes Scolaires Officiels</p>
-          <h2 id="curr-title">Alignement <span class="grad-text">Curriculaire</span></h2>
-          <p class="lede">EDU-AIR est conçu pour s'intégrer directement dans les séquences pédagogiques du Ministère de l'Éducation Nationale.</p>
+      <!-- ================= MODULE 8: QUIZ AIR ================= -->
+      <div class="module-view" id="view-quiz">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap;">
+          <h2 style="color: #00f2fe;">📝 Quiz Air & Vote Collaboratif</h2>
+          <div style="display: flex; gap: 0.5rem;">
+            <select class="select-custom" id="quiz-import-format">
+              <option value="moodle">Import: Moodle XML / GIFT</option>
+              <option value="csv">Import: CSV / Excel</option>
+              <option value="json">Import: JSON Standard</option>
+            </select>
+            <button type="button" class="btn-app btn-app-primary" id="btn-quiz-qr">📱 Quiz QR Code Smartphone</button>
+          </div>
         </div>
 
-        <div class="curr-grid reveal">
-          <div class="curr-card glass">
-            <span class="curr-badge">Cycle 3 (CM1 - CM2 - 6ème)</span>
-            <h3>Géométrie de Base & Sciences</h3>
-            <p>Manipulation de figures planes, apprentissage des fractions visuelles et observation assistée de schémas vivants.</p>
+        <div style="background: rgba(10,20,38,0.8); border: 1px solid rgba(126,195,255,0.2); padding: 1.5rem; border-radius: 14px;">
+          <h3 style="color: #fff; margin-bottom: 0.5rem;">Question 1 / 5 : Théorème de Pythagore</h3>
+          <p style="font-size: 1.1rem; color: #e8effc; margin-bottom: 1.5rem;">Dans un triangle rectangle, le carré de l'hypoténuse est égal à... ?</p>
+          
+          <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+            <button type="button" class="btn-app btn-app-ghost quiz-opt-btn" data-opt="A" style="text-align: left; justify-content: space-between;">
+              <span>A) La somme des carrés des deux autres côtés</span>
+              <span class="quiz-bar-val" style="color: #3ddc97; font-weight: 800;">88% (24 votes)</span>
+            </button>
+            <button type="button" class="btn-app btn-app-ghost quiz-opt-btn" data-opt="B" style="text-align: left; justify-content: space-between;">
+              <span>B) La différence des carrés des côtés</span>
+              <span class="quiz-bar-val" style="color: #ff5d5d;">8% (2 votes)</span>
+            </button>
+            <button type="button" class="btn-app btn-app-ghost quiz-opt-btn" data-opt="C" style="text-align: left; justify-content: space-between;">
+              <span>C) Le double de la hauteur du triangle</span>
+              <span class="quiz-bar-val" style="color: #ff5d5d;">4% (1 vote)</span>
+            </button>
           </div>
-          <div class="curr-card glass">
-            <span class="curr-badge">Cycle 4 (5ème - 4ème - 3ème)</span>
-            <h3>Théorèmes, SVT & Physique</h3>
-            <p>Construction géométrique avancée (Thalès, Pythagore), schémas de circuits électriques et anatomie végétale/animale.</p>
-          </div>
-          <div class="curr-card glass">
-            <span class="curr-badge">Lycée (Seconde à Terminale)</span>
-            <h3>Fonctions, Chimie 3D & Langues</h3>
-            <p>Tracé de courbes mathématiques, modèles moléculaires 3D et pratique de la prise de parole en Anglais, Espagnol et Arabe.</p>
-          </div>
-        </div>
-      </div>
-    </section>
 
-    <!-- ============ RGPD & PROTECTION MINEURS ============ -->
-    <section class="section" id="rgpd-security" aria-labelledby="rgpd-title">
-      <div class="container">
-        <div class="section-head reveal">
-          <p class="eyebrow">Sécurité & Souveraineté</p>
-          <h2 id="rgpd-title">Conformité <span class="grad-text">RGPD & Protection Mineurs</span></h2>
-          <p class="lede">Protection absolue des données des élèves et des enseignants. 100% On-Device, zéro fuite vidéo.</p>
-        </div>
-
-        <div class="rgpd-grid reveal">
-          <div class="rgpd-card glass">
-            <span class="rgpd-ic">🔒</span>
-            <h3>Traitement 100% Local</h3>
-            <p>Les modèles de vision par ordinateur (MediaPipe) s'exécutent entièrement en mémoire vive sur l'ordinateur de la classe. Aucun flux vidéo n'est envoyé vers des serveurs distants.</p>
-          </div>
-          <div class="rgpd-card glass">
-            <span class="rgpd-ic">🛡️</span>
-            <h3>Droit à l'Image des Mineurs</h3>
-            <p>Aucun enregistrement vidéo ni reconnaissance faciale nominative. L'application repère uniquement les 21 points de repère de la main pour bouger le pointeur.</p>
-          </div>
-          <div class="rgpd-card glass">
-            <span class="rgpd-ic">📜</span>
-            <h3>Conforme CNIL & Éducation Nationale</h3>
-            <p>Respecte strictement le RGPD et le cadre de référence pour la protection des données dans les établissements scolaires.</p>
+          <div style="margin-top: 1.5rem; display: flex; gap: 1rem;">
+            <button type="button" class="btn-app btn-app-primary" id="btn-quiz-simulate">📊 Simuler un vote élève</button>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-quiz-next">Question suivante ▶</button>
           </div>
         </div>
       </div>
-    </section>
 
-    <!-- ============ TARIFS & MODÈLE ÉCONOMIQUE ============ -->
-    <section class="section" id="pricing" aria-labelledby="pricing-title">
-      <div class="container">
-        <div class="section-head reveal">
-          <p class="eyebrow">Modèle Économique Clair</p>
-          <h2 id="pricing-title">Tarifs & <span class="grad-text">Licence Établissement</span></h2>
-          <p class="lede">Une offre gratuite pour découvrir en classe et un abonnement établissement accessible.</p>
+      <!-- ================= MODULE 10: PROF IA ================= -->
+      <div class="module-view" id="view-profai">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap;">
+          <h2 style="color: #00f2fe;">🤖 Prof IA — Assistant Pédagogique</h2>
+          <div style="display: flex; gap: 0.5rem;">
+            <button type="button" class="btn-app btn-app-primary" id="btn-ai-diff-ex">🎯 Exercice 3 Niveaux</button>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-ai-tts">🔊 Synthèse Vocale</button>
+          </div>
         </div>
 
-        <div class="pricing-grid reveal">
-          <div class="price-card glass">
-            <span class="price-badge">Découverte Enseignant</span>
-            <div class="price-num">0 €</div>
-            <p class="price-sub">Pour 1 classe / 1 enseignant</p>
-            <ul class="price-features">
-              <li>✓ Contrôle gestuel sans contact</li>
-              <li>✓ Commandes vocales de base</li>
-              <li>✓ Tableau blanc interactif & formes</li>
-              <li>✓ Export PNG des notes</li>
-            </ul>
-            <a href="#download" class="btn btn-ghost">Tester Gratuite</a>
+        <div style="background: rgba(10,20,38,0.8); border: 1px solid rgba(126,195,255,0.2); padding: 1.5rem; border-radius: 14px; height: 480px; display: flex; flex-direction: column;">
+          <div id="ai-chat-messages" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1rem; padding-right: 0.5rem;">
+            <div style="background: rgba(0,242,254,0.1); border: 1px solid rgba(0,242,254,0.3); padding: 1rem; border-radius: 12px; max-width: 80%;">
+              <strong>🤖 Prof IA :</strong> Bonjour ! Je suis votre assistant pédagogique EDU-AIR. Comment puis-je vous aider aujourd'hui ? (Générer des exercices différenciés, expliquer un concept, préparer un cours).
+            </div>
           </div>
-
-          <div class="price-card glass price-featured">
-            <span class="price-badge badge-cyan">Établissement Pro</span>
-            <div class="price-num">299 € <span class="per-yr">/ an</span></div>
-            <p class="price-sub">Salles illimitées par établissement</p>
-            <ul class="price-features">
-              <li>✓ Salles de classe illimitées</li>
-              <li>✓ Tableau de bord enseignant complet</li>
-              <li>✓ Export PDF/PNG HD & Quiz illimités</li>
-              <li>✓ Alignement curriculaire complet</li>
-              <li>✓ Support technique & déploiement facile</li>
-            </ul>
-            <a href="#download" class="btn btn-primary">Équiper l'Établissement</a>
+          <div style="display: flex; gap: 0.5rem;">
+            <input type="text" id="ai-chat-input" placeholder="Posez une question à Prof IA (ex: Donne-moi un exercice sur le théorème de Pythagore...)" style="flex: 1; background: #060912; border: 1px solid rgba(126,195,255,0.3); color: #fff; padding: 0.75rem 1rem; border-radius: 8px; outline: none;">
+            <button type="button" class="btn-app btn-app-primary" id="btn-ai-chat-send">Envoyer ➔</button>
           </div>
         </div>
       </div>
-    </section>
 
-    <!-- ============ PRIVACY ============ -->
-    <section class="section" id="privacy" aria-labelledby="privacy-title">
-      <div class="container">
-        <div class="section-head reveal">
-          <p class="eyebrow" data-i18n="privacy.eyebrow">06 / Privacy</p>
-          <h2 id="privacy-title" data-i18n="privacy.title">Never leaves this machine.</h2>
-          <p class="lede" data-i18n="privacy.lede">Video frames and intent logs stay on-device. Audio does too on the Vosk/SAPI engines;
-          the default Google engine sends your phrase to Google for recognition. There is no account, no
-          sync, no analytics beacon to phone home to.</p>
-        </div>
-
-        <div class="privacy-grid">
-          <article class="privacy-card glass reveal">
-            <span class="mode-num">P.01</span>
-            <h3 data-i18n="privacy.p1t">Local processing</h3>
-            <p data-i18n="privacy.p1">MediaPipe models and the intent engine run on this computer. Camera frames are handled and
-            discarded in memory and never leave your machine. Mic audio is the one exception: the default
-            voice engine (Google Web Speech) sends your spoken phrase to Google's servers; the Vosk and SAPI
-            engines keep recognition fully on-device.</p>
-          </article>
-          <article class="privacy-card glass reveal" style="--d:.07s">
-            <span class="mode-num">P.02</span>
-            <h3 data-i18n="privacy.p2t">Camera toggle</h3>
-            <p data-i18n="privacy.p2">A single switch in the tray menu kills the camera instantly. A global hotkey does the same
-            without touching the tray.</p>
-          </article>
-          <article class="privacy-card glass reveal" style="--d:.14s">
-            <span class="mode-num">P.03</span>
-            <h3 data-i18n="privacy.p3t">Privacy mode</h3>
-            <p data-i18n="privacy.p3">Optional live-preview blur or blank. You and nearby people can see tracking is active without
-            anyone seeing faces on screen.</p>
-          </article>
-          <article class="privacy-card glass reveal" style="--d:.21s">
-            <span class="mode-num">P.04</span>
-            <h3 data-i18n="privacy.p4t">Wipe data</h3>
-            <p data-i18n="privacy.p4">One click clears query logs, settings and calibration. Everything HADJ has learned about you
-            fits in a few files and forgets in a tap.</p>
-          </article>
-        </div>
-        <p class="privacy-footnote reveal" data-i18n="privacy.foot">Optional — 100% local video processing: no sensors, no telemetry, no
-          account. (Voice recognition: local on Vosk/SAPI, cloud by default on Google.)</p>
-      </div>
-    </section>
-
-    <!-- ============ SAFETY ============ -->
-    <section class="section" id="safety" aria-labelledby="safety-title">
-      <div class="container">
-        <div class="section-head reveal">
-          <p class="eyebrow" data-i18n="safety.eyebrow">07 / Safety</p>
-          <h2 id="safety-title" data-i18n="safety.title">A kill switch that is always on tap.</h2>
-          <p class="lede" data-i18n="safety.lede">Contactless control is powerful; it’s also engineered to stay out of your way.
-          These are not optional extras.</p>
-        </div>
-
-        <div class="safety-stop glass reveal" role="group" aria-label="Emergency stop: CTRL + ALT + H">
-          <div class="stop-rings" aria-hidden="true"></div>
-          <div class="stop-inner">
-            <span class="stop-pill">
-              <i class="stop-led" aria-hidden="true"></i>
-              <span class="stop-text" data-i18n="safety.stop">EMERGENCY STOP</span>
-              <span class="stop-keys" data-i18n="safety.stopKeys">CTRL + ALT + H</span>
-            </span>
+      <!-- ================= MODULE 11: CALIBRAGE ================= -->
+      <div class="module-view" id="view-calib">
+        <h2 style="color: #00f2fe; margin-bottom: 1rem;">⚙️ Calibrage Caméra & Profils Marque TNI</h2>
+        <div style="background: rgba(10,20,38,0.8); border: 1px solid rgba(126,195,255,0.2); padding: 1.5rem; border-radius: 14px;">
+          <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+            <div>
+              <label style="font-size: 0.85rem; color: #9fb0cf; display: block; margin-bottom: 0.3rem;">Marque TNI :</label>
+              <select class="select-custom" id="calib-brand-select">
+                <option value="smart">SMART Board (Notebook)</option>
+                <option value="promethean">Promethean ActivBoard</option>
+                <option value="eBeam">eBeam Projection</option>
+                <option value="epson">Epson BrightLink Interactive</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size: 0.85rem; color: #9fb0cf; display: block; margin-bottom: 0.3rem;">Ratio Écran :</label>
+              <select class="select-custom" id="calib-ratio-select">
+                <option value="16:9">16:9 (Standard 1080p / 4K)</option>
+                <option value="16:10">16:10 (WUXGA)</option>
+                <option value="4:3">4:3 (TNI Classique)</option>
+              </select>
+            </div>
           </div>
-          <p class="stop-caption" data-i18n-html="safety.stopCaption">Press <strong>CTRL + ALT + H</strong> (or the on-screen button). Every gesture and
-          voice control freezes immediately — press the same key again to resume. Nothing moves in between.</p>
-        </div>
-
-        <div class="safety-grid">
-          <article class="safety-card glass reveal">
-            <h3 data-i18n="safety.s1t">Jump rejection</h3>
-            <p data-i18n="safety.s1">Sudden, unnaturally fast motion is discarded, not acted on. Debounce and dead-man logic
-            treat a flinch as noise, never as a command.</p>
-          </article>
-          <article class="safety-card glass reveal" style="--d:.07s">
-            <h3 data-i18n="safety.s2t">Dead zones</h3>
-            <p data-i18n="safety.s2">Define an edge buffer where gestures are ignored entirely — so resting your hand near the
-            screen never triggers anything. Calibrated per desk.</p>
-          </article>
-          <article class="safety-card glass reveal" style="--d:.14s">
-            <h3 data-i18n="safety.s3t">Confirm destructive actions</h3>
-            <p data-i18n="safety.s3">Drag-to-delete, shutdown, format — anything destructive asks once before it happens. A
-            confirmation is a second, deliberate pinch.</p>
-          </article>
+          <button type="button" class="btn-app btn-app-primary" id="btn-start-calib-wiz">🚀 Lancer le Wizard de Calibrage (4 Points)</button>
         </div>
       </div>
-    </section>
 
-    <div class="marquee" aria-hidden="true">
-      <div class="marquee-track" id="marquee-track">
-        <span>NO-TOUCH</span><i class="m-dot">•</i><span>NO-TOUCH</span><i class="m-dot">•</i>
-        <span>NO-TOUCH</span><i class="m-dot">•</i><span>NO-TOUCH</span><i class="m-dot">•</i>
-        <span>NO-TOUCH</span><i class="m-dot">•</i><span>NO-TOUCH</span><i class="m-dot">•</i>
-        <span>NO-TOUCH</span><i class="m-dot">•</i><span>NO-TOUCH</span><i class="m-dot">•</i>
-        <span>NO-TOUCH</span><i class="m-dot">•</i><span>NO-TOUCH</span><i class="m-dot">•</i>
-        <span>NO-TOUCH</span><i class="m-dot">•</i><span>NO-TOUCH</span><i class="m-dot">•</i>
-        <span>NO-TOUCH</span><i class="m-dot">•</i><span>NO-TOUCH</span><i class="m-dot">•</i>
-        <span>NO-TOUCH</span><i class="m-dot">•</i><span>NO-TOUCH</span><i class="m-dot">•</i>
-        <span>NO-TOUCH</span><i class="m-dot">•</i><span>NO-TOUCH</span><i class="m-dot">•</i>
-        <span>NO-TOUCH</span><i class="m-dot">•</i><span>NO-TOUCH</span><i class="m-dot">•</i>
+      <!-- ================= MODULE 12: HISTORIQUE ================= -->
+      <div class="module-view" id="view-history">
+        <h2 style="color: #00f2fe; margin-bottom: 1rem;">📜 Historique des Sessions & Replay Éléves</h2>
+        <div style="background: rgba(10,20,38,0.8); border: 1px solid rgba(126,195,255,0.2); padding: 1.5rem; border-radius: 14px;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left;">
+            <thead>
+              <tr style="border-bottom: 1px solid rgba(126,195,255,0.2); color: #00f2fe;">
+                <th style="padding: 0.75rem;">Date</th>
+                <th>Séquence / Cours</th>
+                <th>Classe</th>
+                <th>Exports TNI</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="border-bottom: 1px solid rgba(148,180,255,0.1);">
+                <td style="padding: 0.75rem;">23/09/2026</td>
+                <td>Maths : Théorème de Pythagore</td>
+                <td>4ème B</td>
+                <td><button class="btn-app btn-app-ghost" style="padding:0.2rem 0.5rem; font-size:0.75rem;">📥 PDF / IWB</button></td>
+              </tr>
+              <tr style="border-bottom: 1px solid rgba(148,180,255,0.1);">
+                <td style="padding: 0.75rem;">22/09/2026</td>
+                <td>SVT : Anatomie du Cœur</td>
+                <td>5ème A</td>
+                <td><button class="btn-app btn-app-ghost" style="padding:0.2rem 0.5rem; font-size:0.75rem;">📥 PNG / ZIP</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+
+  </div>
+
+  <!-- ================= FLOATING PIP WEBCAM WIDGET ================= -->
+  <div class="pip-webcam-box" id="pip-webcam-box">
+    <video class="pip-webcam-video" id="pip-webcam-video" autoplay playsinline muted></video>
+    <canvas class="pip-hand-canvas" id="pip-hand-canvas" width="180" height="130"></canvas>
+    <div class="pip-status-tag">🟢 AI HAND ON</div>
+  </div>
+
+  <!-- ================= MODALS ================= -->
+  <!-- Export TNI Modal -->
+  <div class="app-modal-backdrop" id="modal-export-tni">
+    <div class="app-modal-box">
+      <div class="app-modal-head">
+        <h3 style="color: #00f2fe;">📤 Exportation TNI / TBI & ENT</h3>
+        <button class="app-modal-close" data-close-modal="modal-export-tni">✕</button>
+      </div>
+      <p style="margin-bottom: 1.2rem; color: #9fb0cf; font-size: 0.9rem;">Choisissez le format natif de votre logiciel de classe ou le package e-Learning pour l'ENT :</p>
+      
+      <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem;">
+        <button class="btn-app btn-app-ghost" id="exp-smart-nb" style="justify-content: space-between;">
+          <span>📘 SMART Notebook (.notebook)</span>
+          <span style="font-weight: 400; color: #3ddc97;">SMART Board</span>
+        </button>
+        <button class="btn-app btn-app-ghost" id="exp-prom-flip" style="justify-content: space-between;">
+          <span>📙 Promethean ActivInspire (.flipchart)</span>
+          <span style="font-weight: 400; color: #ffb84d;">ActivBoard</span>
+        </button>
+        <button class="btn-app btn-app-ghost" id="exp-iwb-univ" style="justify-content: space-between;">
+          <span>📗 Format Universel Interopérable (.iwb)</span>
+          <span style="font-weight: 400; color: #00f2fe;">OpenBoard / Tout TNI</span>
+        </button>
+        <button class="btn-app btn-app-ghost" id="exp-ent-scorm" style="justify-content: space-between;">
+          <span>📦 Package ENT / SCORM 1.2 & H5P (.zip)</span>
+          <span style="font-weight: 400; color: #c9bfff;">Pronote / Moodle</span>
+        </button>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end;">
+        <button class="btn-app btn-app-ghost" data-close-modal="modal-export-tni">Fermer</button>
       </div>
     </div>
+  </div>
 
-    <!-- ============ SOCIAL PROOF ============ -->
-    <section class="section" id="proof" aria-labelledby="proof-title">
-      <div class="container">
-        <div class="section-head reveal">
-          <p class="eyebrow" data-i18n="proof.eyebrow">First classrooms</p>
-          <h2 id="proof-title" data-i18n="proof.title">Teachers see it work on day one.</h2>
-          <p class="lede" data-i18n="proof.lede">Beta feedback from pilot classrooms and the team’s teaching network —
-          shared with permission.</p>
-        </div>
-
-        <!-- TODO: replace with confirmed real quotes + written permission before publishing -->
-        <ul class="proof-grid" role="list">
-          <li class="proof-card glass reveal">
-            <span class="proof-quote" aria-hidden="true">“</span>
-            <blockquote>
-              <p data-i18n="proof.q1">I ran it straight from a USB stick on the classroom PC. First try, the cursor
-              followed my hand — two minutes later the class was voting by pointing at the screen. That was the
-              “it actually exists” moment.</p>
-            </blockquote>
-            <footer class="proof-who">
-              <strong data-i18n="proof.q1name">Primary school teacher</strong>
-              <span class="proof-role" data-i18n="proof.q1role">Pilot classroom · primary school</span>
-            </footer>
-          </li>
-          <li class="proof-card glass reveal" style="--d:.08s">
-            <span class="proof-quote" aria-hidden="true">“</span>
-            <blockquote>
-              <p data-i18n="proof.q2">We tested it on the school projector with 28 kids behind the camera. The
-              calibrated dead zones meant nobody triggered a click by standing up — that is what sold our IT lead
-              on an offline setup.</p>
-            </blockquote>
-            <footer class="proof-who">
-              <strong data-i18n="proof.q2name">Secondary school teacher</strong>
-              <span class="proof-role" data-i18n="proof.q2role">Pilot classroom · secondary school</span>
-            </footer>
-          </li>
-          <li class="proof-card glass reveal" style="--d:.16s">
-            <span class="proof-quote" aria-hidden="true">“</span>
-            <blockquote>
-              <p data-i18n="proof.q3">Installation is unzip and run — no admin rights, no registry, nothing to
-              uninstall. On locked-down school PCs that is the difference between “maybe” and “yes.”</p>
-            </blockquote>
-            <footer class="proof-who">
-              <strong data-i18n="proof.q3name">School IT coordinator</strong>
-              <span class="proof-role" data-i18n="proof.q3role">Evaluator · school deployment</span>
-            </footer>
-          </li>
-        </ul>
-        <p class="proof-note reveal" data-i18n="proof.note">Beta feedback from pilot classrooms. Names and captures are shared
-        with consent.</p>
+  <!-- QR Code Quiz Modal -->
+  <div class="app-modal-backdrop" id="modal-quiz-qr">
+    <div class="app-modal-box" style="text-align: center;">
+      <div class="app-modal-head">
+        <h3 style="color: #00f2fe;">📱 Quiz Collaboratif Smartphone</h3>
+        <button class="app-modal-close" data-close-modal="modal-quiz-qr">✕</button>
       </div>
-    </section>
-
-    <!-- ============ FAQ ============ -->
-    <section class="section" id="faq" aria-labelledby="faq-title">
-      <div class="container container-narrow">
-        <div class="section-head reveal">
-          <p class="eyebrow" data-i18n="faq.eyebrow">08 / FAQ</p>
-          <h2 id="faq-title" data-i18n="faq.title">Straight answers.</h2>
-        </div>
-
-        <div class="faq-list">
-          <details class="faq glass reveal" open>
-            <summary data-i18n="faq.q1.sum">Is my webcam footage sent anywhere?</summary>
-            <div class="faq-body">
-              <p data-i18n="faq.q1.body">No — camera frames stay in memory on your machine and are used only to derive landmarks.
-              There is no upload path for video, no server, no account. The one exception is mic audio:
-              the default voice engine (Google Web Speech) sends your phrase to Google for recognition; the
-              Vosk and SAPI engines keep it on-device. The PWA page you’re on right now also runs fully
-              offline after first load; the camera is never touched by the page.</p>
-            </div>
-          </details>
-          <details class="faq glass reveal">
-            <summary data-i18n="faq.q2.sum">Which Windows versions are supported?</summary>
-            <div class="faq-body">
-              <p data-i18n="faq.q2.body">Windows 10 and Windows 11, 64-bit, with a standard UVC webcam. Microphone for the voice
-              layer is optional. A dedicated GPU is not required — MediaPipe runs on CPU and modest
-              integrated graphics.</p>
-            </div>
-          </details>
-          <details class="faq glass reveal">
-            <summary data-i18n="faq.q3.sum">Does it work fully offline?</summary>
-            <div class="faq-body">
-              <p data-i18n="faq.q3.body">Almost — with one nuance. Tracking, gestures, the intent engine and gaze all run fully
-              offline with the bundled MediaPipe models. Voice recognition is fully offline when you select
-              the Vosk or SAPI engine; the default Google engine needs an internet connection. This page
-              is a PWA — after the first visit it can be installed and run from the local service-worker
-              cache with no connection at all.</p>
-            </div>
-          </details>
-          <details class="faq glass reveal">
-            <summary data-i18n="faq.q4.sum">How accurate are the gestures really?</summary>
-            <div class="faq-body">
-              <p data-i18n="faq.q4.body">Each intent passes a confidence gate (typically 0.85–0.97, shown live in the demo) and a
-              debounce window before it reaches the Windows control layer. Calibration tunes the reference
-              box for your arm length and camera angle, which is where most “wobbly” systems fail.</p>
-            </div>
-          </details>
-          <details class="faq glass reveal">
-            <summary data-i18n="faq.q5.sum">What about gaze and custom gestures?</summary>
-            <div class="faq-body">
-              <p data-i18n="faq.q5.body">Gaze tracking and user-recorded custom gestures are marked <span class="flag-beta">experimental</span> —
-              they ship behind a flag and are off by default. They’re excluded from the guaranteed gesture
-              set until they meet the same confidence bar as the nine core gestures.</p>
-            </div>
-          </details>
-          <details class="faq glass reveal">
-            <summary data-i18n="faq.q6.sum">Can I use it alongside mouse and keyboard?</summary>
-            <div class="faq-body">
-              <p data-i18n="faq.q6.body">Yes. Control is hybrid and switchable — tray toggle, hotkey, or automatic pause when your
-              hands are at the keys. Most people use the mouse for fine work and gestures for
-              everything else.</p>
-            </div>
-          </details>
-        </div>
+      <p style="margin-bottom: 1rem; color: #9fb0cf; font-size: 0.9rem;">Scannez ce QR Code avec votre téléphone pour rejoindre la session de vote en direct :</p>
+      
+      <div style="width: 180px; height: 180px; background: #fff; margin: 0 auto 1.2rem; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 4px solid #00f2fe;">
+        <svg width="150" height="150" viewBox="0 0 100 100">
+          <path d="M0 0h30v30H0zM70 0h30v30H70zM0 70h30v30H0zM10 10h10v10H10zM80 10h10v10H80zM10 80h10v10H10z" fill="#060912"/>
+          <path d="M40 10h20v10H40zM10 40h10v20H10zM40 40h20v20H40zM70 40h20v10H70zM40 70h10v20H40zM60 80h30v10H60z" fill="#00f2fe"/>
+        </svg>
       </div>
-    </section>
 
-    <!-- ============ DOWNLOAD ============ -->
-    <section class="section" id="download" aria-labelledby="download-title">
-      <div class="container container-narrow">
-        <div class="section-head reveal">
-          <p class="eyebrow" data-i18n="download.eyebrow">09 / Download</p>
-          <h2 id="download-title" data-i18n="download.title">Get HADJ NO-TOUCH AI.</h2>
-          <p class="lede" data-i18n="download.lede">Free, open-source, and runs on your machine. No account required. (Voice recognition
-          is cloud by default — local on the Vosk/SAPI engines.)</p>
-        </div>
+      <div style="font-weight: bold; color: #3ddc97; font-size: 1.1rem; margin-bottom: 1.2rem;">Code de session : 489-021</div>
 
-        <div class="download-hero glass reveal">
-          <div class="download-hero-inner">
-            <div class="download-version">
-              <span class="chip chip-tiny"><span class="chip-dot" aria-hidden="true"></span><span data-i18n="download.beta">v2.0-beta</span></span>
-              <span class="chip chip-tiny"><span class="chip-dot" aria-hidden="true"></span><span data-i18n="download.latest">Latest</span></span>
-            </div>
-            <a class="btn btn-primary btn-lg download-hero-btn" target="_blank" rel="noopener"
-               href="https://github.com/meddahuhadj/HADJ-NO-TOUCH-AI/releases/download/v2.0-beta/HADJ-NO-TOUCH-AI-Windows.zip">
-              <span class="btn-ic win-ic" aria-hidden="true">▣</span> <span data-i18n="download.btn">Download for Windows</span>
-            </a>
-            <p class="download-hero-meta" data-i18n="download.meta">Windows 10 / 11 (x64) · ~205 MB ZIP · No installer needed</p>
-          </div>
-        </div>
-
-        <div class="download-grid">
-          <div class="download-card glass reveal">
-            <h3 data-i18n="download.reqTitle">System Requirements</h3>
-            <ul class="req-list" role="list">
-              <li><span class="req-label" data-i18n="req.os">OS</span><span data-i18n="req.osVal">Windows 10 / 11, 64-bit</span></li>
-              <li><span class="req-label" data-i18n="req.cam">Camera</span><span data-i18n="req.camVal">Standard UVC webcam</span></li>
-              <li><span class="req-label" data-i18n="req.mic">Mic</span><span data-i18n="req.micVal">Optional (for voice commands)</span></li>
-              <li><span class="req-label" data-i18n="req.gpu">GPU</span><span data-i18n="req.gpuVal">Not required — runs on CPU</span></li>
-              <li><span class="req-label" data-i18n="req.ram">RAM</span><span data-i18n="req.ramVal">4 GB recommended</span></li>
-              <li><span class="req-label" data-i18n="req.disk">Disk</span><span data-i18n="req.diskVal">~500 MB free space</span></li>
-            </ul>
-          </div>
-
-          <div class="download-card glass reveal" style="--d:.07s">
-            <h3 data-i18n="download.instTitle">Installation</h3>
-            <ol class="install-steps" role="list">
-              <li data-i18n="download.inst1">Download the ZIP file above.</li>
-              <li data-i18n-html="download.inst2">Extract to any folder (e.g. <code>C:\HADJ</code>).</li>
-              <li data-i18n-html="download.inst3">Double-click <code>HADJ-NO-TOUCH-AI.exe</code>.</li>
-              <li data-i18n="download.inst4">Allow camera/mic access when prompted.</li>
-              <li data-i18n="download.inst5">Follow the on-screen calibration wizard.</li>
-            </ol>
-            <p class="install-note" data-i18n="download.instNote">No installer, no admin rights needed. The app is portable — run from any folder.</p>
-          </div>
-
-          <div class="download-card glass reveal" style="--d:.14s">
-            <h3 data-i18n="download.verifyTitle">Verify the Download</h3>
-            <p class="verify-text" data-i18n="download.verifyText">SHA-256 checksum for integrity verification:</p>
-            <code class="verify-hash">CAF27A9BE6B7CABE747A2FF817D9B5CA83142F6472F7C15D56EB20D29D98F188</code>
-            <p class="verify-how" data-i18n-html="download.verifyHow">A <code>.sha256</code> sidecar file with the same digest is published
-            alongside the ZIP. Verify with PowerShell:<br><code>Get-FileHash .\HADJ-NO-TOUCH-AI-Windows.zip -Algorithm SHA256</code></p>
-          </div>
-
-          <div class="download-card glass reveal" style="--d:.21s">
-            <h3 data-i18n="download.insideTitle">What's Inside</h3>
-            <ul class="inside-list" role="list">
-              <li><code>HADJ-NO-TOUCH-AI.exe</code> — <span data-i18n="download.inside1">main application</span></li>
-              <li><code>Lancer_HADJ_AI.bat</code> — <span data-i18n="download.inside2">launcher script</span></li>
-              <li data-i18n="download.inside3">MediaPipe models (Vosk voice pack optional)</li>
-              <li data-i18n="download.inside4">13 auto-detect profiles</li>
-              <li data-i18n="download.inside5">EN / FR / AR / NL voice commands</li>
-            </ul>
-          </div>
-        </div>
-
-        <div class="download-footer glass reveal">
-          <div class="download-footer-row">
-            <span data-i18n="download.footRow">Also available on</span>
-            <a class="btn btn-ghost" target="_blank" rel="noopener"
-               href="https://github.com/meddahuhadj/HADJ-NO-TOUCH-AI">
-              <span class="btn-ic" aria-hidden="true">⌥</span> <span data-i18n="download.footGit">GitHub</span>
-            </a>
-          </div>
-          <p class="download-footer-note" data-i18n="download.footNote">Open source · No telemetry · No account · Camera frames stay local</p>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <footer class="site-footer" id="foot">
-    <div class="container">
-      <div class="footer-top">
-        <a class="brand brand-footer" href="#top" aria-label="HADJ NO-TOUCH AI — back to top" data-i18n-aria="nav.homeAria">
-          <span class="brand-mark" aria-hidden="true">H</span>
-          <span class="brand-word">
-            <span class="brand-name">HADJ</span>
-            <span class="brand-sub">NO-TOUCH AI</span>
-          </span>
-        </a>
-        <ul class="footer-links" role="list" data-i18n-aria="footer.quick" aria-label="Quick links">
-          <li><a href="#how" data-i18n="nav.how">How it works</a></li>
-          <li><a href="#gestures" data-i18n="nav.gestures">Gestures</a></li>
-          <li><a href="#voice" data-i18n="nav.voice">Voice</a></li>
-          <li><a href="#modes" data-i18n="nav.modes">Modes</a></li>
-          <li><a href="#privacy" data-i18n="nav.privacy">Privacy</a></li>
-          <li><a href="#safety" data-i18n="footer.safety">Safety</a></li>
-          <li><a href="#faq" data-i18n="footer.faq">FAQ</a></li>
-          <li><a href="#download" data-i18n="nav.download">Download</a></li>
-        </ul>
-      </div>
-      <div class="footer-mid">
-        <span class="footer-line" aria-hidden="true" data-i18n="footer.line">No touch is the point.</span>
-      </div>
-      <div class="footer-bottom">
-        <p data-i18n="footer.bottom">HADJ NO-TOUCH AI · contactless computer control for Windows</p>
-        <p class="footer-meta">
-          <span class="chip chip-tiny"><span class="chip-dot" aria-hidden="true"></span><span data-i18n="footer.beta">v2.0-beta</span></span>
-          <span class="chip chip-tiny"><span class="chip-dot" aria-hidden="true"></span><span data-i18n="footer.exp">gaze &amp; custom gestures experimental</span></span>
-          <span class="chip chip-tiny"><span class="chip-dot" aria-hidden="true"></span><span data-i18n="footer.pwa">PWA · offline ready</span></span>
-        </p>
+      <div style="display: flex; justify-content: center;">
+        <button class="btn-app btn-app-ghost" data-close-modal="modal-quiz-qr">Fermer</button>
       </div>
     </div>
-  </footer>
+  </div>
 
-  <a class="float-cta" id="float-download" target="_blank" rel="noopener"
-     href="https://github.com/meddahuhadj/HADJ-NO-TOUCH-AI/releases/download/v2.0-beta/HADJ-NO-TOUCH-AI-Windows.zip"
-     data-i18n-aria="float.aria" aria-label="Download HADJ NO-TOUCH AI for Windows">
-    <span class="btn-ic win-ic" aria-hidden="true">▣</span>
-    <span data-i18n="float.download">Download for Windows</span>
-  </a>
+  <!-- PPTX / PDF Import Modal -->
+  <div class="app-modal-backdrop" id="modal-import-pptx">
+    <div class="app-modal-box">
+      <div class="app-modal-head">
+        <h3 style="color: #00f2fe;">📁 Importer une Présentation (PPTX / PDF)</h3>
+        <button class="app-modal-close" data-close-modal="modal-import-pptx">✕</button>
+      </div>
+      <p style="margin-bottom: 1rem; color: #9fb0cf; font-size: 0.9rem;">Sélectionnez votre fichier PowerPoint (.pptx) ou PDF pour l'importer instantanément dans le Diaporama Tactile EDU-AIR.</p>
+      <input type="file" id="input-file-pptx" accept=".pptx,.pdf,.ppt" style="margin-bottom: 1.5rem; color: #fff;">
+      <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+        <button class="btn-app btn-app-ghost" data-close-modal="modal-import-pptx">Annuler</button>
+        <button class="btn-app btn-app-primary" id="btn-confirm-import">Importer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Google Slides Modal -->
+  <div class="app-modal-backdrop" id="modal-gslides">
+    <div class="app-modal-box">
+      <div class="app-modal-head">
+        <h3 style="color: #00f2fe;">🔗 Intégration Google Slides</h3>
+        <button class="app-modal-close" data-close-modal="modal-gslides">✕</button>
+      </div>
+      <p style="margin-bottom: 1rem; color: #9fb0cf; font-size: 0.9rem;">Collez le lien de partage ou d'intégration de votre présentation Google Slides :</p>
+      <input type="text" id="input-gslides-url" placeholder="https://docs.google.com/presentation/d/..." style="width: 100%; background: #060912; border: 1px solid rgba(126,195,255,0.3); color: #fff; padding: 0.6rem 0.8rem; border-radius: 8px; margin-bottom: 1.5rem; outline: none;">
+      <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+        <button class="btn-app btn-app-ghost" data-close-modal="modal-gslides">Annuler</button>
+        <button class="btn-app btn-app-primary" id="btn-confirm-gslides">Charger Diaporama</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Slide Modal -->
+  <div class="app-modal-backdrop" id="modal-add-slide">
+    <div class="app-modal-box">
+      <div class="app-modal-head">
+        <h3 style="color: #00f2fe;">➕ Ajouter une nouvelle Slide</h3>
+        <button class="app-modal-close" data-close-modal="modal-add-slide">✕</button>
+      </div>
+      <label style="font-size: 0.85rem; color: #9fb0cf; display: block; margin-bottom: 0.4rem;">Titre de la slide :</label>
+      <input type="text" id="input-new-slide-title" placeholder="Ex: Résumé et Définitions..." style="width: 100%; background: #060912; border: 1px solid rgba(126,195,255,0.3); color: #fff; padding: 0.6rem 0.8rem; border-radius: 8px; margin-bottom: 1rem; outline: none;">
+      <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+        <button class="btn-app btn-app-ghost" data-close-modal="modal-add-slide">Annuler</button>
+        <button class="btn-app btn-app-primary" id="btn-confirm-add-slide">Ajouter Slide</button>
+      </div>
+    </div>
+  </div>
 
   <script src="i18n.js"></script>
   <script src="app.js"></script>

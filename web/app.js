@@ -1,716 +1,899 @@
 /* ============================================================
-   HADJ NO-TOUCH AI — app.js
-   Interactivity + live canvas demo + PWA install + service worker
+   EDU-AIR SMART SURFACE — Main Application Logic
    ============================================================ */
 
 (() => {
   "use strict";
 
+  // --- Utility Functions ---
   const $ = (s, c) => (c || document).querySelector(s);
   const $$ = (s, c) => Array.prototype.slice.call((c || document).querySelectorAll(s));
-  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-  const t = (k) => (window.hadjI18n ? window.hadjI18n.t(k) : k);
 
-  const RM = window.matchMedia("(prefers-reduced-motion: reduce)");
-  const lerpEase = RM.matches ? 0.9 : 0.14;
+  // --- Clock Updater ---
+  function updateClock() {
+    const el = $("#app-clock");
+    if (!el) return;
+    const now = new Date();
+    const hrs = String(now.getHours()).padStart(2, "0");
+    const mins = String(now.getMinutes()).padStart(2, "0");
+    const secs = String(now.getSeconds()).padStart(2, "0");
+    el.textContent = `${hrs}:${mins}:${secs}`;
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
 
-  /* ---------- ROI Calculator ---------- */
-  window.updateROICalculator = function(rooms) {
-    const numRooms = parseInt(rooms, 10) || 1;
-    const tniCost = numRooms * 2500;
-    const eduCost = numRooms * 30;
-    const savings = tniCost - eduCost;
-    const percent = ((savings / tniCost) * 100).toFixed(1);
+  // --- Language Selector ---
+  $$(".lang-pill").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      $$(".lang-pill").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+    });
+  });
 
-    const formatEUR = (v) => v.toLocaleString("fr-FR") + " €";
+  // --- Status Pills Toggles ---
+  $$(".status-pill").forEach((pill) => {
+    pill.addEventListener("click", () => {
+      pill.classList.toggle("active");
+    });
+  });
 
-    const elRoomsVal = document.getElementById("calc-rooms-val");
-    const elTniCost = document.getElementById("calc-tni-cost");
-    const elEduCost = document.getElementById("calc-edu-cost");
-    const elSavings = document.getElementById("calc-savings");
+  // --- Sidebar & Module View Router ---
+  const sidebarItems = $$(".sidebar-item");
+  const moduleViews = $$(".module-view");
 
-    if (elRoomsVal) elRoomsVal.innerText = numRooms;
-    if (elTniCost) elTniCost.innerText = formatEUR(tniCost);
-    if (elEduCost) elEduCost.innerText = formatEUR(eduCost);
-    if (elSavings) elSavings.innerText = formatEUR(savings) + " (" + percent + "%)";
-  };
+  sidebarItems.forEach((item) => {
+    item.addEventListener("click", () => {
+      const targetId = item.getAttribute("data-target-view");
+      if (!targetId) return;
 
-  /* ---------- Reveal on scroll ---------- */
+      sidebarItems.forEach((i) => i.classList.remove("active"));
+      item.classList.add("active");
 
-  const revealEls = $$(".reveal");
-  if ("IntersectionObserver" in window) {
-    const io = new IntersectionObserver((entries) => {
-      entries.forEach((en) => {
-        if (en.isIntersecting) {
-          en.target.classList.add("in");
-          io.unobserve(en.target);
+      moduleViews.forEach((view) => {
+        if (view.id === targetId) {
+          view.classList.add("active-view");
+        } else {
+          view.classList.remove("active-view");
         }
       });
-    }, { threshold: 0.12, rootMargin: "0px 0px -40px 0px" });
-    revealEls.forEach((el) => io.observe(el));
-  } else {
-    revealEls.forEach((el) => el.classList.add("in"));
+    });
+  });
+
+  // ============================================================
+  // MODULE 9: PRÉSENTATION AIR — SLIDE ENGINE
+  // ============================================================
+
+  let gslidesEmbedUrl = "https://docs.google.com/presentation/d/e/2PACX-1vR3S6zC0x-zN_X8z3/embed?start=false&loop=false&delayms=3000";
+
+  function createGSlidesContent(embedUrl) {
+    return `
+      <div style="width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative;">
+        <iframe src="${embedUrl}" frameborder="0" width="100%" height="100%" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true" style="border-radius: 12px; border: none; background: #fff; width: 100%; height: 100%;"></iframe>
+      </div>
+    `;
   }
 
-  /* ---------- PWA install ---------- */
-
-  let deferredPrompt = null;
-  const canPrompt = () => !!deferredPrompt;
-
-  window.addEventListener("beforeinstallprompt", (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    $("#install-btn").hidden = false;
-  });
-
-  window.addEventListener("appinstalled", () => {
-    $("#install-btn").hidden = true;
-  });
-
-  const showDownloadNote = () => {
-    const note = $("#download-note");
-    if (note.hidden) note.hidden = false;
-    note.scrollIntoView({ behavior: RM.matches ? "auto" : "smooth", block: "nearest" });
-  };
-
-  const promptInstall = async () => {
-    if (canPrompt()) {
-      await deferredPrompt.prompt();
-      return;
-    }
-    showDownloadNote();
-  };
-
-  $("#install-btn").addEventListener("click", promptInstall);
-
-  /* ---------- Floating download CTA ---------- */
-
-  const floatCta = $("#float-download");
-  if (floatCta) {
-    const dlSection = $("#download");
-    const updateFloatCta = () => {
-      let inDownload = false;
-      if (dlSection) {
-        const r = dlSection.getBoundingClientRect();
-        inDownload = r.top < window.innerHeight * 0.75 && r.bottom > 0;
-      }
-      const pastHero = window.scrollY > Math.max(window.innerHeight * 0.9, 320);
-      floatCta.classList.toggle("float-visible", pastHero && !inDownload);
-    };
-    window.addEventListener("scroll", updateFloatCta, { passive: true });
-    window.addEventListener("resize", updateFloatCta, { passive: true });
-    updateFloatCta();
-  }
-
-  /* ---------- Classroom video (auto-enable when the mp4 exists) ---------- */
-
-  const classroomPlayer = $("#classroom-player");
-  const classroomFallback = $("#classroom-fallback");
-  if (classroomPlayer && classroomFallback) {
-    const probe = document.createElement("video");
-    probe.preload = "metadata";
-    probe.muted = true;
-    let settled = false;
-    const resolve = (hasVideo) => {
-      if (settled) return;
-      settled = true;
-      classroomPlayer.hidden = !hasVideo;
-      classroomFallback.hidden = hasVideo;
-    };
-    probe.addEventListener("loadedmetadata", () => resolve(true), { once: true });
-    probe.addEventListener("error", () => resolve(false), { once: true });
-    probe.src = "assets/classroom-demo.mp4";
-    window.setTimeout(() => resolve(false), 4000);
-  }
-
-  /* ---------- Shared gesture → action bus ---------- */
-
-  const clicksEl = $("#hud-clicks");
-  let clickCount = 0;
-  const regClick = () => {
-    clickCount += 1;
-    if (clicksEl) clicksEl.textContent = String(clickCount);
-  };
-
-  const flashText = (el, text) => {
-    if (!el) return;
-    el.textContent = text;
-  };
-
-  const TRACKS = [
-    { title: "flightpath.wav — side A", dur: 14 },
-    { title: "metalnotes.wav — side B", dur: 18 },
-    { title: "zero-grain.wav — ep", dur: 11 },
-  ];
-  let trackIdx = 0;
-  let playing = false;
-  let elapsed = 0;
-  let prevTick = null;
-
-  const mediaFill = $("#media-fill");
-  const mediaTitle = $("#media-title");
-  const mediaTime = $("#media-time");
-  const mediaCap = $("#media-cap");
-  const mediaCard = $(".media-card");
-  const playBtn = $("#media-play");
-
-  let mediaCapMode = "idle"; // idle | track | playing | paused
-
-  const renderMediaCap = () => {
-    if (!mediaCap) return;
-    if (mediaCapMode === "track") mediaCap.textContent = t("demo.trackNow");
-    else if (mediaCapMode === "playing") mediaCap.textContent = t("demo.playing");
-    else if (mediaCapMode === "paused") mediaCap.textContent = t("demo.paused");
-    else mediaCap.textContent = t("try.mediaStart");
-  };
-
-  const setTrack = (i) => {
-    trackIdx = (i + TRACKS.length) % TRACKS.length;
-    elapsed = 0;
-    if (mediaTitle) mediaTitle.textContent = TRACKS[trackIdx].title;
-    mediaCapMode = "track";
-    renderMediaCap();
-    paintMedia();
-  };
-
-  const paintMedia = () => {
-    const t = TRACKS[trackIdx];
-    const frac = clamp(t.dur === 0 ? 0 : elapsed / t.dur, 0, 1);
-    if (mediaFill) mediaFill.style.transform = "scaleX(" + frac + ")";
-    if (mediaTime) {
-      const m = Math.floor(elapsed / 60);
-      const s = Math.floor(elapsed % 60);
-      mediaTime.textContent = m + ":" + String(s).padStart(2, "0") + " / " + t.dur + ":00";
-    }
-  };
-
-  const tickMedia = () => {
-    if (!playing) return;
-    const now = performance.now() / 1000;
-    if (prevTick !== null) {
-      elapsed += Math.min(now - prevTick, 0.3);
-      const t = TRACKS[trackIdx];
-      if (elapsed >= t.dur) {
-        elapsed = 0;
-        setTrack(trackIdx + 1);
-      }
-    }
-    prevTick = now;
-    paintMedia();
-    requestAnimationFrame(tickMedia);
-  };
-
-  const togglePlay = () => {
-    playing = !playing;
-    prevTick = null;
-    if (!playing) { elapsed = Math.floor(elapsed) + 0.4; }
-    playBtn.setAttribute("aria-pressed", String(playing));
-    if (mediaCard) mediaCard.classList.toggle("playing", playing);
-    mediaCapMode = playing ? "playing" : "paused";
-    renderMediaCap();
-    if (playing) requestAnimationFrame(tickMedia);
-    paintMedia();
-  };
-
-  // Real click handlers — these power keyboard, mouse and pinch fires alike.
-  $("#click-test").addEventListener("click", () => {
-    regClick();
-    flashText($("#click-status"), t("demo.clicked"));
-    if (RM.matches) return;
-    const st = $("#click-status");
-    st.classList.add("ok");
-    window.clearTimeout(st._t);
-    st._t = window.setTimeout(() => {
-      flashText(st, t("demo.ready"));
-      st.classList.remove("ok");
-    }, 900);
-  });
-
-  playBtn.addEventListener("click", togglePlay);
-  $$("[data-demo-target=media-prev]").forEach((b) =>
-    b.addEventListener("click", () => { setTrack(trackIdx - 1); })
-  );
-  $$("[data-demo-target=media-next]").forEach((b) =>
-    b.addEventListener("click", () => { setTrack(trackIdx + 1); })
-  );
-  paintMedia();
-
-  /* ---------- Live demo plane ---------- */
-
-  const wrap = $("#demo-wrap");
-  const cv = $("#plane");
-  const ctx = cv.getContext("2d");
-  const hint = $("#demo-hint");
-
-  let W = 0, H = 0, DPR = 1;
-
-  const resize = () => {
-    if (!wrap) return;
-    DPR = Math.min(window.devicePixelRatio || 1, 2);
-    const r = wrap.getBoundingClientRect();
-    W = r.width; H = r.height;
-    cv.width = Math.round(W * DPR);
-    cv.height = Math.round(H * DPR);
-  };
-  if ("ResizeObserver" in window) {
-    const ro = new ResizeObserver(resize);
-    ro.observe(wrap);
-  }
-  resize();
-
-  // pointer state
-  const ptr = { tx: 0.5, ty: 0.42, dx: 0.5, dy: 0.42, inPlane: false };
-  let pinch = false;      // left button / touch held
-  let pinchAt = 0;        // timestamp pinch began
-  let pinchDir = 0;       // ring state
-  let armedEl = null;
-  let confirmT = 0;       // timestamp of last PINCH CONFIRMED
-  let palm = false;
-  let touchSeen = false;
-  let moveStartX = 0, moveStartY = 0, movedAway = false;
-
-  const scheduleRedraw = () => requestAnimationFrame(draw);
-
-  const setHint = (text) => { if (hint) hint.innerHTML = text; };
-
-  const planePos = (e) => {
-    const r = wrap.getBoundingClientRect();
-    return {
-      x: (e.clientX - r.left) / r.width,
-      y: (e.clientY - r.top) / r.height,
-    };
-  };
-
-  window.addEventListener("pointermove", (e) => {
-    const p = planePos(e);
-    const pad = 0.12; // allow a halo outside the panel
-    if (p.x >= -pad && p.x <= 1 + pad && p.y >= -pad && p.y <= 1 + pad) {
-      ptr.tx = clamp(p.x, 0, 1);
-      ptr.ty = clamp(p.y, 0, 1);
-      ptr.inPlane = true;
-    } else {
-      ptr.inPlane = false;
-    }
-  });
-
-  // Toggle palm mode with Space
-  window.addEventListener("keydown", (e) => {
-    if (e.code !== "Space" && e.key !== " ") return;
-    const el = e.target;
-    if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "BUTTON" || el.tagName === "SELECT" || el.isContentEditable)) return;
-    if (el && el.closest && el.closest(".demo-scroll")) return; // let the panel scroll naturally
-    e.preventDefault();
-    palm = !palm;
-    setHint(palm ? t("demo.palmOn") : t("demo.hint"));
-  });
-
-  const fireTarget = (el) => {
-    if (!el) return;
-    confirmT = performance.now();
-    const btn = el.closest("button") || el;
-    if (btn instanceof HTMLButtonElement) {
-      btn.dispatchEvent(new MouseEvent("click", { bubbles: true, view: window }));
-    }
-    // visual hit state
-    btn.classList.add("demo-hit");
-    window.clearTimeout(btn._hitT);
-    btn._hitT = window.setTimeout(() => btn.classList.remove("demo-hit"), 360);
-    btn.classList.remove("demo-arm");
-  };
-
-  const hitTarget = (x, y) => {
-    const el = document.elementFromPoint(x, y);
-    return el ? el.closest("[data-demo-target]") : null;
-  };
-
-  window.addEventListener("pointerdown", (e) => {
-    const el2 = hitTarget(e.clientX, e.clientY);
-    const p = planePos(e);
-    const inWrap = p.x >= 0 && p.x <= 1 && p.y >= 0 && p.y <= 1;
-    if (!inWrap && !el2) return; // not a control interaction nor the plane
-
-    if (e.pointerType === "touch") {
-      touchSeen = true;
-      setHint(t("demo.touchHint"));
-    }
-
-    // press feedback + pinch state
-    pinch = true;
-    pinchAt = performance.now();
-    pinchDir = 0;
-    confirmT = 0;
-    movedAway = false;
-    moveStartX = e.clientX; moveStartY = e.clientY;
-
-    if (el2) {
-      // cancel native click so WE own it (also prevents double-fire on touch)
-      e.preventDefault();
-      armedEl = el2;
-      const btn = el2.closest("button") || el2;
-      btn.classList.add("demo-arm");
-    }
-
-    // touch: a tap = fast pinch-click, drag = move the air pointer
-    if (e.pointerType === "touch" && inWrap) {
-      ptr.tx = clamp(p.x, 0, 1); ptr.ty = clamp(p.y, 0, 1);
-      ptr.inPlane = true;
-    }
-  });
-
-  window.addEventListener("pointermove", (e) => {
-    if (e.pointerType === "touch" && pinch) {
-      const dx = e.clientX - moveStartX;
-      const dy = e.clientY - moveStartY;
-      if (Math.abs(dx) + Math.abs(dy) > 14) movedAway = true;
-      const p = planePos(e);
-      ptr.tx = clamp(p.x, 0, 1); ptr.ty = clamp(p.y, 0, 1);
-      ptr.inPlane = true;
-    }
-  });
-
-  window.addEventListener("pointerup", (e) => {
-    const hold = performance.now() - pinchAt;
-    const pressBuilt = hold > (e.pointerType === "touch" ? 60 : 90);
-
-    if (armedEl && !movedAway && pressBuilt) {
-      fireTarget(armedEl);
-    }
-    if (armedEl) {
-      const btn = armedEl.closest("button") || armedEl;
-      btn.classList.remove("demo-arm");
-    }
-    pinch = false;
-    pinchDir = 0;
-    armedEl = null;
-    movedAway = false;
-  });
-
-  window.addEventListener("pointercancel", () => {
-    pinch = false;
-    pinchDir = 0;
-    armedEl = null;
-    movedAway = false;
-  });
-
-  /* ---------- HUD ---------- */
-
-  const hudX = $("#hud-x"), hudY = $("#hud-y"), hudConf = $("#hud-conf");
-  const hudConfBar = $("#hud-confbar");
-  const hudMode = $("#hud-mode"), hudGesture = $("#hud-gesture");
-
-  const CYCLE = [
-    { g: "POINT", c: () => 0.9 + Math.random() * 0.06 },
-    { g: "PINCH", c: () => 0.94 + Math.random() * 0.04 },
-    { g: "SCROLL", c: () => 0.92 + Math.random() * 0.05 },
-  ];
-  let cyc = 0;
-  let confShown = 0.94;
-  window.setInterval(() => {
-    cyc = (cyc + 1) % CYCLE.length;
-  }, 1500);
-
-  /* ---------- Wheel scroll on demo panels ---------- */
-
-  const docPanel = $("#doc-panel");
-  const docPos = $("#doc-pos");
-
-  const scrollPanel = (el, deltaY) => {
-    const step = palm ? 210 : 56;
-    const d = deltaY > 0 ? step : -step;
-    el.scrollBy({ top: d });
-    if (docPos) {
-      const line = Math.floor(el.scrollTop / 24) + 1;
-      docPos.textContent = "L:" + String(line).padStart(4, "0");
-    }
-  };
-
-  $$(".demo-scroll").forEach((el) => {
-    el.addEventListener(
-      "wheel",
-      (e) => {
-        e.preventDefault();
-        scrollPanel(el, e.deltaY);
+  const decks = {
+    pythagore: [
+      {
+        title: "Maths 4ème : Théorème de Pythagore",
+        subtitle: "Introduction à la géométrie dans le triangle rectangle",
+        content: `
+          <div style="text-align: center;">
+            <h1 style="font-size: 2.2rem; color: #00f2fe; margin-bottom: 1rem;">📐 Théorème de Pythagore</h1>
+            <p style="font-size: 1.2rem; color: #e8effc;">Séquence Pédagogique — Cycle 4 (4ème / 3ème)</p>
+            <div style="margin-top: 2rem; padding: 1.2rem; background: rgba(0,242,254,0.1); border-radius: 12px; border: 1px solid rgba(0,242,254,0.3); display: inline-block;">
+              ✋ Utilisez vos gestes aériens ou les boutons ci-dessous pour contrôler le diaporama
+            </div>
+          </div>
+        `
       },
-      { passive: false }
-    );
-    el.addEventListener("scroll", () => {
-      if (docPos && el === docPanel) {
-        const line = Math.floor(el.scrollTop / 24) + 1;
-        docPos.textContent = "L:" + String(line).padStart(4, "0");
+      {
+        title: "Slide 2 : Énoncé & Formule Fondamentale",
+        subtitle: "Relation entre l'hypoténuse et les côtés de l'angle droit",
+        content: `
+          <div style="display: flex; gap: 2rem; align-items: center; justify-content: center; width: 100%;">
+            <!-- Geometric Triangle SVG -->
+            <svg width="280" height="220" viewBox="0 0 280 220" style="filter: drop-shadow(0 0 12px rgba(0,242,254,0.4));">
+              <polygon points="40,180 240,180 40,40" fill="rgba(0,242,254,0.15)" stroke="#00f2fe" stroke-width="4" />
+              <!-- Right angle symbol -->
+              <polyline points="40,160 60,160 60,180" fill="none" stroke="#ffb84d" stroke-width="3" />
+              <!-- Labels -->
+              <text x="30" y="200" fill="#fff" font-weight="bold" font-size="18">A</text>
+              <text x="245" y="200" fill="#fff" font-weight="bold" font-size="18">B</text>
+              <text x="30" y="30" fill="#fff" font-weight="bold" font-size="18">C</text>
+              <text x="140" y="205" fill="#3ddc97" font-weight="bold" font-size="16">a = 4 cm</text>
+              <text x="10" y="110" fill="#3ddc97" font-weight="bold" font-size="16">b = 3 cm</text>
+              <text x="150" y="100" fill="#00f2fe" font-weight="bold" font-size="18">c = 5 cm (Hypoténuse)</text>
+            </svg>
+            
+            <div style="text-align: left; background: rgba(10,20,38,0.9); padding: 1.5rem; border-radius: 12px; border: 1px solid rgba(0,242,254,0.3);">
+              <h3 style="color: #00f2fe; margin-bottom: 0.8rem;">Formule de Pythagore :</h3>
+              <div style="font-size: 1.8rem; font-weight: 800; color: #ffb84d; font-family: monospace; margin-bottom: 1rem;">
+                BC² = AB² + AC²
+              </div>
+              <p style="color: #e8effc; font-size: 1rem;">Calcul numérique :</p>
+              <p style="color: #9fb0cf; font-family: monospace; font-size: 1.1rem;">c² = 4² + 3² = 16 + 9 = 25<br>c = √25 = <strong style="color:#00f2fe;">5 cm</strong></p>
+            </div>
+          </div>
+        `
+      },
+      {
+        title: "Slide 3 : Application Pratique en Classe",
+        subtitle: "Calculer la hauteur d'une échelle posée contre un mur",
+        content: `
+          <div style="text-align: center; max-width: 600px;">
+            <h3 style="color: #00f2fe; margin-bottom: 1rem;">Problème Échelle & Mur</h3>
+            <p style="font-size: 1.1rem; color: #e8effc; line-height: 1.6;">
+              Une échelle de <strong>5 mètres</strong> s'appuie contre un mur vertical. Son pied est situé à <strong>3 mètres</strong> du mur.
+            </p>
+            <div style="margin-top: 1.5rem; padding: 1.2rem; background: rgba(61,220,151,0.15); border: 1px solid #3ddc97; border-radius: 12px; font-size: 1.2rem; font-weight: bold; color: #3ddc97;">
+              Hauteur atteinte sur le mur : h = √(5² - 3²) = 4 mètres
+            </div>
+          </div>
+        `
+      },
+      {
+        title: "Slide 4 : Quiz Instantané Éléves",
+        subtitle: "Vérification rapide de la compréhension",
+        content: `
+          <div style="text-align: center; max-width: 600px;">
+            <h3 style="color: #ffb84d; margin-bottom: 1rem;">Question flash :</h3>
+            <p style="font-size: 1.2rem; color: #fff;">Si les deux côtés de l'angle droit mesurent 6 cm et 8 cm, quelle est la longueur de l'hypoténuse ?</p>
+            <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 1.5rem;">
+              <button class="btn-app btn-app-ghost" style="font-size: 1.1rem; padding: 0.8rem 1.5rem;">A) 9 cm</button>
+              <button class="btn-app btn-app-primary" style="font-size: 1.1rem; padding: 0.8rem 1.5rem;">B) 10 cm ✓</button>
+              <button class="btn-app btn-app-ghost" style="font-size: 1.1rem; padding: 0.8rem 1.5rem;">C) 14 cm</button>
+            </div>
+          </div>
+        `
+      },
+      {
+        title: "Slide 5 : Synthèse & Devoirs",
+        subtitle: "Résumé du cours et exercices d'entraînement",
+        content: `
+          <div style="text-align: left; max-width: 550px;">
+            <h3 style="color: #00f2fe; margin-bottom: 1rem;">À retenir pour le prochain cours :</h3>
+            <ul style="line-height: 2; color: #e8effc; font-size: 1.05rem;">
+              <li>✓ Le théorème s'applique <strong>uniquement</strong> dans un triangle rectangle.</li>
+              <li>✓ L'hypoténuse est toujours le côté le plus long opposé à l'angle droit.</li>
+              <li>✓ Exercices N° 12, 14 et 15 page 148 du manuel.</li>
+            </ul>
+          </div>
+        `
       }
+    ],
+    heart: [
+      {
+        title: "SVT : Anatomie du Cœur",
+        subtitle: "Système Cardiovasculaire — Collège",
+        content: `<h1 style="color:#00f2fe;">❤️ Anatomie du Cœur Humain</h1><p>Ventricules, oreillettes et circulation sanguine.</p>`
+      },
+      {
+        title: "Circulation Sanguine",
+        subtitle: "Grande et Petite Circulation",
+        content: `<h2 style="color:#ff5d5d;">🫀 Circulation de l'Oxygène</h2><p>Trajet du sang rouge (oxygéné) et du sang bleu (désoxygéné).</p>`
+      }
+    ],
+    physics: [
+      {
+        title: "Physique : Circuit Électrique",
+        subtitle: "Loi d'Ohm U = R x I",
+        content: `<h1 style="color:#00f2fe;">⚡ Circuits Électriques & Tension</h1><p>Étude des composants en série et en dérivation.</p>`
+      }
+    ],
+    history: [
+      {
+        title: "Histoire : La Révolution Française",
+        subtitle: "Année 1789 — Prise de la Bastille",
+        content: `<h1 style="color:#ffb84d;">🏛️ La Révolution Française de 1789</h1><p>De la réunion des États Généraux à la Déclaration des Droits de l'Homme.</p>`
+      }
+    ],
+    gslides: [
+      {
+        title: "Google Slides en direct",
+        content: createGSlidesContent(gslidesEmbedUrl)
+      }
+    ]
+  };
+
+  let currentDeckKey = "pythagore";
+  let currentSlideIndex = 0;
+
+  function renderCurrentSlide() {
+    const deck = decks[currentDeckKey] || decks["pythagore"];
+    if (currentSlideIndex >= deck.length) currentSlideIndex = deck.length - 1;
+    if (currentSlideIndex < 0) currentSlideIndex = 0;
+
+    const slide = deck[currentSlideIndex];
+    const stage = $("#slide-content-render");
+    const counter = $("#slide-counter-display");
+
+    if (stage) {
+      stage.innerHTML = slide.content;
+    }
+    if (counter) {
+      counter.textContent = `${currentSlideIndex + 1} / ${deck.length}`;
+    }
+  }
+
+  // Deck selector
+  const deckSelect = $("#presentation-deck-select");
+  if (deckSelect) {
+    deckSelect.addEventListener("change", (e) => {
+      currentDeckKey = e.target.value;
+      currentSlideIndex = 0;
+      renderCurrentSlide();
+    });
+  }
+
+  // Prev / Next Slide Buttons
+  const btnPrev = $("#btn-slide-prev");
+  const btnNext = $("#btn-slide-next");
+
+  if (btnPrev) {
+    btnPrev.addEventListener("click", () => {
+      currentSlideIndex--;
+      renderCurrentSlide();
+    });
+  }
+  if (btnNext) {
+    btnNext.addEventListener("click", () => {
+      currentSlideIndex++;
+      renderCurrentSlide();
+    });
+  }
+
+  // Keyboard navigation Left / Right Arrow
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowLeft") {
+      currentSlideIndex--;
+      renderCurrentSlide();
+    } else if (e.key === "ArrowRight") {
+      currentSlideIndex++;
+      renderCurrentSlide();
+    }
+  });
+
+  renderCurrentSlide();
+
+  // ============================================================
+  // ANNOTATION CANVAS ON PRESENTATION
+  // ============================================================
+
+  const drawCanvas = $("#presentation-draw-canvas");
+  if (drawCanvas) {
+    const ctx = drawCanvas.getContext("2d");
+    let isDrawing = false;
+    let activeTool = "pen";
+    let activeColor = "#00f2fe";
+    let historyStack = [];
+
+    // Tool chips
+    $$(".tool-chip").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        $$(".tool-chip").forEach((c) => c.classList.remove("active"));
+        chip.classList.add("active");
+        if (chip.id === "tool-pen") activeTool = "pen";
+        if (chip.id === "tool-highlighter") activeTool = "highlighter";
+        if (chip.id === "tool-eraser") activeTool = "eraser";
+      });
+    });
+
+    // Color dots
+    $$(".color-dot").forEach((dot) => {
+      dot.addEventListener("click", () => {
+        $$(".color-dot").forEach((d) => d.classList.remove("active"));
+        dot.classList.add("active");
+        activeColor = dot.getAttribute("data-color");
+      });
+    });
+
+    const customColor = $("#custom-color-picker");
+    if (customColor) {
+      customColor.addEventListener("input", (e) => {
+        activeColor = e.target.value;
+      });
+    }
+
+    function saveState() {
+      historyStack.push(ctx.getImageData(0, 0, drawCanvas.width, drawCanvas.height));
+      if (historyStack.length > 20) historyStack.shift();
+    }
+
+    function getCanvasCoords(e) {
+      const rect = drawCanvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return {
+        x: (clientX - rect.left) * (drawCanvas.width / rect.width),
+        y: (clientY - rect.top) * (drawCanvas.height / rect.height)
+      };
+    }
+
+    drawCanvas.addEventListener("mousedown", (e) => {
+      saveState();
+      isDrawing = true;
+      const pos = getCanvasCoords(e);
+      ctx.beginPath();
+      ctx.moveTo(pos.x, pos.y);
+    });
+
+    drawCanvas.addEventListener("mousemove", (e) => {
+      if (!isDrawing) return;
+      const pos = getCanvasCoords(e);
+
+      if (activeTool === "pen") {
+        ctx.strokeStyle = activeColor;
+        ctx.lineWidth = 4;
+        ctx.lineCap = "round";
+        ctx.globalAlpha = 1.0;
+        ctx.lineTo(pos.x, pos.y);
+        ctx.stroke();
+      } else if (activeTool === "highlighter") {
+        ctx.strokeStyle = activeColor;
+        ctx.lineWidth = 18;
+        ctx.lineCap = "square";
+        ctx.globalAlpha = 0.35;
+        ctx.lineTo(pos.x, pos.y);
+        ctx.stroke();
+      } else if (activeTool === "eraser") {
+        ctx.clearRect(pos.x - 15, pos.y - 15, 30, 30);
+      }
+    });
+
+    window.addEventListener("mouseup", () => {
+      isDrawing = false;
+    });
+
+    // Undo & Clear
+    const btnUndo = $("#btn-draw-undo");
+    const btnClear = $("#btn-draw-clear");
+
+    if (btnUndo) {
+      btnUndo.addEventListener("click", () => {
+        if (historyStack.length > 0) {
+          const state = historyStack.pop();
+          ctx.putImageData(state, 0, 0);
+        } else {
+          ctx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+        }
+      });
+    }
+
+    if (btnClear) {
+      btnClear.addEventListener("click", () => {
+        saveState();
+        ctx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+      });
+    }
+  }
+
+  // ============================================================
+  // SPOTLIGHT & LOUPE ZOOM OVERLAYS
+  // ============================================================
+
+  const canvasBox = $("#slide-canvas-container");
+  const spotlightMask = $("#spotlight-mask-layer");
+  const loupeLens = $("#loupe-lens-layer");
+  const btnSpotlight = $("#btn-toggle-spotlight");
+  const btnLoupe = $("#btn-toggle-loupe");
+
+  let spotlightActive = false;
+  let loupeActive = false;
+
+  if (btnSpotlight) {
+    btnSpotlight.addEventListener("click", () => {
+      spotlightActive = !spotlightActive;
+      btnSpotlight.classList.toggle("btn-app-primary", spotlightActive);
+      btnSpotlight.classList.toggle("btn-app-ghost", !spotlightActive);
+      if (spotlightMask) spotlightMask.classList.toggle("active", spotlightActive);
+    });
+  }
+
+  if (btnLoupe) {
+    btnLoupe.addEventListener("click", () => {
+      loupeActive = !loupeActive;
+      btnLoupe.classList.toggle("btn-app-primary", loupeActive);
+      btnLoupe.classList.toggle("btn-app-ghost", !loupeActive);
+      if (loupeLens) loupeLens.classList.toggle("active", loupeActive);
+    });
+  }
+
+  if (canvasBox) {
+    canvasBox.addEventListener("mousemove", (e) => {
+      const rect = canvasBox.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      if (spotlightActive && spotlightMask) {
+        spotlightMask.style.setProperty("--sp-x", `${(x / rect.width) * 100}%`);
+        spotlightMask.style.setProperty("--sp-y", `${(y / rect.height) * 100}%`);
+      }
+
+      if (loupeActive && loupeLens) {
+        loupeLens.style.left = `${x - 90}px`;
+        loupeLens.style.top = `${y - 90}px`;
+      }
+    });
+  }
+
+  // ============================================================
+  // MINUTEUR DE CLASSE TNI (TIMER)
+  // ============================================================
+
+  let timerSeconds = 180;
+  let timerInterval = null;
+  let timerRunning = false;
+
+  const timerDigits = $("#class-timer-digits");
+  const btnTimerStart = $("#btn-timer-start-pause");
+  const btnTimerReset = $("#btn-timer-reset");
+
+  function formatTime(s) {
+    const mins = Math.floor(s / 60);
+    const secs = s % 60;
+    return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+  }
+
+  function updateTimerDisplay() {
+    if (timerDigits) {
+      timerDigits.textContent = formatTime(timerSeconds);
+    }
+  }
+
+  $$(".timer-preset-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      $$(".timer-preset-btn").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      const val = parseInt(btn.getAttribute("data-preset"), 10);
+      timerSeconds = val;
+      if (timerRunning) clearInterval(timerInterval);
+      timerRunning = false;
+      if (btnTimerStart) btnTimerStart.textContent = "▶ DÉMARRER";
+      updateTimerDisplay();
     });
   });
 
-  /* ---------- Canvas drawing ---------- */
-
-  const drawGrid = (w, h) => {
-    ctx.strokeStyle = "rgba(126,195,255,0.09)";
-    ctx.lineWidth = 1;
-    const hor = h * 0.36;
-    const vpx = w * 0.5;
-
-    // vertical fan from the vanishing point
-    const step = 30;
-    const cols = Math.ceil(w / (2 * step)) + 1;
-    for (let k = -cols; k <= cols; k++) {
-      ctx.beginPath();
-      ctx.moveTo(vpx, hor);
-      ctx.lineTo(vpx + k * step, h);
-      ctx.stroke();
-    }
-    // horizontal planes with perspective compression
-    for (let i = 0; i <= 13; i++) {
-      const tt = i / 13;
-      const y = hor + (h - hor) * tt * tt;
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(w, y);
-      ctx.stroke();
-    }
-    // horizon + focal crosshair
-    ctx.strokeStyle = "rgba(76,201,255,0.22)";
-    ctx.beginPath(); ctx.moveTo(0, hor); ctx.lineTo(w, hor); ctx.stroke();
-    ctx.strokeStyle = "rgba(76,201,255,0.3)";
-    ctx.beginPath();
-    ctx.moveTo(vpx - 9, hor); ctx.lineTo(vpx + 9, hor);
-    ctx.moveTo(vpx, hor - 9); ctx.lineTo(vpx, hor + 9);
-    ctx.stroke();
-  };
-
-  const drawScanline = (t, w, h) => {
-    const slow = RM.matches ? 0 : ((t * 0.045) % 1) * (h + 160) - 80;
-    const g = ctx.createLinearGradient(0, slow - 60, 0, slow + 16);
-    g.addColorStop(0, "rgba(76,201,255,0)");
-    g.addColorStop(0.72, "rgba(76,201,255,0.05)");
-    g.addColorStop(1, "rgba(76,201,255,0.12)");
-    ctx.fillStyle = g;
-    ctx.fillRect(0, slow - 60, w, 76);
-    ctx.strokeStyle = "rgba(124,195,255,0.24)";
-    ctx.beginPath(); ctx.moveTo(0, slow); ctx.lineTo(w, slow); ctx.stroke();
-  };
-
-  const roundRect = (x, y, w, h, r) => {
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.arcTo(x + w, y, x + w, y + h, r);
-    ctx.arcTo(x + w, y + h, x, y + h, r);
-    ctx.arcTo(x, y + h, x, y, r);
-    ctx.arcTo(x, y, x + w, y, r);
-    ctx.closePath();
-  };
-
-  const drawPinch = (now, x, y) => {
-    const age = now - pinchAt;
-    const ring = 9 + clamp(age / 340, 0, 1) * 26;
-    ctx.strokeStyle = "rgba(76,201,255,0.85)";
-    ctx.lineWidth = 1.6;
-    ctx.beginPath(); ctx.arc(x, y, ring, 0, Math.PI * 2); ctx.stroke();
-    ctx.strokeStyle = "rgba(76,201,255,0.4)";
-    ctx.beginPath(); ctx.arc(x, y, ring + 5, 0, Math.PI * 2); ctx.stroke();
-    ctx.fillStyle = "rgba(232,247,255,0.95)";
-    ctx.beginPath(); ctx.arc(x, y, 2.2, 0, Math.PI * 2); ctx.fill();
-  };
-
-  const drawConfirm = (now, w, h) => {
-    if (!confirmT) return;
-    const age = (now - confirmT) / 1000;
-    if (age > 1.2) { confirmT = 0; return; }
-    const a = 1 - age / 1.2;
-    const cy = h * 0.72 - age * 18;
-    ctx.font = '700 11px "Segoe UI", "Segoe UI Variable Display", system-ui, sans-serif';
-    ctx.textAlign = "center";
-    ctx.fillStyle = "rgba(76,201,255," + a.toFixed(3) + ")";
-    ctx.fillText(t("demo.confirm"), w / 2, cy);
-    ctx.font = '600 9px "Segoe UI", system-ui, sans-serif';
-    ctx.fillStyle = "rgba(159,176,207," + (a * 0.8).toFixed(3) + ")";
-    ctx.fillText(t("demo.confirmSub"), w / 2, cy + 15);
-  };
-
-  const draw = () => {
-    if (!ctx || W === 0 || H === 0) return;
-    const now = performance.now();
-    const t = now / 1000;
-    const w = W, h = H;
-
-    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    ctx.clearRect(0, 0, w, h);
-
-    drawGrid(w, h);
-    if (!RM.matches) drawScanline(t, w, h);
-
-    // smoothed air-pointer dot
-    const lf = lerpEase;
-    ptr.dx += (ptr.tx - ptr.dx) * lf;
-    ptr.dy += (ptr.ty - ptr.dy) * lf;
-    const px = ptr.dx * w;
-    const py = ptr.dy * h;
-    const hot = ptr.inPlane ? 1 : 0.35;
-
-    // glow
-    const g = ctx.createRadialGradient(px, py, 0, px, py, 30);
-    g.addColorStop(0, "rgba(76,201,255," + (0.5 * hot).toFixed(3) + ")");
-    g.addColorStop(1, "rgba(76,201,255,0)");
-    ctx.fillStyle = g;
-    ctx.beginPath(); ctx.arc(px, py, 30, 0, Math.PI * 2); ctx.fill();
-
-    ctx.strokeStyle = "rgba(124,195,255," + (0.85 * hot).toFixed(3) + ")";
-    ctx.lineWidth = 1.4;
-    ctx.beginPath(); ctx.arc(px, py, 7, 0, Math.PI * 2); ctx.stroke();
-    ctx.fillStyle = "rgba(232,247,255," + hot.toFixed(3) + ")";
-    ctx.beginPath(); ctx.arc(px, py, 3, 0, Math.PI * 2); ctx.fill();
-
-    if (pinch && ptr.inPlane) drawPinch(now, px, py);
-    drawConfirm(now, w, h);
-
-    // HUD
-    if (hudX) hudX.textContent = ptr.dx.toFixed(2);
-    if (hudY) hudY.textContent = ptr.dy.toFixed(2);
-
-    // gesture override order: pinch > palm > auto cycle
-    let label, conf;
-    if (pinch) { label = "PINCH"; conf = 0.96 + Math.random() * 0.03; }
-    else if (palm) { label = "PALM"; conf = 0.91 + Math.random() * 0.03; }
-    else { const c = CYCLE[cyc]; label = c.g; conf = c.c(); }
-
-    confShown += (conf - confShown) * 0.12;
-    if (hudGesture) hudGesture.textContent = label;
-    if (hudMode) {
-      const mode = palm ? "PALM" : pinch ? "PINCH" : label === "SCROLL" ? "SCROLL" : "POINT";
-      hudMode.textContent = mode;
-    }
-    if (hudConf) hudConf.textContent = (confShown * 100).toFixed(0) + "%";
-    if (hudConfBar) hudConfBar.style.transform = "scaleX(" + confShown.toFixed(3) + ")";
-
-    requestAnimationFrame(draw);
-  };
-
-  requestAnimationFrame(draw);
-
-  /* ---------- i18n: language switcher + runtime translation ---------- */
-
-  const i18n = window.hadjI18n;
-  if (i18n) {
-    const langBtn = $("#lang-btn");
-    const langMenu = $("#lang-menu");
-    const langCurrent = $("#lang-current");
-
-    const paintLang = (code) => {
-      if (langCurrent) langCurrent.textContent = String(code).toUpperCase();
-      if (langMenu) {
-        langMenu.querySelectorAll(".lang-opt").forEach((o) => {
-          o.classList.toggle("is-active", o.getAttribute("data-lang") === code);
-        });
-      }
-    };
-
-    const closeLang = () => {
-      if (langMenu) langMenu.classList.remove("open");
-      if (langBtn) langBtn.setAttribute("aria-expanded", "false");
-    };
-
-    if (langBtn) {
-      langBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        if (!langMenu) return;
-        const open = langMenu.classList.toggle("open");
-        langBtn.setAttribute("aria-expanded", String(open));
-      });
-    }
-
-    if (langMenu) {
-      langMenu.addEventListener("click", (e) => {
-        const opt = e.target.closest("[data-lang]");
-        if (!opt) return;
-        i18n.setLang(opt.getAttribute("data-lang"));
-        closeLang();
-      });
-    }
-
-    document.addEventListener("click", () => closeLang());
-    window.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") closeLang();
-    });
-
-    window.addEventListener("hadjlangchange", () => {
-      paintLang(i18n.current());
-      setHint(palm ? t("demo.palmOn") : t("demo.hint"));
-      const st = $("#click-status");
-      if (st) {
-        window.clearTimeout(st._t);
-        st.classList.remove("ok");
-        st.textContent = t("demo.ready");
-      }
-      renderMediaCap();
-    });
-
-    i18n.init();
-  }
-
-  /* ---------- Mobile Navigation Toggle ---------- */
-
-  const navToggle = $("#nav-toggle");
-  const navLinks = $("#nav-links");
-  if (navToggle && navLinks) {
-    navToggle.addEventListener("click", () => {
-      navLinks.classList.toggle("nav-open");
-    });
-  }
-
-  /* ---------- Pedagogical Carousel ---------- */
-
-  let currentSlide = 1;
-  const totalSlides = 4;
-
-  const updateCarousel = (slideIndex) => {
-    currentSlide = ((slideIndex - 1 + totalSlides) % totalSlides) + 1;
-    $$(".carousel-slide").forEach((el) => {
-      const idx = parseInt(el.getAttribute("data-slide"), 10);
-      el.classList.toggle("active", idx === currentSlide);
-    });
-    const indicator = $("#car-current");
-    if (indicator) indicator.textContent = String(currentSlide);
-  };
-
-  const carPrev = $("#car-prev");
-  const carNext = $("#car-next");
-  if (carPrev) carPrev.addEventListener("click", () => updateCarousel(currentSlide - 1));
-  if (carNext) carNext.addEventListener("click", () => updateCarousel(currentSlide + 1));
-
-  /* ---------- Animated Camera Preview & FPS Visibility ---------- */
-
-  let camActive = false;
-  const btnCam = $("#btn-toggle-cam");
-  const camStatus = $("#cam-status-text");
-  const fpsCell = $("#hud-fps-cell");
-  const fpsVal = $("#hud-fps");
-
-  if (btnCam) {
-    btnCam.addEventListener("click", async () => {
-      if (!camActive) {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-          camActive = true;
-          if (btnCam) btnCam.textContent = "🛑 Arrêter WebCam";
-          if (camStatus) camStatus.textContent = "WEBCAM ACTIVE";
-          if (fpsCell) fpsCell.style.display = "flex";
-          if (fpsVal) fpsVal.textContent = "30 FPS";
-        } catch (err) {
-          alert("Aperçu caméra non disponible. Poursuite en mode démo animée sans contact.");
-        }
+  if (btnTimerStart) {
+    btnTimerStart.addEventListener("click", () => {
+      if (!timerRunning) {
+        timerRunning = true;
+        btnTimerStart.textContent = "⏸ PAUSE";
+        timerInterval = setInterval(() => {
+          if (timerSeconds > 0) {
+            timerSeconds--;
+            updateTimerDisplay();
+          } else {
+            clearInterval(timerInterval);
+            timerRunning = false;
+            btnTimerStart.textContent = "▶ DÉMARRER";
+            alert("⏰ MINUTEUR TERMINÉ ! Temps écoulé pour l'activité.");
+          }
+        }, 1000);
       } else {
-        camActive = false;
-        if (btnCam) btnCam.textContent = "🎥 Activer WebCam (Optionnel)";
-        if (camStatus) camStatus.textContent = "DEMO ANIMÉE";
-        if (fpsCell) fpsCell.style.display = "none";
+        timerRunning = false;
+        clearInterval(timerInterval);
+        btnTimerStart.textContent = "▶ DÉMARRER";
       }
     });
   }
 
-  /* ---------- Service worker ---------- */
-
-  if ("serviceWorker" in navigator && /^https:|^localhost|^127\.0\.0\.1/.test(location.origin)) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("sw.js").catch(() => {});
+  if (btnTimerReset) {
+    btnTimerReset.addEventListener("click", () => {
+      if (timerRunning) clearInterval(timerInterval);
+      timerRunning = false;
+      if (btnTimerStart) btnTimerStart.textContent = "▶ DÉMARRER";
+      timerSeconds = 180;
+      updateTimerDisplay();
     });
   }
+
+  updateTimerDisplay();
+
+  // ============================================================
+  // OTHER MODULE INTERACTIVITIES
+  // ============================================================
+
+  // --- Module 7: Labo Air Electric Circuit Simulator ---
+  const sliderU = $("#slider-u");
+  const sliderR = $("#slider-r");
+  const valU = $("#val-u");
+  const valR = $("#val-r");
+  const valI = $("#val-i");
+  const bulb = $("#bulb-glow");
+
+  function updateCircuit() {
+    if (!sliderU || !sliderR) return;
+    const u = parseFloat(sliderU.value);
+    const r = parseFloat(sliderR.value);
+    const i = (u / r).toFixed(2);
+
+    if (valU) valU.textContent = `${u}V`;
+    if (valR) valR.textContent = `${r}Ω`;
+    if (valI) valI.textContent = `${i} A`;
+
+    if (bulb) {
+      const brightness = Math.min(1.0, u / 18);
+      bulb.style.opacity = brightness;
+      bulb.style.boxShadow = `0 0 ${brightness * 40}px #ffea00`;
+    }
+  }
+
+  if (sliderU) sliderU.addEventListener("input", updateCircuit);
+  if (sliderR) sliderR.addEventListener("input", updateCircuit);
+
+  // --- Module 8: Quiz Air Polling Simulator ---
+  const btnQuizSim = $("#btn-quiz-simulate");
+  if (btnQuizSim) {
+    btnQuizSim.addEventListener("click", () => {
+      alert("📊 Vote de la classe mis à jour : +1 réponse enregistrée pour Option A !");
+    });
+  }
+
+  // --- Module 10: Prof IA Chatbot ---
+  const chatInput = $("#ai-chat-input");
+  const chatSend = $("#btn-ai-chat-send");
+  const chatMessages = $("#ai-chat-messages");
+
+  if (chatSend && chatInput && chatMessages) {
+    chatSend.addEventListener("click", () => {
+      const text = chatInput.value.trim();
+      if (!text) return;
+
+      // Add User Message
+      const userMsg = document.createElement("div");
+      userMsg.style.cssText = "background: rgba(148,180,255,0.1); border: 1px solid rgba(126,195,255,0.2); padding: 0.8rem; border-radius: 12px; max-width: 80%; align-self: flex-end;";
+      userMsg.innerHTML = `<strong>Vous :</strong> ${text}`;
+      chatMessages.appendChild(userMsg);
+      chatInput.value = "";
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+
+      // Simulate AI Answer
+      setTimeout(() => {
+        const aiMsg = document.createElement("div");
+        aiMsg.style.cssText = "background: rgba(0,242,254,0.1); border: 1px solid rgba(0,242,254,0.3); padding: 0.8rem; border-radius: 12px; max-width: 80%; align-self: flex-start;";
+        aiMsg.innerHTML = `<strong>🤖 Prof IA :</strong> Voici une suggestion de séquence pour votre question sur "${text}" :<br>1. Rappel de la formule.<br>2. Exercice guidé pas à pas.<br>3. Évaluation par quiz instantané.`;
+        chatMessages.appendChild(aiMsg);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }, 700);
+    });
+  }
+
+  // --- Modals Toggle Logic ---
+  $$("[data-close-modal]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const targetId = btn.getAttribute("data-close-modal");
+      const modal = $(`#${targetId}`);
+      if (modal) modal.classList.remove("active");
+    });
+  });
+
+  const btnImportPptx = $("#btn-modal-import-pptx");
+  if (btnImportPptx) {
+    btnImportPptx.addEventListener("click", () => {
+      const m = $("#modal-import-pptx");
+      if (m) m.classList.add("active");
+    });
+  }
+
+  const btnGSlides = $("#btn-modal-gslides");
+  if (btnGSlides) {
+    btnGSlides.addEventListener("click", () => {
+      const m = $("#modal-gslides");
+      if (m) m.classList.add("active");
+    });
+  }
+
+  const btnAddSlide = $("#btn-modal-add-slide");
+  if (btnAddSlide) {
+    btnAddSlide.addEventListener("click", () => {
+      const m = $("#modal-add-slide");
+      if (m) m.classList.add("active");
+    });
+  }
+
+  // Helper to parse Google Slides URL
+  function convertToGSlidesEmbedUrl(rawUrl) {
+    if (!rawUrl || !rawUrl.trim()) {
+      return "https://docs.google.com/presentation/d/e/2PACX-1vR3S6zC0x-zN_X8z3/embed?start=false&loop=false&delayms=3000";
+    }
+    let url = rawUrl.trim();
+    const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    if (match && match[1]) {
+      const id = match[1];
+      return `https://docs.google.com/presentation/d/${id}/embed?start=false&loop=false&delayms=3000`;
+    }
+    return url;
+  }
+
+  const btnConfirmGSlides = $("#btn-confirm-gslides");
+  if (btnConfirmGSlides) {
+    btnConfirmGSlides.addEventListener("click", () => {
+      const inputUrl = $("#input-gslides-url");
+      const rawUrl = inputUrl ? inputUrl.value : "";
+      gslidesEmbedUrl = convertToGSlidesEmbedUrl(rawUrl);
+
+      decks.gslides = [
+        {
+          title: "Google Slides en direct",
+          content: createGSlidesContent(gslidesEmbedUrl)
+        }
+      ];
+
+      currentDeckKey = "gslides";
+      currentSlideIndex = 0;
+
+      if (deckSelect) {
+        deckSelect.value = "gslides";
+      }
+      renderCurrentSlide();
+
+      const m = $("#modal-gslides");
+      if (m) m.classList.remove("active");
+      alert("✅ Présentation Google Slides chargée avec succès !");
+    });
+  }
+
+  const btnConfirmImport = $("#btn-confirm-import");
+  if (btnConfirmImport) {
+    btnConfirmImport.addEventListener("click", () => {
+      const fileInput = $("#input-file-pptx");
+      const fileName = (fileInput && fileInput.files && fileInput.files[0]) ? fileInput.files[0].name : "Présentation_Importée.pptx";
+
+      decks.imported = [
+        {
+          title: `${fileName} — Page 1`,
+          subtitle: "Document importé en classe",
+          content: `
+            <div style="text-align: center; max-width: 600px;">
+              <h2 style="color: #00f2fe; margin-bottom: 1rem;">📁 ${fileName}</h2>
+              <p style="font-size: 1.1rem; color: #e8effc;">Document PPTX / PDF importé et rendu dans EDU-AIR Smart Surface.</p>
+              <div style="margin-top: 1.5rem; padding: 1.5rem; background: rgba(0,242,254,0.1); border-radius: 12px; border: 1px solid rgba(0,242,254,0.3);">
+                ✍️ Vous pouvez maintenant annoter ce document avec le stylo aérien ou la souris.
+              </div>
+            </div>
+          `
+        },
+        {
+          title: `${fileName} — Page 2`,
+          subtitle: "Définitions et exercices",
+          content: `
+            <div style="text-align: center; max-width: 600px;">
+              <h3 style="color: #3ddc97; margin-bottom: 1rem;">Section 2 : Applications & Schémas</h3>
+              <p style="color: #e8effc;">Analyse en direct avec la classe.</p>
+            </div>
+          `
+        }
+      ];
+
+      if (deckSelect && !deckSelect.querySelector("option[value='imported']")) {
+        const opt = document.createElement("option");
+        opt.value = "imported";
+        opt.textContent = `📁 ${fileName} (2 slides)`;
+        deckSelect.appendChild(opt);
+      }
+
+      currentDeckKey = "imported";
+      currentSlideIndex = 0;
+      if (deckSelect) deckSelect.value = "imported";
+      renderCurrentSlide();
+
+      const m = $("#modal-import-pptx");
+      if (m) m.classList.remove("active");
+      alert(`✅ Fichier ${fileName} importé avec succès !`);
+    });
+  }
+
+  const btnConfirmAddSlide = $("#btn-confirm-add-slide");
+  if (btnConfirmAddSlide) {
+    btnConfirmAddSlide.addEventListener("click", () => {
+      const inputTitle = $("#input-new-slide-title");
+      const titleText = (inputTitle && inputTitle.value.trim()) ? inputTitle.value.trim() : "Nouvelle Slide";
+
+      const currentDeck = decks[currentDeckKey] || decks["pythagore"];
+      const newSlideNum = currentDeck.length + 1;
+
+      currentDeck.push({
+        title: `Slide ${newSlideNum} : ${titleText}`,
+        subtitle: "Slide ajoutée au cours",
+        content: `
+          <div style="text-align: center; max-width: 600px;">
+            <h2 style="color: #00f2fe; margin-bottom: 1rem;">✨ ${titleText}</h2>
+            <p style="font-size: 1.1rem; color: #e8effc;">Espace de cours vierge pour annotations et prise de notes.</p>
+          </div>
+        `
+      });
+
+      currentSlideIndex = currentDeck.length - 1;
+      renderCurrentSlide();
+
+      if (inputTitle) inputTitle.value = "";
+      const m = $("#modal-add-slide");
+      if (m) m.classList.remove("active");
+      alert(`✅ Nouvelle slide "${titleText}" ajoutée au diaporama !`);
+    });
+  }
+
+  // --- PiP WebCam Video Initialization ---
+  const pipVideo = $("#pip-webcam-video");
+  if (pipVideo && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then((stream) => {
+        pipVideo.srcObject = stream;
+      })
+      .catch((err) => {
+        console.log("Webcam notice:", err.message);
+      });
+  }
+
+  // ============================================================
+  // MODULE ENRICHMENTS: TNI / TBI CLASSROOM INTERACTORS
+  // ============================================================
+
+  // 1. Role Switcher
+  const roleSelect = $("#user-role-select");
+  if (roleSelect) {
+    roleSelect.addEventListener("change", (e) => {
+      const role = e.target.value;
+      const roleLabels = {
+        teacher: "Enseignant (Contrôle total & Calibrations)",
+        student: "Élève (Interactions guidées)",
+        tech: "Technicien / Admin (Maintenance parc TNI)"
+      };
+      alert(`👤 Profil basculé vers : ${roleLabels[role] || role}`);
+    });
+  }
+
+  // 2. Export TNI Modal
+  const btnExportTni = $("#btn-modal-export-tni");
+  if (btnExportTni) {
+    btnExportTni.addEventListener("click", () => {
+      const m = $("#modal-export-tni");
+      if (m) m.classList.add("active");
+    });
+  }
+
+  // Export Buttons Simulators
+  ["btn-export-notebook", "btn-export-flipchart", "btn-export-iwb", "btn-export-scorm"].forEach((id) => {
+    const btn = $(`#${id}`);
+    if (btn) {
+      btn.addEventListener("click", () => {
+        const fmt = id.replace("btn-export-", "").toUpperCase();
+        alert(`📥 Génération du fichier export TNI .${fmt.toLowerCase()} en cours...\nTéléchargement prêt pour archivage établissement & ENT !`);
+        const m = $("#modal-export-tni");
+        if (m) m.classList.remove("active");
+      });
+    }
+  });
+
+  // 3. Quiz QR Modal
+  const btnQuizQr = $("#btn-quiz-qr");
+  if (btnQuizQr) {
+    btnQuizQr.addEventListener("click", () => {
+      const m = $("#modal-quiz-qr");
+      if (m) m.classList.add("active");
+    });
+  }
+
+  // 4. Smart Surface Specialty Backgrounds
+  const wbBgSelect = $("#wb-bg-select");
+  const wbCanvas = $("#whiteboard-full-canvas");
+  if (wbBgSelect && wbCanvas) {
+    wbBgSelect.addEventListener("change", (e) => {
+      const bg = e.target.value;
+      wbCanvas.style.backgroundColor = "#08101e";
+      
+      if (bg === "grid") {
+        wbCanvas.style.backgroundImage = "linear-gradient(rgba(0, 242, 254, 0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 242, 254, 0.15) 1px, transparent 1px)";
+        wbCanvas.style.backgroundSize = "30px 30px";
+      } else if (bg === "music") {
+        wbCanvas.style.backgroundImage = "linear-gradient(rgba(255, 255, 255, 0.25) 2px, transparent 2px)";
+        wbCanvas.style.backgroundSize = "100% 16px";
+      } else if (bg === "timeline") {
+        wbCanvas.style.backgroundImage = "linear-gradient(0deg, transparent 48%, rgba(255, 184, 77, 0.6) 50%, transparent 52%), linear-gradient(90deg, rgba(255, 184, 77, 0.4) 2px, transparent 2px)";
+        wbCanvas.style.backgroundSize = "100% 100%, 80px 100%";
+      } else if (bg === "map") {
+        wbCanvas.style.backgroundImage = "radial-gradient(circle, rgba(61, 220, 151, 0.15) 2px, transparent 2px)";
+        wbCanvas.style.backgroundSize = "40px 40px";
+      } else {
+        wbCanvas.style.backgroundImage = "none";
+      }
+    });
+  }
+
+  // 5. Virtual Laser Mode Toggle
+  const btnLaserMode = $("#btn-pointer-laser-mode");
+  let isLaserActive = false;
+  if (btnLaserMode) {
+    btnLaserMode.addEventListener("click", () => {
+      isLaserActive = !isLaserActive;
+      btnLaserMode.classList.toggle("btn-app-primary", isLaserActive);
+      btnLaserMode.classList.toggle("btn-app-ghost", !isLaserActive);
+      document.body.classList.toggle("laser-pointer-active", isLaserActive);
+      alert(isLaserActive ? "🔦 Pointeur Laser Virtuel ACTIF (désignation sans écriture)" : "✋ Mode Pointeur standard réactivé");
+    });
+  }
+
+  // 6. 3D Cutaway Mode & Snapshot
+  const btn3dCoupe = $("#btn-3d-coupe");
+  const view3d = $("#view-air-3d");
+  if (btn3dCoupe && view3d) {
+    btn3dCoupe.addEventListener("click", () => {
+      view3d.classList.toggle("cut-view-active");
+      const isCut = view3d.classList.contains("cut-view-active");
+      btn3dCoupe.style.background = isCut ? "rgba(255, 93, 93, 0.3)" : "";
+      alert(isCut ? "✂️ Mode Coupe Transversale Activé" : "◠ Vue 3D Intégrale Réactivée");
+    });
+  }
+
+  const btn3dSnapshot = $("#btn-3d-snapshot");
+  if (btn3dSnapshot) {
+    btn3dSnapshot.addEventListener("click", () => {
+      alert("📸 Capture annotée 3D exportée vers le compte-rendu de séance (PDF) !");
+    });
+  }
+
+  // 7. STEM Lab Selector & Error Calculator
+  const labSelect = $("#lab-sim-select");
+  const labExpSlider = $("#slider-lab-exp");
+  const labExpVal = $("#val-lab-exp");
+  const labErrorVal = $("#val-lab-error");
+
+  function updateLabCalc() {
+    if (!labExpSlider || !labExpVal || !labErrorVal) return;
+    const exp = parseFloat(labExpSlider.value);
+    const theo = 6.0; // Theoretical reference
+    const diffPct = Math.abs((exp - theo) / theo * 100).toFixed(1);
+
+    labExpVal.textContent = `${exp.toFixed(1)} V`;
+    labErrorVal.textContent = `${diffPct}%`;
+    if (parseFloat(diffPct) < 5.0) {
+      labErrorVal.style.color = "#3ddc97";
+    } else {
+      labErrorVal.style.color = "#ff5d5d";
+    }
+  }
+
+  if (labExpSlider) {
+    labExpSlider.addEventListener("input", updateLabCalc);
+  }
+
+  if (labSelect) {
+    labSelect.addEventListener("change", (e) => {
+      alert(`🧪 Simulation baseline chargée : ${e.target.options[e.target.selectedIndex].text}`);
+    });
+  }
+
+  // 8. AI Teacher 3-Tier Differentiated Exercises
+  const btnAiDiff = $("#btn-ai-diff-ex");
+  if (btnAiDiff && chatMessages) {
+    btnAiDiff.addEventListener("click", () => {
+      const diffMsg = document.createElement("div");
+      diffMsg.style.cssText = "background: rgba(139,123,255,0.15); border: 1px solid rgba(139,123,255,0.4); padding: 1rem; border-radius: 12px; margin-top: 0.5rem;";
+      diffMsg.innerHTML = `
+        <h4 style="color: #8b7bff; margin-bottom: 0.5rem;">✦ Exercices Différenciés (3 Niveaux de Difficulté)</h4>
+        <div style="font-size: 0.9rem; line-height: 1.6;">
+          <p style="color: #3ddc97;">🟢 <strong>Niveau 1 (Socle) :</strong> Calculer l'hypoténuse quand a=3 et b=4.</p>
+          <p style="color: #ffb84d;">🟡 <strong>Niveau 2 (Intermédiaire) :</strong> Retrouver la hauteur d'un triangle connaissant l'hypoténuse 13 cm et le côté 5 cm.</p>
+          <p style="color: #ff5d5d;">🔴 <strong>Niveau 3 (Approfondissement) :</strong> Démontrer la réciproque du théorème dans une charpente de toit.</p>
+        </div>
+      `;
+      chatMessages.appendChild(diffMsg);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    });
+  }
+
+  // 9. TNI Timer Ambient Glow Toggle
+  const classTimer = $("#class-timer");
+  const slideContainer = $("#slide-canvas-container");
+  if (classTimer && slideContainer) {
+    let timerRunning = false;
+    classTimer.addEventListener("click", () => {
+      timerRunning = !timerRunning;
+      slideContainer.classList.toggle("timer-active-glow", timerRunning);
+    });
+  }
+
+  console.log("EDU-AIR Smart Surface App Initialized.");
 })();
