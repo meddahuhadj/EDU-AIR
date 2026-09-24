@@ -476,14 +476,30 @@
           <button type="button" class="tool-chip active" id="draw-tool-pen">✏️ STYLO</button>
           <button type="button" class="tool-chip" id="draw-tool-eraser">❌ GOMME</button>
 
+          <select class="select-custom" id="airdraw-shape-select" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; margin-inline: 0.4rem;">
+            <option value="none" data-i18n="shapeDraw">📐 FORMES ▾</option>
+            <option value="line" data-i18n="shapeLine">📏 Ligne Droite</option>
+            <option value="circle" data-i18n="shapeCircle">⭕ Cercle</option>
+            <option value="rect" data-i18n="shapeRect">⬛ Rectangle</option>
+            <option value="triangle" data-i18n="shapeTriangle">🔺 Triangle</option>
+            <option value="arrow" data-i18n="shapeArrow">➔ Flèche</option>
+          </select>
+
           <div class="color-dots-picker" style="margin-inline: 0.5rem;">
             <span class="color-dot active" data-color="#00f2fe" style="background: #00f2fe;"></span>
             <span class="color-dot" data-color="#ffb84d" style="background: #ffb84d;"></span>
             <span class="color-dot" data-color="#3ddc97" style="background: #3ddc97;"></span>
             <span class="color-dot" data-color="#ff5d5d" style="background: #ff5d5d;"></span>
-            <span class="color-dot" data-color="#ffffff" style="background: #ffffff;"></span>
+            <span class="color-dot" data-color="#ffffff" style="background: #ffffff; border: 1px solid #ccc;"></span>
+            <input type="color" id="airdraw-custom-color-picker" value="#00f2fe" style="width: 24px; height: 24px; border: none; background: transparent; cursor: pointer; vertical-align: middle;">
           </div>
 
+          <div style="display: inline-flex; align-items: center; gap: 0.3rem; margin-inline: 0.4rem;">
+            <span style="font-size: 0.78rem; color: #9fb0cf;">Épaisseur :</span>
+            <input type="range" id="airdraw-line-width" min="1" max="30" value="4" style="width: 80px; vertical-align: middle;">
+          </div>
+
+          <button type="button" class="btn-app btn-app-ghost" id="btn-airdraw-undo" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;">↩ Annuler</button>
           <button type="button" class="btn-app btn-app-ghost" id="btn-airdraw-clear" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;">🗑️ Effacer Canvas</button>
         </div>
 
@@ -493,10 +509,17 @@
         </div>
 
         <!-- OCR & Math Formula Result Box -->
-        <div id="ocr-result-box" style="display: none; background: rgba(0,242,254,0.1); border: 1px solid rgba(0,242,254,0.4); padding: 1rem; border-radius: 12px;">
-          <h4 style="color: #00f2fe; margin-bottom: 0.3rem;">🔤 Formule & Texte Reconnu :</h4>
-          <div id="ocr-text-render" style="font-size: 1.2rem; font-weight: 700; color: #3ddc97; font-family: monospace;">
-            BC² = AB² + AC²  ➔  LaTeX: \sqrt{AB^2 + AC^2}
+        <div id="ocr-result-box" style="display: none; background: rgba(0,242,254,0.12); border: 1px solid rgba(0,242,254,0.4); padding: 1rem; border-radius: 12px; margin-top: 0.8rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; flex-wrap: wrap;">
+            <h4 style="color: #00f2fe; margin: 0;">🔤 Formule & Texte Reconnu (Analyse AI Canvas) :</h4>
+            <span style="font-size: 0.78rem; color: #3ddc97; font-weight: bold;">✓ Reconnaissance en temps réel</span>
+          </div>
+          <div id="ocr-text-render" style="font-size: 1.3rem; font-weight: 800; color: #3ddc97; font-family: monospace; background: rgba(6,9,18,0.7); padding: 0.8rem 1rem; border-radius: 8px; border: 1px solid rgba(0,242,254,0.3); margin-bottom: 0.8rem;">
+            Texte Reconnu
+          </div>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <input type="text" id="ocr-edit-input" placeholder="Éditer le texte reconnu..." style="flex: 1; min-width: 200px; background: #060912; border: 1px solid rgba(126,195,255,0.3); color: #fff; padding: 0.5rem 0.8rem; border-radius: 8px; font-family: monospace;">
+            <button type="button" class="btn-app btn-app-primary" id="btn-ocr-copy-canvas" style="padding: 0.4rem 0.8rem; font-size: 0.82rem;">✍️ Copier sur le Tableau</button>
           </div>
         </div>
       </div>

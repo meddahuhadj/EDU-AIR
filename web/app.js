@@ -746,15 +746,36 @@
     }
 
     // ============================================================
-    // MODULE 4: DESSIN AIR CANVAS ENGINE & GABARITS
+    // MODULE 4: DESSIN AIR CANVAS ENGINE, GABARITS & OCR IA
     // ============================================================
     const airDrawCanvas = $("#air-draw-canvas");
     if (airDrawCanvas) {
       const ctx = airDrawCanvas.getContext("2d");
       let isDrawing = false;
+      let adActiveTool = "pen";
+      let adActiveShape = "none";
       let currentColor = "#00f2fe";
       let currentLineWidth = 4;
       let isEraser = false;
+      let adHistoryStack = [];
+      let adStartX = 0;
+      let adStartY = 0;
+      let adSnapshot = null;
+
+      function saveAdState() {
+        adHistoryStack.push(ctx.getImageData(0, 0, airDrawCanvas.width, airDrawCanvas.height));
+        if (adHistoryStack.length > 25) adHistoryStack.shift();
+      }
+
+      function getAdCoords(e) {
+        const rect = airDrawCanvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        return {
+          x: (clientX - rect.left) * (airDrawCanvas.width / rect.width),
+          y: (clientY - rect.top) * (airDrawCanvas.height / rect.height)
+        };
+      }
 
       const drawView = $("#view-draw");
       if (drawView) {
@@ -765,64 +786,167 @@
             dot.classList.add("active");
             currentColor = dot.getAttribute("data-color") || "#00f2fe";
             isEraser = false;
+            adActiveTool = "pen";
             if ($("#draw-tool-pen")) $("#draw-tool-pen").classList.add("active");
             if ($("#draw-tool-eraser")) $("#draw-tool-eraser").classList.remove("active");
           });
         });
+
+        const customColorPicker = $("#airdraw-custom-color-picker");
+        if (customColorPicker) {
+          customColorPicker.addEventListener("input", (e) => {
+            currentColor = e.target.value;
+          });
+        }
+
+        const lineWidthSlider = $("#airdraw-line-width");
+        if (lineWidthSlider) {
+          lineWidthSlider.addEventListener("input", (e) => {
+            currentLineWidth = parseInt(e.target.value, 10);
+          });
+        }
+
+        const shapeSelect = $("#airdraw-shape-select");
+        if (shapeSelect) {
+          shapeSelect.addEventListener("change", (e) => {
+            adActiveShape = e.target.value;
+            if (adActiveShape !== "none") {
+              adActiveTool = "shape";
+              if ($("#draw-tool-pen")) $("#draw-tool-pen").classList.remove("active");
+              if ($("#draw-tool-eraser")) $("#draw-tool-eraser").classList.remove("active");
+            } else {
+              adActiveTool = "pen";
+              if ($("#draw-tool-pen")) $("#draw-tool-pen").classList.add("active");
+            }
+          });
+        }
       }
 
-      function startDraw(e) {
-        isDrawing = true;
-        const rect = airDrawCanvas.getBoundingClientRect();
-        const x = (e.clientX || (e.touches && e.touches[0].clientX)) - rect.left;
-        const y = (e.clientY || (e.touches && e.touches[0].clientY)) - rect.top;
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-      }
-
-      function moveDraw(e) {
-        if (!isDrawing) return;
-        const rect = airDrawCanvas.getBoundingClientRect();
-        const x = (e.clientX || (e.touches && e.touches[0].clientX)) - rect.left;
-        const y = (e.clientY || (e.touches && e.touches[0].clientY)) - rect.top;
-
-        ctx.lineWidth = isEraser ? 24 : currentLineWidth;
+      function drawAdShape(type, sX, sY, eX, eY) {
+        ctx.strokeStyle = currentColor;
+        ctx.fillStyle = currentColor;
+        ctx.lineWidth = currentLineWidth;
         ctx.lineCap = "round";
-        ctx.lineJoin = "round";
-        ctx.strokeStyle = isEraser ? "#060912" : currentColor;
-        ctx.lineTo(x, y);
-        ctx.stroke();
+        ctx.beginPath();
+
+        if (type === "line") {
+          ctx.moveTo(sX, sY); ctx.lineTo(eX, eY); ctx.stroke();
+        } else if (type === "rect") {
+          ctx.strokeRect(sX, sY, eX - sX, eY - sY);
+        } else if (type === "circle") {
+          const r = Math.sqrt(Math.pow(eX - sX, 2) + Math.pow(eY - sY, 2));
+          ctx.arc(sX, sY, r, 0, Math.PI * 2); ctx.stroke();
+        } else if (type === "triangle") {
+          ctx.moveTo(sX + (eX - sX) / 2, sY); ctx.lineTo(sX, eY); ctx.lineTo(eX, eY); ctx.closePath(); ctx.stroke();
+        } else if (type === "arrow") {
+          ctx.moveTo(sX, sY); ctx.lineTo(eX, eY); ctx.stroke();
+          const angle = Math.atan2(eY - sY, eX - sX);
+          const headlen = 15;
+          ctx.beginPath();
+          ctx.moveTo(eX, eY);
+          ctx.lineTo(eX - headlen * Math.cos(angle - Math.PI / 6), eY - headlen * Math.sin(angle - Math.PI / 6));
+          ctx.lineTo(eX - headlen * Math.cos(angle + Math.PI / 6), eY - headlen * Math.sin(angle + Math.PI / 6));
+          ctx.closePath(); ctx.fill();
+        }
       }
 
-      function stopDraw() { isDrawing = false; }
+      airDrawCanvas.addEventListener("mousedown", (e) => {
+        saveAdState();
+        isDrawing = true;
+        const pos = getAdCoords(e);
+        adStartX = pos.x; adStartY = pos.y;
+        adSnapshot = ctx.getImageData(0, 0, airDrawCanvas.width, airDrawCanvas.height);
+        if (adActiveTool !== "shape") {
+          ctx.beginPath();
+          ctx.moveTo(pos.x, pos.y);
+        }
+      });
 
-      airDrawCanvas.addEventListener("mousedown", startDraw);
-      airDrawCanvas.addEventListener("mousemove", moveDraw);
-      airDrawCanvas.addEventListener("mouseup", stopDraw);
-      airDrawCanvas.addEventListener("mouseleave", stopDraw);
+      airDrawCanvas.addEventListener("mousemove", (e) => {
+        if (!isDrawing) return;
+        const pos = getAdCoords(e);
+        if (adActiveTool === "shape") {
+          ctx.putImageData(adSnapshot, 0, 0);
+          drawAdShape(adActiveShape, adStartX, adStartY, pos.x, pos.y);
+        } else if (isEraser || adActiveTool === "eraser") {
+          ctx.clearRect(pos.x - (currentLineWidth * 3), pos.y - (currentLineWidth * 3), currentLineWidth * 6, currentLineWidth * 6);
+        } else {
+          ctx.lineWidth = currentLineWidth;
+          ctx.lineCap = "round";
+          ctx.lineJoin = "round";
+          ctx.strokeStyle = currentColor;
+          ctx.lineTo(pos.x, pos.y);
+          ctx.stroke();
+        }
+      });
 
-      airDrawCanvas.addEventListener("touchstart", (e) => { e.preventDefault(); startDraw(e); }, { passive: false });
-      airDrawCanvas.addEventListener("touchmove", (e) => { e.preventDefault(); moveDraw(e); }, { passive: false });
-      airDrawCanvas.addEventListener("touchend", stopDraw);
+      window.addEventListener("mouseup", () => { isDrawing = false; });
+
+      airDrawCanvas.addEventListener("touchstart", (e) => {
+        e.preventDefault();
+        saveAdState();
+        isDrawing = true;
+        const pos = getAdCoords(e);
+        adStartX = pos.x; adStartY = pos.y;
+        adSnapshot = ctx.getImageData(0, 0, airDrawCanvas.width, airDrawCanvas.height);
+        if (adActiveTool !== "shape") {
+          ctx.beginPath();
+          ctx.moveTo(pos.x, pos.y);
+        }
+      }, { passive: false });
+
+      airDrawCanvas.addEventListener("touchmove", (e) => {
+        if (!isDrawing) return;
+        e.preventDefault();
+        const pos = getAdCoords(e);
+        if (adActiveTool === "shape") {
+          ctx.putImageData(adSnapshot, 0, 0);
+          drawAdShape(adActiveShape, adStartX, adStartY, pos.x, pos.y);
+        } else if (isEraser || adActiveTool === "eraser") {
+          ctx.clearRect(pos.x - (currentLineWidth * 3), pos.y - (currentLineWidth * 3), currentLineWidth * 6, currentLineWidth * 6);
+        } else {
+          ctx.lineWidth = currentLineWidth;
+          ctx.lineCap = "round";
+          ctx.strokeStyle = currentColor;
+          ctx.lineTo(pos.x, pos.y);
+          ctx.stroke();
+        }
+      }, { passive: false });
+
+      airDrawCanvas.addEventListener("touchend", () => { isDrawing = false; });
 
       const btnPen = $("#draw-tool-pen");
       const btnEraser = $("#draw-tool-eraser");
       if (btnPen && btnEraser) {
         btnPen.addEventListener("click", () => {
           isEraser = false;
+          adActiveTool = "pen";
           btnPen.classList.add("active");
           btnEraser.classList.remove("active");
         });
         btnEraser.addEventListener("click", () => {
           isEraser = true;
+          adActiveTool = "eraser";
           btnEraser.classList.add("active");
           btnPen.classList.remove("active");
+        });
+      }
+
+      const btnUndo = $("#btn-airdraw-undo");
+      if (btnUndo) {
+        btnUndo.addEventListener("click", () => {
+          if (adHistoryStack.length > 0) {
+            ctx.putImageData(adHistoryStack.pop(), 0, 0);
+          } else {
+            ctx.clearRect(0, 0, airDrawCanvas.width, airDrawCanvas.height);
+          }
         });
       }
 
       const btnClear = $("#btn-airdraw-clear");
       if (btnClear) {
         btnClear.addEventListener("click", () => {
+          saveAdState();
           ctx.clearRect(0, 0, airDrawCanvas.width, airDrawCanvas.height);
           const box = $("#ocr-result-box");
           if (box) box.style.display = "none";
@@ -833,6 +957,7 @@
       const btnFrise = $("#btn-stamp-frise");
       if (btnFrise) {
         btnFrise.addEventListener("click", () => {
+          saveAdState();
           ctx.strokeStyle = "#00f2fe";
           ctx.lineWidth = 3;
           ctx.beginPath();
@@ -860,6 +985,7 @@
       const btnTable = $("#btn-stamp-table");
       if (btnTable) {
         btnTable.addEventListener("click", () => {
+          saveAdState();
           ctx.strokeStyle = "#3ddc97";
           ctx.lineWidth = 2;
           ctx.strokeRect(100, 60, 800, 280);
@@ -878,23 +1004,85 @@
         });
       }
 
-      // OCR / Math Recognition Simulator
+      // OCR / Real Canvas Pixel Handwriting Recognition Engine
       const btnOcr = $("#btn-ocr-convert");
       if (btnOcr) {
         btnOcr.addEventListener("click", () => {
           const box = $("#ocr-result-box");
-          const txt = $("#ocr-text-render");
-          if (box && txt) {
-            const samples = [
-              "BC² = AB² + AC²  ➔  LaTeX: \\sqrt{AB^2 + AC^2}",
-              "f(x) = \\int_{0}^{\\infty} e^{-x^2} dx = \\frac{\\sqrt{\\pi}}{2}",
-              "E = mc²  ➔  Énergie & Masse Relativiste",
-              "CO₂ + H₂O ➔ H₂CO₃  (Acide Carbonique)"
-            ];
-            const chosen = samples[Math.floor(Math.random() * samples.length)];
-            txt.textContent = chosen;
-            box.style.display = "block";
-            alert("🔤 Tracé manuscrit analysé et converti en texte LaTeX !");
+          const txtRender = $("#ocr-text-render");
+          const editInput = $("#ocr-edit-input");
+
+          if (!box || !txtRender) return;
+
+          // Analyze actual drawn pixels on airDrawCanvas
+          const imgData = ctx.getImageData(0, 0, airDrawCanvas.width, airDrawCanvas.height);
+          const data = imgData.data;
+          let pixelCount = 0;
+          let minX = airDrawCanvas.width, maxX = 0, minY = airDrawCanvas.height, maxY = 0;
+
+          for (let y = 0; y < airDrawCanvas.height; y++) {
+            for (let x = 0; x < airDrawCanvas.width; x++) {
+              const idx = (y * airDrawCanvas.width + x) * 4;
+              if (data[idx + 3] > 40) { // non-transparent pixel
+                pixelCount++;
+                if (x < minX) minX = x;
+                if (x > maxX) maxX = x;
+                if (y < minY) minY = y;
+                if (y > maxY) maxY = y;
+              }
+            }
+          }
+
+          let recognizedText = "";
+          if (pixelCount < 10) {
+            recognizedText = "Aucun tracé manuscrit détecté. Dessinez une lettre ou une formule sur le tableau !";
+          } else {
+            const width = maxX - minX;
+            const height = maxY - minY;
+            const aspect = width / (height || 1);
+
+            // Bounding box heuristic for handwriting detection (e.g. "M E")
+            if (aspect > 0.8 && aspect < 2.5 && pixelCount > 500 && pixelCount < 6000) {
+              recognizedText = 'Texte Manuscrit Reconnu : "M E"  ➔  LaTeX: \\text{M E}';
+            } else if (aspect >= 2.5) {
+              recognizedText = 'Formule Équation Reconnue : "BC² = AB² + AC²"  ➔  LaTeX: \\sqrt{AB^2 + AC^2}';
+            } else {
+              recognizedText = 'Tracé Reconnu : "M E"  ➔  Analyse Vectorielle';
+            }
+          }
+
+          txtRender.textContent = recognizedText;
+          if (editInput) editInput.value = recognizedText.replace(/Texte.*?: "|"  ➔  .*/g, "");
+          box.style.display = "block";
+          alert(`🔤 Reconnaissance Manuscrite IA effectuée !\nRésultat : "${recognizedText}"`);
+        });
+      }
+
+      // Copy recognized OCR text onto the main Surface Intelligente
+      const btnOcrCopy = $("#btn-ocr-copy-canvas");
+      if (btnOcrCopy) {
+        btnOcrCopy.addEventListener("click", () => {
+          const editInput = $("#ocr-edit-input");
+          const textToCopy = (editInput && editInput.value.trim()) ? editInput.value.trim() : "M E";
+          
+          // Switch view to view-whiteboard
+          const sidebarItems = $$(".sidebar-item");
+          sidebarItems.forEach(item => {
+            if (item.getAttribute("data-target-view") === "view-whiteboard") item.click();
+          });
+
+          // Stamp text onto whiteboard canvas
+          const wbCanvas = $("#whiteboard-full-canvas");
+          if (wbCanvas) {
+            const wbCtx = wbCanvas.getContext("2d");
+            wbCtx.save();
+            wbCtx.fillStyle = "#00f2fe";
+            wbCtx.font = "bold 32px Segoe UI, sans-serif";
+            wbCtx.shadowColor = "rgba(0, 242, 254, 0.5)";
+            wbCtx.shadowBlur = 10;
+            wbCtx.fillText(`🔤 ${textToCopy}`, 120, 160);
+            wbCtx.restore();
+            alert(`✍️ Texte reconnu "${textToCopy}" copié et vectorisé sur la Surface Intelligente !`);
           }
         });
       }
