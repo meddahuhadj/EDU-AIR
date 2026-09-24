@@ -333,8 +333,24 @@
             <input type="range" id="wb-line-width" min="1" max="30" value="4" style="width: 80px; vertical-align: middle;">
           </div>
 
+          <button type="button" class="btn-app btn-app-ghost" id="btn-wb-speech-dictate" style="padding: 0.25rem 0.6rem; font-size: 0.8rem; border-color: #00f2fe; color: #00f2fe;" title="Parlez et vos paroles s'écriront au tableau">🎙️ Dictée Vocale</button>
           <button type="button" class="btn-app btn-app-ghost" id="btn-wb-undo" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;" data-i18n="btnDrawUndo">↩ Annuler</button>
           <button type="button" class="btn-app btn-app-ghost" id="btn-wb-clear" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;" data-i18n="btnDrawClear">🗑️ Effacer</button>
+        </div>
+
+        <!-- Live Speech Dictation Banner Box -->
+        <div id="wb-speech-box" style="display: none; background: rgba(0, 242, 254, 0.12); border: 1px solid rgba(0, 242, 254, 0.4); padding: 0.8rem 1rem; border-radius: 10px; margin-bottom: 0.8rem; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 0.6rem;">
+            <span style="font-size: 1.3rem;">🎙️</span>
+            <div>
+              <div style="font-size: 0.75rem; color: #9fb0cf; font-weight: 700; text-transform: uppercase;">Dictée Vocale Temps Réel (Web Speech AI)</div>
+              <div id="wb-speech-transcript" style="font-size: 1.1rem; font-weight: bold; color: #3ddc97;">Écoute en cours... Parlez maintenant !</div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 0.5rem;">
+            <button type="button" class="btn-app btn-app-primary" id="btn-wb-stamp-speech" style="padding: 0.3rem 0.7rem; font-size: 0.8rem;">✍️ Écrire sur le Tableau</button>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-wb-stop-speech" style="padding: 0.3rem 0.7rem; font-size: 0.8rem;">⏹️ Arrêter Dictée</button>
+          </div>
         </div>
 
         <div style="position: relative; width: 100%; height: 520px; background: #080d1a; border: 2px solid rgba(0,242,254,0.3); border-radius: 14px; overflow: hidden;" id="wb-canvas-container">

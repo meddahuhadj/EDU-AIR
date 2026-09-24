@@ -434,6 +434,138 @@
         });
       }
 
+      // Speech-to-Text Voice Dictation (Dictée Vocale Temps Réel)
+      const btnSpeechDictate = $("#btn-wb-speech-dictate");
+      const speechBox = $("#wb-speech-box");
+      const speechTranscript = $("#wb-speech-transcript");
+      const btnStampSpeech = $("#btn-wb-stamp-speech");
+      const btnStopSpeech = $("#btn-wb-stop-speech");
+      const btnTopAudio = $("#btn-toggle-audio");
+
+      let speechRecognition = null;
+      let isDictating = false;
+      let latestSpeechText = "";
+
+      const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+      if (SpeechRec) {
+        speechRecognition = new SpeechRec();
+        speechRecognition.continuous = true;
+        speechRecognition.interimResults = true;
+        speechRecognition.lang = "fr-FR";
+
+        speechRecognition.onstart = () => {
+          isDictating = true;
+          if (speechBox) speechBox.style.display = "flex";
+          if (btnSpeechDictate) {
+            btnSpeechDictate.classList.add("btn-app-primary");
+            btnSpeechDictate.classList.remove("btn-app-ghost");
+            btnSpeechDictate.textContent = "🎙️ Écoute en cours... (Parlez)";
+          }
+          if (speechTranscript) speechTranscript.textContent = "🎙️ Écoute activée... Parlez maintenant !";
+        };
+
+        speechRecognition.onresult = (e) => {
+          let text = "";
+          for (let i = e.resultIndex; i < e.results.length; i++) {
+            text += e.results[i][0].transcript;
+          }
+          if (text.trim()) {
+            latestSpeechText = text.trim();
+            if (speechTranscript) speechTranscript.textContent = `🗣️ "${latestSpeechText}"`;
+          }
+        };
+
+        speechRecognition.onerror = (err) => {
+          console.log("Speech recognition notice:", err.error);
+          stopSpeechDictation();
+        };
+
+        speechRecognition.onend = () => {
+          if (isDictating) {
+            try { speechRecognition.start(); } catch(err) { stopSpeechDictation(); }
+          } else {
+            stopSpeechDictation();
+          }
+        };
+      }
+
+      function stopSpeechDictation() {
+        isDictating = false;
+        if (speechBox) speechBox.style.display = "none";
+        if (btnSpeechDictate) {
+          btnSpeechDictate.classList.remove("btn-app-primary");
+          btnSpeechDictate.classList.add("btn-app-ghost");
+          btnSpeechDictate.textContent = "🎙️ Dictée Vocale";
+        }
+        if (speechRecognition) {
+          try { speechRecognition.stop(); } catch(err) {}
+        }
+      }
+
+      function toggleSpeechDictation() {
+        if (!SpeechRec) {
+          alert("⚠️ La reconnaissance vocale n'est pas prise en charge par ce navigateur.\nUtilisez Chrome, Edge ou Safari.");
+          return;
+        }
+        if (!isDictating) {
+          try {
+            const currentLang = document.documentElement.lang || "fr";
+            const langMap = { fr: "fr-FR", en: "en-US", nl: "nl-NL", ar: "ar-SA" };
+            speechRecognition.lang = langMap[currentLang] || "fr-FR";
+            speechRecognition.start();
+          } catch(err) {
+            stopSpeechDictation();
+          }
+        } else {
+          stopSpeechDictation();
+        }
+      }
+
+      function stampTextToBoard(text) {
+        if (!text || !text.trim()) return;
+        saveWbState();
+        ctx.save();
+        ctx.fillStyle = (wbColor === "#000000" && document.documentElement.getAttribute("data-theme") !== "light") ? "#00f2fe" : wbColor;
+        ctx.font = "bold 26px Segoe UI, sans-serif";
+        ctx.shadowColor = "rgba(0, 242, 254, 0.4)";
+        ctx.shadowBlur = 8;
+
+        const maxWidth = wbCanvas.width - 160;
+        const words = text.split(" ");
+        let line = "🗣️ ";
+        let y = 140;
+
+        for (let n = 0; n < words.length; n++) {
+          let testLine = line + words[n] + " ";
+          let metrics = ctx.measureText(testLine);
+          let testWidth = metrics.width;
+          if (testWidth > maxWidth && n > 0) {
+            ctx.fillText(line, 80, y);
+            line = words[n] + " ";
+            y += 36;
+          } else {
+            line = testLine;
+          }
+        }
+        ctx.fillText(line, 80, y);
+        ctx.restore();
+        alert(`✍️ Texte dicté écrit sur le tableau : "${text}"`);
+      }
+
+      if (btnSpeechDictate) btnSpeechDictate.addEventListener("click", toggleSpeechDictation);
+      if (btnTopAudio) btnTopAudio.addEventListener("click", toggleSpeechDictation);
+      if (btnStopSpeech) btnStopSpeech.addEventListener("click", stopSpeechDictation);
+      if (btnStampSpeech) {
+        btnStampSpeech.addEventListener("click", () => {
+          if (latestSpeechText) {
+            stampTextToBoard(latestSpeechText);
+          } else {
+            alert("⚠️ Aucune parole détectée pour l'instant. Parlez dans votre micro.");
+          }
+        });
+      }
+
       // Specialty Backgrounds
       const wbBgSelect = $("#wb-bg-select");
       if (wbBgSelect) {
