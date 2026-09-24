@@ -2449,13 +2449,14 @@
       for (let i = 0; i < data.length; i += 4) {
         const r = data[i], g = data[i+1], b = data[i+2];
 
-        // Enhanced YCbCr / Normalized RGB Skin thresholding
-        const isSkin = (r > 50 && g > 35 && b > 20 && r > g && r > b && (Math.max(r,g,b) - Math.min(r,g,b) > 12));
+        const maxC = Math.max(r, g, b);
+        const minC = Math.min(r, g, b);
+        const isSkin = (r > 40 && g > 25 && b > 15 && r > g && (maxC - minC > 10));
 
         let isMotion = false;
         if (prevFramePixels && prevFramePixels[i] !== undefined) {
           const diff = Math.abs(r - prevFramePixels[i]) + Math.abs(g - prevFramePixels[i+1]) + Math.abs(b - prevFramePixels[i+2]);
-          if (diff > 30) isMotion = true;
+          if (diff > 25) isMotion = true;
         }
 
         if (isSkin || isMotion) {
@@ -2481,11 +2482,11 @@
 
       prevFramePixels = new Uint8ClampedArray(data);
 
-      if (count > 25) {
+      if (count > 20) {
         const avgX = sumX / count;
         const avgY = sumY / count;
 
-        const targetX = (minPixelY < avgY - 5) ? topFingertipX : avgX;
+        const targetX = (minPixelY < avgY - 3) ? topFingertipX : avgX;
         const targetY = minPixelY;
 
         const normX = targetX / width;
@@ -2504,7 +2505,7 @@
 
           ctx.beginPath();
           ctx.arc(cX, cY, 14, 0, 2 * Math.PI);
-          ctx.fillStyle = "rgba(0, 242, 254, 0.25)";
+          ctx.fillStyle = "rgba(0, 242, 254, 0.35)";
           ctx.strokeStyle = "#00f2fe";
           ctx.lineWidth = 2.5;
           ctx.fill();
@@ -2513,7 +2514,7 @@
           ctx.beginPath();
           ctx.moveTo(cX - 8, cY); ctx.lineTo(cX + 8, cY);
           ctx.moveTo(cX, cY - 8); ctx.lineTo(cX, cY + 8);
-          ctx.strokeStyle = "#00f2fe";
+          ctx.strokeStyle = "#ffffff";
           ctx.lineWidth = 1.5;
           ctx.stroke();
         }
@@ -2529,11 +2530,11 @@
         let gestCode = "☝️ Pointeur Air";
         let gestName = "POINT";
 
-        if (blobWidth < 25 && blobHeight < 25) {
+        if (blobWidth < 22 && blobHeight < 22) {
           gestCode = "🤏 Pincement";
           gestName = "PINCH";
           isPinching = true;
-        } else if (blobWidth > 55 && blobHeight > 45) {
+        } else if (blobWidth > 50 && blobHeight > 40) {
           gestCode = "🖐️ Paume Ouverte";
           gestName = "PALM";
           isPinching = false;
@@ -2557,7 +2558,7 @@
 
         handleAirGesturesInteraction(smoothedX, smoothedY, gestName);
       } else {
-        if (Date.now() - lastMpFrameSuccessTime > 1000) {
+        if (Date.now() - lastMpFrameSuccessTime > 800) {
           onNoHandDetected();
         }
       }
@@ -2578,10 +2579,6 @@
           handsEngine.onResults((results) => {
             if (results && results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
               processHandLandmarks(results.multiHandLandmarks);
-            } else {
-              if (Date.now() - lastMpFrameSuccessTime > 800) {
-                onNoHandDetected();
-              }
             }
           });
           console.log("✅ Moteur MediaPipe Hands initialisé.");
@@ -2614,18 +2611,15 @@
 
           function frameLoop() {
             if (pipVideo && pipVideo.readyState >= 2 && handTrackerActive) {
+              // 1. Always run standalone 60 FPS optical tracking
+              processStandaloneHandAnalysis(pipVideo);
+
+              // 2. Concurrently refine with MediaPipe 3D landmarks if available
               if (handsEngine && !isMpProcessing) {
                 isMpProcessing = true;
-                Promise.race([
-                  handsEngine.send({ image: pipVideo }),
-                  new Promise((_, reject) => setTimeout(() => reject(new Error("MP Timeout")), 250))
-                ]).catch(() => {
-                  processStandaloneHandAnalysis(pipVideo);
-                }).finally(() => {
+                handsEngine.send({ image: pipVideo }).catch(() => {}).finally(() => {
                   isMpProcessing = false;
                 });
-              } else if (!handsEngine || Date.now() - lastMpFrameSuccessTime > 400) {
-                processStandaloneHandAnalysis(pipVideo);
               }
             }
             requestAnimationFrame(frameLoop);
