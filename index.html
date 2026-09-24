@@ -115,29 +115,29 @@
         <!-- Diaporama Header Toolbar -->
         <div class="mod-header-bar">
           <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
-            <strong style="color: #00f2fe; font-size: 0.9rem;">DIAPORAMA :</strong>
+            <strong style="color: #00f2fe; font-size: 0.9rem;" data-i18n="modDiaporama">DIAPORAMA :</strong>
             <select class="select-custom" id="presentation-deck-select">
-              <option value="pythagore">Maths : Théorème de Pythagore (5 slides)</option>
-              <option value="heart">SVT : Anatomie du Cœur & Circulation (4 slides)</option>
-              <option value="physics">Physique : Circuit Électrique & Loi d'Ohm (3 slides)</option>
-              <option value="history">Histoire : La Révolution Française 1789 (4 slides)</option>
-              <option value="gslides">🔗 Google Slides en direct</option>
+              <option value="pythagore" data-i18n="deckMath">Maths : Théorème de Pythagore (5 slides)</option>
+              <option value="heart" data-i18n="deckSvt">SVT : Anatomie du Cœur & Circulation (4 slides)</option>
+              <option value="physics" data-i18n="deckPhysics">Physique : Circuit Électrique & Loi d'Ohm (3 slides)</option>
+              <option value="history" data-i18n="deckHistory">Histoire : La Révolution Française 1789 (4 slides)</option>
+              <option value="gslides" data-i18n="deckGoogle">🔗 Google Slides en direct</option>
             </select>
-            <button type="button" class="btn-app btn-app-ghost" id="btn-modal-add-slide">➕ Ajouter slide</button>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-modal-add-slide" data-i18n="btnAddSlide">➕ Ajouter slide</button>
           </div>
 
           <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
-            <button type="button" class="btn-app btn-app-primary" id="btn-modal-import-pptx">📁 IMPORTER PPTX / PDF</button>
-            <button type="button" class="btn-app btn-app-ghost" id="btn-modal-gslides">🔗 GOOGLE SLIDES</button>
+            <button type="button" class="btn-app btn-app-primary" id="btn-modal-import-pptx" data-i18n="btnImportPptx">📁 IMPORTER PPTX / PDF</button>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-modal-gslides" data-i18n="btnGoogleSlides">🔗 GOOGLE SLIDES</button>
           </div>
         </div>
 
         <!-- Annotation Toolbar -->
         <div class="annotation-toolbar">
-          <strong style="color: #9fb0cf; font-size: 0.82rem; margin-right: 0.4rem;">ANNOTATION :</strong>
-          <button type="button" class="tool-chip active" id="tool-pen">✏️ STYLO</button>
-          <button type="button" class="tool-chip" id="tool-highlighter">🖍️ SURLIGNEUR</button>
-          <button type="button" class="tool-chip" id="tool-eraser">❌ GOMME</button>
+          <strong style="color: #9fb0cf; font-size: 0.82rem; margin-right: 0.4rem;" data-i18n="toolAnnotation">ANNOTATION :</strong>
+          <button type="button" class="tool-chip active" id="tool-pen" data-i18n="toolPen">✏️ STYLO</button>
+          <button type="button" class="tool-chip" id="tool-highlighter" data-i18n="toolHighlighter">🖍️ SURLIGNEUR</button>
+          <button type="button" class="tool-chip" id="tool-eraser" data-i18n="toolEraser">❌ GOMME</button>
 
           <div class="color-dots-picker" style="margin-inline: 0.5rem;">
             <span class="color-dot active" data-color="#00f2fe" style="background: #00f2fe;"></span>
@@ -149,15 +149,15 @@
           </div>
 
           <select class="select-custom" id="shape-draw-select" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">
-            <option value="none">📐 SHAPES ▾</option>
-            <option value="circle">⭕ Cercle</option>
-            <option value="rect">⬛ Rectangle</option>
-            <option value="triangle">🔺 Triangle</option>
-            <option value="arrow">➔ Flèche</option>
+            <option value="none" data-i18n="shapeDraw">📐 SHAPES ▾</option>
+            <option value="circle" data-i18n="shapeCircle">⭕ Cercle</option>
+            <option value="rect" data-i18n="shapeRect">⬛ Rectangle</option>
+            <option value="triangle" data-i18n="shapeTriangle">🔺 Triangle</option>
+            <option value="arrow" data-i18n="shapeArrow">➔ Flèche</option>
           </select>
 
-          <button type="button" class="btn-app btn-app-ghost" id="btn-draw-undo" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;">↩ Annuler</button>
-          <button type="button" class="btn-app btn-app-ghost" id="btn-draw-clear" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;">🗑️ Effacer</button>
+          <button type="button" class="btn-app btn-app-ghost" id="btn-draw-undo" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;" data-i18n="btnDrawUndo">↩ Annuler</button>
+          <button type="button" class="btn-app btn-app-ghost" id="btn-draw-clear" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;" data-i18n="btnDrawClear">🗑️ Effacer</button>
         </div>
 
         <!-- Slide Presentation Canvas Stage -->
@@ -183,18 +183,18 @@
         <!-- Slide Bottom Navigation & Toggle Bar -->
         <div class="slide-bottom-bar">
           <div class="slide-nav-group">
-            <button type="button" class="btn-app btn-app-primary" id="btn-slide-prev">◀ Préc</button>
+            <button type="button" class="btn-app btn-app-primary" id="btn-slide-prev" data-i18n="btnSlidePrev">◀ Préc</button>
             <span class="slide-counter-badge" id="slide-counter-display">2 / 5</span>
-            <button type="button" class="btn-app btn-app-primary" id="btn-slide-next">Suiv ▶</button>
+            <button type="button" class="btn-app btn-app-primary" id="btn-slide-next" data-i18n="btnSlideNext">Suiv ▶</button>
           </div>
 
-          <div style="font-size: 0.85rem; color: #00f2fe; font-weight: 600;">
+          <div style="font-size: 0.85rem; color: #00f2fe; font-weight: 600;" data-i18n="gestureNavHint">
             ✋ Montrez votre main devant la caméra pour naviguer
           </div>
 
           <div style="display: flex; align-items: center; gap: 0.6rem;">
-            <button type="button" class="btn-app btn-app-ghost" id="btn-toggle-spotlight">🔦 SPOTLIGHT</button>
-            <button type="button" class="btn-app btn-app-ghost" id="btn-toggle-loupe">🔍 LOUPE ZOOM</button>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-toggle-spotlight" data-i18n="btnSpotlight">🔦 SPOTLIGHT</button>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-toggle-loupe" data-i18n="btnLoupe">🔍 LOUPE ZOOM</button>
           </div>
         </div>
 
@@ -203,8 +203,8 @@
           <div style="display: flex; align-items: center; gap: 0.6rem;">
             <span style="font-size: 1.4rem;">⏱️</span>
             <div>
-              <div class="timer-title">MINUTEUR DE CLASSE TNI (GESTION DU TEMPS)</div>
-              <div style="font-size: 0.78rem; color: #9fb0cf;">Alerte visuelle et sonore ambiante pour le contrôle du temps en classe</div>
+              <div class="timer-title" data-i18n="timerTitle">MINUTEUR DE CLASSE TNI (GESTION DU TEMPS)</div>
+              <div style="font-size: 0.78rem; color: #9fb0cf;" data-i18n="timerDesc">Alerte visuelle et sonore ambiante pour le contrôle du temps en classe</div>
             </div>
           </div>
 
@@ -219,8 +219,8 @@
           <div class="timer-digits-display" id="class-timer-digits">03:00</div>
 
           <div style="display: flex; gap: 0.5rem;">
-            <button type="button" class="btn-app btn-app-primary" id="btn-timer-start-pause">▶ DÉMARRER</button>
-            <button type="button" class="btn-app btn-app-ghost" id="btn-timer-reset">🔄 RÉINITIALISER</button>
+            <button type="button" class="btn-app btn-app-primary" id="btn-timer-start-pause" data-i18n="btnTimerStart">▶ DÉMARRER</button>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-timer-reset" data-i18n="btnTimerReset">🔄 RÉINITIALISER</button>
           </div>
         </div>
 
@@ -228,55 +228,55 @@
 
       <!-- ================= MODULE 1: TABLEAU DE BORD ================= -->
       <div class="module-view" id="view-dashboard">
-        <h2 style="color: #00f2fe; margin-bottom: 1rem;">📊 Tableau de bord & Santé du Parc TNI</h2>
+        <h2 style="color: #00f2fe; margin-bottom: 1rem;" data-i18n="dashTitle">📊 Tableau de bord & Santé du Parc TNI</h2>
         
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
           <div style="background: rgba(10,20,38,0.8); border: 1px solid rgba(126,195,255,0.2); padding: 1.25rem; border-radius: 12px;">
-            <div style="font-size: 0.8rem; color: #9fb0cf;">Classe Active</div>
-            <div style="font-size: 1.4rem; font-weight: 800; color: #fff;">4ème B — Mathématiques</div>
+            <div style="font-size: 0.8rem; color: #9fb0cf;" data-i18n="dashStatClass">Classe Active</div>
+            <div style="font-size: 1.4rem; font-weight: 800; color: #fff;" data-i18n="dashStatClassVal">4ème B — Mathématiques</div>
           </div>
           <div style="background: rgba(10,20,38,0.8); border: 1px solid rgba(126,195,255,0.2); padding: 1.25rem; border-radius: 12px;">
-            <div style="font-size: 0.8rem; color: #9fb0cf;">Taux de Participation</div>
+            <div style="font-size: 0.8rem; color: #9fb0cf;" data-i18n="dashStatPart">Taux de Participation</div>
             <div style="font-size: 1.4rem; font-weight: 800; color: #3ddc97;">94% (+12%)</div>
           </div>
           <div style="background: rgba(10,20,38,0.8); border: 1px solid rgba(126,195,255,0.2); padding: 1.25rem; border-radius: 12px;">
-            <div style="font-size: 0.8rem; color: #9fb0cf;">FPS Suivi Caméra</div>
+            <div style="font-size: 0.8rem; color: #9fb0cf;" data-i18n="dashStatFps">FPS Suivi Caméra</div>
             <div style="font-size: 1.4rem; font-weight: 800; color: #00f2fe;">60 FPS (Sub-pixel)</div>
           </div>
           <div style="background: rgba(10,20,38,0.8); border: 1px solid rgba(126,195,255,0.2); padding: 1.25rem; border-radius: 12px;">
-            <div style="font-size: 0.8rem; color: #9fb0cf;">Temps de Session</div>
+            <div style="font-size: 0.8rem; color: #9fb0cf;" data-i18n="dashStatTime">Temps de Session</div>
             <div style="font-size: 1.4rem; font-weight: 800; color: #ffb84d;">42:15 min</div>
           </div>
         </div>
 
         <!-- Santé du parc TNI -->
         <div style="background: rgba(10,20,38,0.85); border: 1px solid rgba(0,242,254,0.3); padding: 1.5rem; border-radius: 14px; margin-bottom: 1.5rem;">
-          <h3 style="color: #00f2fe; margin-bottom: 1rem;">🏥 Santé du Parc TNI de l'Établissement</h3>
+          <h3 style="color: #00f2fe; margin-bottom: 1rem;" data-i18n="tniHealthTitle">🏥 Santé du Parc TNI de l'Établissement</h3>
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem;">
             <div style="background: rgba(6,9,18,0.6); padding: 1rem; border-radius: 10px; border-left: 4px solid #3ddc97;">
-              <strong style="color: #fff;">Salle 101 — SMART Board</strong>
-              <div style="font-size: 0.82rem; color: #9fb0cf; margin-top: 0.3rem;">Dernière calibration : Aujourd'hui (08:30)</div>
-              <span style="font-size: 0.75rem; color: #3ddc97; font-weight: 700;">🟢 Précision : 0.2mm (Excellente)</span>
+              <strong style="color: #fff;" data-i18n="tniHealthR1">Salle 101 — SMART Board</strong>
+              <div style="font-size: 0.82rem; color: #9fb0cf; margin-top: 0.3rem;" data-i18n="tniHealthR1Cal">Dernière calibration : Aujourd'hui (08:30)</div>
+              <span style="font-size: 0.75rem; color: #3ddc97; font-weight: 700;" data-i18n="tniHealthR1Acc">🟢 Précision : 0.2mm (Excellente)</span>
             </div>
             <div style="background: rgba(6,9,18,0.6); padding: 1rem; border-radius: 10px; border-left: 4px solid #3ddc97;">
-              <strong style="color: #fff;">Salle 204 — Promethean ActivBoard</strong>
-              <div style="font-size: 0.82rem; color: #9fb0cf; margin-top: 0.3rem;">Dernière calibration : Hier (16:15)</div>
-              <span style="font-size: 0.75rem; color: #3ddc97; font-weight: 700;">🟢 Précision : 0.4mm (Excellente)</span>
+              <strong style="color: #fff;" data-i18n="tniHealthR2">Salle 204 — Promethean ActivBoard</strong>
+              <div style="font-size: 0.82rem; color: #9fb0cf; margin-top: 0.3rem;" data-i18n="tniHealthR2Cal">Dernière calibration : Hier (16:15)</div>
+              <span style="font-size: 0.75rem; color: #3ddc97; font-weight: 700;" data-i18n="tniHealthR2Acc">🟢 Précision : 0.4mm (Excellente)</span>
             </div>
             <div style="background: rgba(6,9,18,0.6); padding: 1rem; border-radius: 10px; border-left: 4px solid #ffb84d;">
-              <strong style="color: #fff;">Labo SVT — Epson BrightLink</strong>
-              <div style="font-size: 0.82rem; color: #9fb0cf; margin-top: 0.3rem;">Dernière calibration : Il y a 7 jours</div>
-              <span style="font-size: 0.75rem; color: #ffb84d; font-weight: 700;">🟡 Dérive détectée (Calibrage conseillé)</span>
+              <strong style="color: #fff;" data-i18n="tniHealthR3">Labo SVT — Epson BrightLink</strong>
+              <div style="font-size: 0.82rem; color: #9fb0cf; margin-top: 0.3rem;" data-i18n="tniHealthR3Cal">Dernière calibration : Il y a 7 jours</div>
+              <span style="font-size: 0.75rem; color: #ffb84d; font-weight: 700;" data-i18n="tniHealthR3Acc">🟡 Dérive détectée (Calibrage conseillé)</span>
             </div>
           </div>
         </div>
 
         <div style="background: rgba(10,20,38,0.8); border: 1px solid rgba(126,195,255,0.2); padding: 1.5rem; border-radius: 14px;">
-          <h3 style="color: #fff; margin-bottom: 1rem;">⚡ Accès Rapide & Exports TNI</h3>
+          <h3 style="color: #fff; margin-bottom: 1rem;" data-i18n="dashQuickTitle">⚡ Accès Rapide & Exports TNI</h3>
           <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-            <button type="button" class="btn-app btn-app-primary" id="dash-quick-whiteboard">✨ Surface Intelligente</button>
-            <button type="button" class="btn-app btn-app-ghost" id="dash-quick-quiz">📝 Lancer Quiz Instantané</button>
-            <button type="button" class="btn-app btn-app-ghost" id="dash-quick-export">📥 Exporter Package ENT / SCORM</button>
+            <button type="button" class="btn-app btn-app-primary" id="dash-quick-whiteboard" data-i18n="dashQuickWb">✨ Surface Intelligente</button>
+            <button type="button" class="btn-app btn-app-ghost" id="dash-quick-quiz" data-i18n="dashQuickQuiz">📝 Lancer Quiz Instantané</button>
+            <button type="button" class="btn-app btn-app-ghost" id="dash-quick-export" data-i18n="dashQuickExport">📥 Exporter Package ENT / SCORM</button>
           </div>
         </div>
       </div>
@@ -284,18 +284,18 @@
       <!-- ================= MODULE 2: SURFACE INTELLIGENTE ================= -->
       <div class="module-view" id="view-whiteboard">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
-          <h2 style="color: #00f2fe;">✨ Surface Intelligente — Tableau Blanc Tactile</h2>
+          <h2 style="color: #00f2fe;" data-i18n="wbTitle">✨ Surface Intelligente — Tableau Blanc Tactile</h2>
           <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
             <select class="select-custom" id="wb-bg-select">
-              <option value="dark">Fond Sombre</option>
-              <option value="grid">Grille Quadrillée</option>
-              <option value="music">🎼 Portée Musicale</option>
-              <option value="map">🗺️ Carte Muette (Géo)</option>
-              <option value="graph">📏 Papier Millimétré</option>
-              <option value="timeline">⏳ Ligne du Temps</option>
+              <option value="dark" data-i18n="wbBgDark">Fond Sombre</option>
+              <option value="grid" data-i18n="wbBgGrid">Grille Quadrillée</option>
+              <option value="music" data-i18n="wbBgMusic">🎼 Portée Musicale</option>
+              <option value="map" data-i18n="wbBgMap">🗺️ Carte Muette (Géo)</option>
+              <option value="graph" data-i18n="wbBgGraph">📏 Papier Millimétré</option>
+              <option value="timeline" data-i18n="wbBgTimeline">⏳ Ligne du Temps</option>
             </select>
-            <button type="button" class="btn-app btn-app-ghost" id="btn-lock-layer">🔒 Verrouiller Calque Prof</button>
-            <button type="button" class="btn-app btn-app-primary" id="btn-wb-save">💾 Exporter PNG</button>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-lock-layer" data-i18n="btnLockLayer">🔒 Verrouiller Calque Prof</button>
+            <button type="button" class="btn-app btn-app-primary" id="btn-wb-save" data-i18n="btnWbSave">💾 Exporter PNG</button>
           </div>
         </div>
 
@@ -307,25 +307,25 @@
       <!-- ================= MODULE 3: POINTEUR AIR ================= -->
       <div class="module-view" id="view-pointer">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
-          <h2 style="color: #00f2fe;">🎯 Pointeur Air — Test & Laser Virtuel</h2>
-          <button type="button" class="btn-app btn-app-primary" id="btn-pointer-laser-mode">🔴 Mode Laser Virtuel (Designation)</button>
+          <h2 style="color: #00f2fe;" data-i18n="pointerTitle">🎯 Pointeur Air — Test & Laser Virtuel</h2>
+          <button type="button" class="btn-app btn-app-primary" id="btn-pointer-laser-mode" data-i18n="btnLaserMode">🔴 Mode Laser Virtuel (Désignation)</button>
         </div>
 
         <div style="background: rgba(10,20,38,0.8); border: 1px solid rgba(126,195,255,0.2); padding: 1.5rem; border-radius: 14px; margin-bottom: 1rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-            <p>Déplacez votre pointeur dans la zone ci-dessous pour tester la sensibilité et la précision.</p>
+            <p data-i18n="pointerDesc">Déplacez votre pointeur dans la zone ci-dessous pour tester la sensibilité et la précision.</p>
             <div style="display: flex; gap: 0.5rem; align-items: center;">
               <span style="font-size: 0.8rem; color: #9fb0cf;">Curseur Utilisateur :</span>
-              <button class="btn-app btn-app-ghost" style="padding: 0.2rem 0.5rem; color: #00f2fe;">User 1 (Cyan)</button>
-              <button class="btn-app btn-app-ghost" style="padding: 0.2rem 0.5rem; color: #ffb84d;">User 2 (Amber)</button>
+              <button class="btn-app btn-app-ghost" style="padding: 0.2rem 0.5rem; color: #00f2fe;" data-i18n="user1Label">User 1 (Cyan)</button>
+              <button class="btn-app btn-app-ghost" style="padding: 0.2rem 0.5rem; color: #ffb84d;" data-i18n="user2Label">User 2 (Amber)</button>
             </div>
           </div>
 
           <div style="width: 100%; height: 350px; background: #060912; border: 2px dashed rgba(0,242,254,0.4); border-radius: 12px; display: flex; align-items: center; justify-content: center; position: relative;" id="pointer-test-zone">
             <div style="text-align: center;">
               <span style="font-size: 3rem;">🎯</span>
-              <p style="color: #00f2fe; font-weight: 700; margin-top: 0.5rem;" id="pointer-mode-label">Mode Pointeur Laser Actif</p>
-              <p style="font-size: 0.85rem; color: #9fb0cf;">Pincez (index + pouce) pour cliquer sur les cibles</p>
+              <p style="color: #00f2fe; font-weight: 700; margin-top: 0.5rem;" id="pointer-mode-label" data-i18n="pointerActiveLabel">Mode Pointeur Laser Actif</p>
+              <p style="font-size: 0.85rem; color: #9fb0cf;" data-i18n="pointerHint">Pincez (index + pouce) pour cliquer sur les cibles</p>
             </div>
           </div>
         </div>
@@ -334,33 +334,33 @@
       <!-- ================= MODULE 4: DESSIN AIR ================= -->
       <div class="module-view" id="view-draw">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap;">
-          <h2 style="color: #00f2fe;">🎨 Studio Dessin Air & Gabarits Pédagogiques</h2>
+          <h2 style="color: #00f2fe;" data-i18n="drawTitle">🎨 Studio Dessin Air & Gabarits Pédagogiques</h2>
           <div style="display: flex; gap: 0.5rem;">
-            <button type="button" class="btn-app btn-app-ghost" id="btn-stamp-frise">📐 Gabarit Frise</button>
-            <button type="button" class="btn-app btn-app-ghost" id="btn-stamp-table">📊 Gabarit Tableau</button>
-            <button type="button" class="btn-app btn-app-primary" id="btn-ocr-convert">🔤 Reconnaissance Texte/LaTeX</button>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-stamp-frise" data-i18n="btnFrise">📐 Gabarit Frise</button>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-stamp-table" data-i18n="btnTable">📊 Gabarit Tableau</button>
+            <button type="button" class="btn-app btn-app-primary" id="btn-ocr-convert" data-i18n="btnOcrConvert">🔤 Reconnaissance Texte/LaTeX</button>
           </div>
         </div>
         <div style="background: rgba(10,20,38,0.8); border: 1px solid rgba(126,195,255,0.2); padding: 1.5rem; border-radius: 14px;">
-          <p style="color: #e8effc;">Tracé artistique avec lissage automatique de courbes, gabarits vectoriels et reconnaissance de formules LaTeX ($\sqrt{a^2 + b^2}$).</p>
+          <p style="color: #e8effc;" data-i18n="drawDesc">Tracé artistique avec lissage automatique de courbes, gabarits vectoriels et reconnaissance de formules LaTeX.</p>
         </div>
       </div>
 
       <!-- ================= MODULE 5: AIR 3D ================= -->
       <div class="module-view" id="view-air3d">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
-          <h2 style="color: #00f2fe;">🧊 Visualiseur 3D Interactif Scolaire</h2>
+          <h2 style="color: #00f2fe;" data-i18n="air3dTitle">🧊 Visualiseur 3D Interactif Scolaire</h2>
           <div style="display: flex; gap: 0.5rem;">
-            <button type="button" class="btn-app btn-app-ghost" id="btn-3d-coupe">✂️ Mode Coupe</button>
-            <button type="button" class="btn-app btn-app-primary" id="btn-3d-snapshot">📸 Capture 3D Annotée</button>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-3d-coupe" data-i18n="btn3dCut">✂️ Mode Coupe</button>
+            <button type="button" class="btn-app btn-app-primary" id="btn-3d-snapshot" data-i18n="btn3dSnapshot">📸 Capture 3D Annotée</button>
           </div>
         </div>
 
         <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
-          <button type="button" class="btn-app btn-app-primary" id="btn-3d-h2o">💧 Molécule H₂O</button>
-          <button type="button" class="btn-app btn-app-ghost" id="btn-3d-cell">🧫 Cellule Végétale</button>
-          <button type="button" class="btn-app btn-app-ghost" id="btn-3d-tecto">🌍 Tectonique des Plaques</button>
-          <button type="button" class="btn-app btn-app-ghost" id="btn-3d-orbit">🪐 Système Solaire</button>
+          <button type="button" class="btn-app btn-app-primary" id="btn-3d-h2o" data-i18n="btn3dH2o">💧 Molécule H₂O</button>
+          <button type="button" class="btn-app btn-app-ghost" id="btn-3d-cell" data-i18n="btn3dCell">🧫 Cellule Végétale</button>
+          <button type="button" class="btn-app btn-app-ghost" id="btn-3d-tecto" data-i18n="btn3dTecto">🌍 Tectonique des Plaques</button>
+          <button type="button" class="btn-app btn-app-ghost" id="btn-3d-orbit" data-i18n="btn3dOrbit">🪐 Système Solaire</button>
         </div>
 
         <div style="width: 100%; height: 420px; background: #040710; border: 2px solid rgba(0,242,254,0.3); border-radius: 14px; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center;" id="canvas-3d-holder">
@@ -370,50 +370,50 @@
 
       <!-- ================= MODULE 6: VISION AIR ================= -->
       <div class="module-view" id="view-vision">
-        <h2 style="color: #00f2fe; margin-bottom: 1rem;">👁️ Vision Air — Correction Direct & Suivi EPS</h2>
+        <h2 style="color: #00f2fe; margin-bottom: 1rem;" data-i18n="visionTitle">👁️ Vision Air — Correction Direct & Suivi EPS</h2>
         <div style="background: rgba(10,20,38,0.8); border: 1px solid rgba(126,195,255,0.2); padding: 1.5rem; border-radius: 14px;">
-          <h3 style="color: #fff; margin-bottom: 0.5rem;">Superposition Corrective & Analyse de Posture</h3>
-          <p style="color: #9fb0cf; font-size: 0.9rem;">Correction automatique de feuille d'élève sous caméra & Suivi des angles articulaires EPS.</p>
+          <h3 style="color: #fff; margin-bottom: 0.5rem;" data-i18n="visionSubTitle">Superposition Corrective & Analyse de Posture</h3>
+          <p style="color: #9fb0cf; font-size: 0.9rem;" data-i18n="visionDesc">Correction automatique de feuille d'élève sous caméra & Suivi des angles articulaires EPS.</p>
         </div>
       </div>
 
       <!-- ================= MODULE 7: LABO AIR ================= -->
       <div class="module-view" id="view-labo">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap;">
-          <h2 style="color: #00f2fe;">🔬 Labo Air — Simulations STEM</h2>
+          <h2 style="color: #00f2fe;" data-i18n="labTitle">🔬 Labo Air — Simulations STEM</h2>
           <select class="select-custom" id="lab-sim-select">
-            <option value="ohm">⚡ Électricité (Loi d'Ohm U = R × I)</option>
-            <option value="genetics">🧬 Génétique (Tableau de Punnett)</option>
-            <option value="ph">🧪 Chimie (Titrage Acide-Base & pH)</option>
-            <option value="em">🧲 Électromagnétisme (Champ & Boussole)</option>
+            <option value="ohm" data-i18n="labSimOhm">⚡ Électricité (Loi d'Ohm U = R × I)</option>
+            <option value="genetics" data-i18n="labSimGenetics">🧬 Génétique (Tableau de Punnett)</option>
+            <option value="ph" data-i18n="labSimPh">🧪 Chimie (Titrage Acide-Base & pH)</option>
+            <option value="em" data-i18n="labSimEm">🧲 Électromagnétisme (Champ & Boussole)</option>
           </select>
         </div>
 
         <div style="background: rgba(10,20,38,0.8); border: 1px solid rgba(126,195,255,0.2); padding: 1.5rem; border-radius: 14px;">
-          <h3 style="color: #fff; margin-bottom: 1rem;" id="lab-sim-title">⚡ Simulation Circuit Électrique (Loi d'Ohm U = R × I)</h3>
+          <h3 style="color: #fff; margin-bottom: 1rem;" id="lab-sim-title" data-i18n="labTitleOhm">⚡ Simulation Circuit Électrique (Loi d'Ohm U = R × I)</h3>
           
           <div style="display: flex; gap: 2rem; align-items: center; flex-wrap: wrap;">
             <div>
-              <label style="font-weight: 700; color: #00f2fe;">Tension U (Volts) : <span id="val-u">9V</span></label>
+              <label style="font-weight: 700; color: #00f2fe;"><span data-i18n="labVoltage">Tension U (Volts) :</span> <span id="val-u">9V</span></label>
               <input type="range" id="slider-u" min="1" max="24" value="9" style="width: 200px; display: block; margin-top: 0.5rem;">
             </div>
             <div>
-              <label style="font-weight: 700; color: #ffb84d;">Résistance R (Ohms) : <span id="val-r">10Ω</span></label>
+              <label style="font-weight: 700; color: #ffb84d;"><span data-i18n="labResistance">Résistance R (Ohms) :</span> <span id="val-r">10Ω</span></label>
               <input type="range" id="slider-r" min="1" max="100" value="10" style="width: 200px; display: block; margin-top: 0.5rem;">
             </div>
             <div style="font-size: 1.2rem; font-weight: 800; color: #3ddc97;">
-              Courant I = <span id="val-i">0.90 A</span>
+              <span data-i18n="labCurrent">Courant I =</span> <span id="val-i">0.90 A</span>
             </div>
           </div>
 
           <div style="margin-top: 1.2rem; background: rgba(0,242,254,0.1); padding: 0.8rem; border-radius: 8px; font-weight: 600; color: #00f2fe; display: flex; justify-content: space-between;">
-            <span>Valeur Théorique : 0.90 A</span>
-            <span>% Écart Calculé : 0.0% (Conforme)</span>
+            <span data-i18n="labTheoVal">Valeur Théorique : 0.90 A</span>
+            <span data-i18n="labErrorCalc">% Écart Calculé : 0.0% (Conforme)</span>
           </div>
 
           <div style="margin-top: 1.5rem; text-align: center; padding: 2rem; background: #060912; border-radius: 12px; border: 1px solid rgba(0,242,254,0.3);">
             <div id="bulb-glow" style="width: 60px; height: 60px; border-radius: 50%; background: #ffea00; margin: 0 auto; box-shadow: 0 0 30px #ffea00; transition: all 0.2s ease;"></div>
-            <p style="margin-top: 0.8rem; font-weight: 700; color: #fff;">Luminosité Ampoule en Temps Réel</p>
+            <p style="margin-top: 0.8rem; font-weight: 700; color: #fff;" data-i18n="labBulbTitle">Luminosité Ampoule en Temps Réel</p>
           </div>
         </div>
       </div>
@@ -421,39 +421,39 @@
       <!-- ================= MODULE 8: QUIZ AIR ================= -->
       <div class="module-view" id="view-quiz">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap;">
-          <h2 style="color: #00f2fe;">📝 Quiz Air & Vote Collaboratif</h2>
+          <h2 style="color: #00f2fe;" data-i18n="quizTitle">📝 Quiz Air & Vote Collaboratif</h2>
           <div style="display: flex; gap: 0.5rem;">
             <select class="select-custom" id="quiz-import-format">
-              <option value="moodle">Import: Moodle XML / GIFT</option>
-              <option value="csv">Import: CSV / Excel</option>
-              <option value="json">Import: JSON Standard</option>
+              <option value="moodle" data-i18n="quizImportMoodle">Import: Moodle XML / GIFT</option>
+              <option value="csv" data-i18n="quizImportCsv">Import: CSV / Excel</option>
+              <option value="json" data-i18n="quizImportJson">Import: JSON Standard</option>
             </select>
-            <button type="button" class="btn-app btn-app-primary" id="btn-quiz-qr">📱 Quiz QR Code Smartphone</button>
+            <button type="button" class="btn-app btn-app-primary" id="btn-quiz-qr" data-i18n="btnQuizQrModal">📱 Quiz QR Code Smartphone</button>
           </div>
         </div>
 
         <div style="background: rgba(10,20,38,0.8); border: 1px solid rgba(126,195,255,0.2); padding: 1.5rem; border-radius: 14px;">
-          <h3 style="color: #fff; margin-bottom: 0.5rem;">Question 1 / 5 : Théorème de Pythagore</h3>
-          <p style="font-size: 1.1rem; color: #e8effc; margin-bottom: 1.5rem;">Dans un triangle rectangle, le carré de l'hypoténuse est égal à... ?</p>
+          <h3 style="color: #fff; margin-bottom: 0.5rem;" data-i18n="quizQ1Title">Question 1 / 5 : Théorème de Pythagore</h3>
+          <p style="font-size: 1.1rem; color: #e8effc; margin-bottom: 1.5rem;" data-i18n="quizQ1Text">Dans un triangle rectangle, le carré de l'hypoténuse est égal à... ?</p>
           
           <div style="display: flex; flex-direction: column; gap: 0.75rem;">
             <button type="button" class="btn-app btn-app-ghost quiz-opt-btn" data-opt="A" style="text-align: left; justify-content: space-between;">
-              <span>A) La somme des carrés des deux autres côtés</span>
+              <span data-i18n="quizOptA">A) La somme des carrés des deux autres côtés</span>
               <span class="quiz-bar-val" style="color: #3ddc97; font-weight: 800;">88% (24 votes)</span>
             </button>
             <button type="button" class="btn-app btn-app-ghost quiz-opt-btn" data-opt="B" style="text-align: left; justify-content: space-between;">
-              <span>B) La différence des carrés des côtés</span>
+              <span data-i18n="quizOptB">B) La différence des carrés des côtés</span>
               <span class="quiz-bar-val" style="color: #ff5d5d;">8% (2 votes)</span>
             </button>
             <button type="button" class="btn-app btn-app-ghost quiz-opt-btn" data-opt="C" style="text-align: left; justify-content: space-between;">
-              <span>C) Le double de la hauteur du triangle</span>
+              <span data-i18n="quizOptC">C) Le double de la hauteur du triangle</span>
               <span class="quiz-bar-val" style="color: #ff5d5d;">4% (1 vote)</span>
             </button>
           </div>
 
           <div style="margin-top: 1.5rem; display: flex; gap: 1rem;">
-            <button type="button" class="btn-app btn-app-primary" id="btn-quiz-simulate">📊 Simuler un vote élève</button>
-            <button type="button" class="btn-app btn-app-ghost" id="btn-quiz-next">Question suivante ▶</button>
+            <button type="button" class="btn-app btn-app-primary" id="btn-quiz-simulate" data-i18n="btnQuizSimVote">📊 Simuler un vote élève</button>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-quiz-next" data-i18n="btnQuizNext">Question suivante ▶</button>
           </div>
         </div>
       </div>
@@ -461,33 +461,33 @@
       <!-- ================= MODULE 10: PROF IA ================= -->
       <div class="module-view" id="view-profai">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap;">
-          <h2 style="color: #00f2fe;">🤖 Prof IA — Assistant Pédagogique</h2>
+          <h2 style="color: #00f2fe;" data-i18n="aiTitle">🤖 Prof IA — Assistant Pédagogique</h2>
           <div style="display: flex; gap: 0.5rem;">
-            <button type="button" class="btn-app btn-app-primary" id="btn-ai-diff-ex">🎯 Exercice 3 Niveaux</button>
-            <button type="button" class="btn-app btn-app-ghost" id="btn-ai-tts">🔊 Synthèse Vocale</button>
+            <button type="button" class="btn-app btn-app-primary" id="btn-ai-diff-ex" data-i18n="btnAiDiffEx">🎯 Exercice 3 Niveaux</button>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-ai-tts" data-i18n="btnAiTts">🔊 Synthèse Vocale</button>
           </div>
         </div>
 
         <div style="background: rgba(10,20,38,0.8); border: 1px solid rgba(126,195,255,0.2); padding: 1.5rem; border-radius: 14px; height: 480px; display: flex; flex-direction: column;">
           <div id="ai-chat-messages" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1rem; padding-right: 0.5rem;">
-            <div style="background: rgba(0,242,254,0.1); border: 1px solid rgba(0,242,254,0.3); padding: 1rem; border-radius: 12px; max-width: 80%;">
-              <strong>🤖 Prof IA :</strong> Bonjour ! Je suis votre assistant pédagogique EDU-AIR. Comment puis-je vous aider aujourd'hui ? (Générer des exercices différenciés, expliquer un concept, préparer un cours).
+            <div style="background: rgba(0,242,254,0.1); border: 1px solid rgba(0,242,254,0.3); padding: 1rem; border-radius: 12px; max-width: 80%;" data-i18n="aiWelcomeMsg">
+              🤖 Prof IA : Bonjour ! Je suis votre assistant pédagogique EDU-AIR. Comment puis-je vous aider aujourd'hui ?
             </div>
           </div>
           <div style="display: flex; gap: 0.5rem;">
-            <input type="text" id="ai-chat-input" placeholder="Posez une question à Prof IA (ex: Donne-moi un exercice sur le théorème de Pythagore...)" style="flex: 1; background: #060912; border: 1px solid rgba(126,195,255,0.3); color: #fff; padding: 0.75rem 1rem; border-radius: 8px; outline: none;">
-            <button type="button" class="btn-app btn-app-primary" id="btn-ai-chat-send">Envoyer ➔</button>
+            <input type="text" id="ai-chat-input" data-i18n="aiInputPlaceholder" placeholder="Posez une question à Prof IA (ex: Donne-moi un exercice sur le théorème de Pythagore...)" style="flex: 1; background: #060912; border: 1px solid rgba(126,195,255,0.3); color: #fff; padding: 0.75rem 1rem; border-radius: 8px; outline: none;">
+            <button type="button" class="btn-app btn-app-primary" id="btn-ai-chat-send" data-i18n="btnAiSend">Envoyer ➔</button>
           </div>
         </div>
       </div>
 
       <!-- ================= MODULE 11: CALIBRAGE ================= -->
       <div class="module-view" id="view-calib">
-        <h2 style="color: #00f2fe; margin-bottom: 1rem;">⚙️ Calibrage Caméra & Profils Marque TNI</h2>
+        <h2 style="color: #00f2fe; margin-bottom: 1rem;" data-i18n="calibTitle">⚙️ Calibrage Caméra & Profils Marque TNI</h2>
         <div style="background: rgba(10,20,38,0.8); border: 1px solid rgba(126,195,255,0.2); padding: 1.5rem; border-radius: 14px;">
           <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
             <div>
-              <label style="font-size: 0.85rem; color: #9fb0cf; display: block; margin-bottom: 0.3rem;">Marque TNI :</label>
+              <label style="font-size: 0.85rem; color: #9fb0cf; display: block; margin-bottom: 0.3rem;" data-i18n="calibBrandLabel">Marque TNI :</label>
               <select class="select-custom" id="calib-brand-select">
                 <option value="smart">SMART Board (Notebook)</option>
                 <option value="promethean">Promethean ActivBoard</option>
@@ -496,7 +496,7 @@
               </select>
             </div>
             <div>
-              <label style="font-size: 0.85rem; color: #9fb0cf; display: block; margin-bottom: 0.3rem;">Ratio Écran :</label>
+              <label style="font-size: 0.85rem; color: #9fb0cf; display: block; margin-bottom: 0.3rem;" data-i18n="calibRatioLabel">Ratio Écran :</label>
               <select class="select-custom" id="calib-ratio-select">
                 <option value="16:9">16:9 (Standard 1080p / 4K)</option>
                 <option value="16:10">16:10 (WUXGA)</option>
@@ -504,21 +504,21 @@
               </select>
             </div>
           </div>
-          <button type="button" class="btn-app btn-app-primary" id="btn-start-calib-wiz">🚀 Lancer le Wizard de Calibrage (4 Points)</button>
+          <button type="button" class="btn-app btn-app-primary" id="btn-start-calib-wiz" data-i18n="btnStartCalib">🚀 Lancer le Wizard de Calibrage (4 Points)</button>
         </div>
       </div>
 
       <!-- ================= MODULE 12: HISTORIQUE ================= -->
       <div class="module-view" id="view-history">
-        <h2 style="color: #00f2fe; margin-bottom: 1rem;">📜 Historique des Sessions & Replay Éléves</h2>
+        <h2 style="color: #00f2fe; margin-bottom: 1rem;" data-i18n="historyTitle">📜 Historique des Sessions & Replay Éléves</h2>
         <div style="background: rgba(10,20,38,0.8); border: 1px solid rgba(126,195,255,0.2); padding: 1.5rem; border-radius: 14px;">
           <table style="width: 100%; border-collapse: collapse; text-align: left;">
             <thead>
               <tr style="border-bottom: 1px solid rgba(126,195,255,0.2); color: #00f2fe;">
-                <th style="padding: 0.75rem;">Date</th>
-                <th>Séquence / Cours</th>
-                <th>Classe</th>
-                <th>Exports TNI</th>
+                <th style="padding: 0.75rem;" data-i18n="thDate">Date</th>
+                <th data-i18n="thCourse">Séquence / Cours</th>
+                <th data-i18n="thClass">Classe</th>
+                <th data-i18n="thExport">Exports TNI</th>
               </tr>
             </thead>
             <tbody>
@@ -555,10 +555,10 @@
   <div class="app-modal-backdrop" id="modal-export-tni">
     <div class="app-modal-box">
       <div class="app-modal-head">
-        <h3 style="color: #00f2fe;">📤 Exportation TNI / TBI & ENT</h3>
+        <h3 style="color: #00f2fe;" data-i18n="modalExpTitle">📤 Exportation TNI / TBI & ENT</h3>
         <button class="app-modal-close" data-close-modal="modal-export-tni">✕</button>
       </div>
-      <p style="margin-bottom: 1.2rem; color: #9fb0cf; font-size: 0.9rem;">Choisissez le format natif de votre logiciel de classe ou le package e-Learning pour l'ENT :</p>
+      <p style="margin-bottom: 1.2rem; color: #9fb0cf; font-size: 0.9rem;" data-i18n="modalExpDesc">Choisissez le format natif de votre logiciel de classe ou le package e-Learning pour l'ENT :</p>
       
       <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem;">
         <button class="btn-app btn-app-ghost" id="exp-smart-nb" style="justify-content: space-between;">
@@ -580,7 +580,7 @@
       </div>
 
       <div style="display: flex; justify-content: flex-end;">
-        <button class="btn-app btn-app-ghost" data-close-modal="modal-export-tni">Fermer</button>
+        <button class="btn-app btn-app-ghost" data-close-modal="modal-export-tni" data-i18n="btnClose">Fermer</button>
       </div>
     </div>
   </div>
@@ -589,10 +589,10 @@
   <div class="app-modal-backdrop" id="modal-quiz-qr">
     <div class="app-modal-box" style="text-align: center;">
       <div class="app-modal-head">
-        <h3 style="color: #00f2fe;">📱 Quiz Collaboratif Smartphone</h3>
+        <h3 style="color: #00f2fe;" data-i18n="modalQrTitle">📱 Quiz Collaboratif Smartphone</h3>
         <button class="app-modal-close" data-close-modal="modal-quiz-qr">✕</button>
       </div>
-      <p style="margin-bottom: 1rem; color: #9fb0cf; font-size: 0.9rem;">Scannez ce QR Code avec votre téléphone pour rejoindre la session de vote en direct :</p>
+      <p style="margin-bottom: 1rem; color: #9fb0cf; font-size: 0.9rem;" data-i18n="modalQrDesc">Scannez ce QR Code avec votre téléphone pour rejoindre la session de vote en direct :</p>
       
       <div style="width: 180px; height: 180px; background: #fff; margin: 0 auto 1.2rem; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 4px solid #00f2fe;">
         <svg width="150" height="150" viewBox="0 0 100 100">
@@ -601,10 +601,10 @@
         </svg>
       </div>
 
-      <div style="font-weight: bold; color: #3ddc97; font-size: 1.1rem; margin-bottom: 1.2rem;">Code de session : 489-021</div>
+      <div style="font-weight: bold; color: #3ddc97; font-size: 1.1rem; margin-bottom: 1.2rem;" data-i18n="modalQrCodeLabel">Code de session : 489-021</div>
 
       <div style="display: flex; justify-content: center;">
-        <button class="btn-app btn-app-ghost" data-close-modal="modal-quiz-qr">Fermer</button>
+        <button class="btn-app btn-app-ghost" data-close-modal="modal-quiz-qr" data-i18n="btnClose">Fermer</button>
       </div>
     </div>
   </div>
@@ -613,14 +613,14 @@
   <div class="app-modal-backdrop" id="modal-import-pptx">
     <div class="app-modal-box">
       <div class="app-modal-head">
-        <h3 style="color: #00f2fe;">📁 Importer une Présentation (PPTX / PDF)</h3>
+        <h3 style="color: #00f2fe;" data-i18n="modalPptxTitle">📁 Importer une Présentation (PPTX / PDF)</h3>
         <button class="app-modal-close" data-close-modal="modal-import-pptx">✕</button>
       </div>
-      <p style="margin-bottom: 1rem; color: #9fb0cf; font-size: 0.9rem;">Sélectionnez votre fichier PowerPoint (.pptx) ou PDF pour l'importer instantanément dans le Diaporama Tactile EDU-AIR.</p>
+      <p style="margin-bottom: 1rem; color: #9fb0cf; font-size: 0.9rem;" data-i18n="modalPptxDesc">Sélectionnez votre fichier PowerPoint (.pptx) ou PDF pour l'importer instantanément dans le Diaporama Tactile EDU-AIR.</p>
       <input type="file" id="input-file-pptx" accept=".pptx,.pdf,.ppt" style="margin-bottom: 1.5rem; color: #fff;">
       <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
-        <button class="btn-app btn-app-ghost" data-close-modal="modal-import-pptx">Annuler</button>
-        <button class="btn-app btn-app-primary" id="btn-confirm-import">Importer</button>
+        <button class="btn-app btn-app-ghost" data-close-modal="modal-import-pptx" data-i18n="btnCancel">Annuler</button>
+        <button class="btn-app btn-app-primary" id="btn-confirm-import" data-i18n="btnImportConfirm">Importer</button>
       </div>
     </div>
   </div>
@@ -629,14 +629,14 @@
   <div class="app-modal-backdrop" id="modal-gslides">
     <div class="app-modal-box">
       <div class="app-modal-head">
-        <h3 style="color: #00f2fe;">🔗 Intégration Google Slides</h3>
+        <h3 style="color: #00f2fe;" data-i18n="modalGslidesTitle">🔗 Intégration Google Slides</h3>
         <button class="app-modal-close" data-close-modal="modal-gslides">✕</button>
       </div>
-      <p style="margin-bottom: 1rem; color: #9fb0cf; font-size: 0.9rem;">Collez le lien de partage ou d'intégration de votre présentation Google Slides :</p>
+      <p style="margin-bottom: 1rem; color: #9fb0cf; font-size: 0.9rem;" data-i18n="modalGslidesDesc">Collez le lien de partage ou d'intégration de votre présentation Google Slides :</p>
       <input type="text" id="input-gslides-url" placeholder="https://docs.google.com/presentation/d/..." style="width: 100%; background: #060912; border: 1px solid rgba(126,195,255,0.3); color: #fff; padding: 0.6rem 0.8rem; border-radius: 8px; margin-bottom: 1.5rem; outline: none;">
       <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
-        <button class="btn-app btn-app-ghost" data-close-modal="modal-gslides">Annuler</button>
-        <button class="btn-app btn-app-primary" id="btn-confirm-gslides">Charger Diaporama</button>
+        <button class="btn-app btn-app-ghost" data-close-modal="modal-gslides" data-i18n="btnCancel">Annuler</button>
+        <button class="btn-app btn-app-primary" id="btn-confirm-gslides" data-i18n="btnLoadSlides">Charger Diaporama</button>
       </div>
     </div>
   </div>
@@ -645,14 +645,14 @@
   <div class="app-modal-backdrop" id="modal-add-slide">
     <div class="app-modal-box">
       <div class="app-modal-head">
-        <h3 style="color: #00f2fe;">➕ Ajouter une nouvelle Slide</h3>
+        <h3 style="color: #00f2fe;" data-i18n="modalSlideTitle">➕ Ajouter une nouvelle Slide</h3>
         <button class="app-modal-close" data-close-modal="modal-add-slide">✕</button>
       </div>
-      <label style="font-size: 0.85rem; color: #9fb0cf; display: block; margin-bottom: 0.4rem;">Titre de la slide :</label>
+      <label style="font-size: 0.85rem; color: #9fb0cf; display: block; margin-bottom: 0.4rem;" data-i18n="labelSlideTitle">Titre de la slide :</label>
       <input type="text" id="input-new-slide-title" placeholder="Ex: Résumé et Définitions..." style="width: 100%; background: #060912; border: 1px solid rgba(126,195,255,0.3); color: #fff; padding: 0.6rem 0.8rem; border-radius: 8px; margin-bottom: 1rem; outline: none;">
       <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
-        <button class="btn-app btn-app-ghost" data-close-modal="modal-add-slide">Annuler</button>
-        <button class="btn-app btn-app-primary" id="btn-confirm-add-slide">Ajouter Slide</button>
+        <button class="btn-app btn-app-ghost" data-close-modal="modal-add-slide" data-i18n="btnCancel">Annuler</button>
+        <button class="btn-app btn-app-primary" id="btn-confirm-add-slide" data-i18n="btnAddConfirm">Ajouter Slide</button>
       </div>
     </div>
   </div>
