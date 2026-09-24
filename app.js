@@ -1003,7 +1003,7 @@
 
   // 6. 3D Cutaway Mode & Snapshot
   const btn3dCoupe = $("#btn-3d-coupe");
-  const view3d = $("#view-air-3d");
+  const view3d = $("#view-air3d");
   if (btn3dCoupe && view3d) {
     btn3dCoupe.addEventListener("click", () => {
       view3d.classList.toggle("cut-view-active");
@@ -1053,7 +1053,8 @@
 
   // 8. AI Teacher 3-Tier Differentiated Exercises
   const btnAiDiff = $("#btn-ai-diff-ex");
-  if (btnAiDiff && chatMessages) {
+  const chatMsgBox = $("#ai-chat-messages");
+  if (btnAiDiff && chatMsgBox) {
     btnAiDiff.addEventListener("click", () => {
       const diffMsg = document.createElement("div");
       diffMsg.style.cssText = "background: rgba(139,123,255,0.15); border: 1px solid rgba(139,123,255,0.4); padding: 1rem; border-radius: 12px; margin-top: 0.5rem;";
@@ -1065,8 +1066,8 @@
           <p style="color: #ff5d5d;">🔴 <strong>Niveau 3 (Approfondissement) :</strong> Démontrer la réciproque du théorème dans une charpente de toit.</p>
         </div>
       `;
-      chatMessages.appendChild(diffMsg);
-      chatMessages.scrollTop = chatMessages.scrollHeight;
+      chatMsgBox.appendChild(diffMsg);
+      chatMsgBox.scrollTop = chatMsgBox.scrollHeight;
     });
   }
 
