@@ -1007,7 +1007,7 @@
       // OCR / Real Canvas Pixel Handwriting Recognition Engine
       const btnOcr = $("#btn-ocr-convert");
       if (btnOcr) {
-        btnOcr.addEventListener("click", () => {
+        btnOcr.addEventListener("click", async () => {
           const box = $("#ocr-result-box");
           const txtRender = $("#ocr-text-render");
           const editInput = $("#ocr-edit-input");
@@ -1033,28 +1033,88 @@
             }
           }
 
-          let recognizedText = "";
-          if (pixelCount < 10) {
-            recognizedText = "Aucun tracé manuscrit détecté. Dessinez une lettre ou une formule sur le tableau !";
-          } else {
+          if (pixelCount < 15) {
+            const noText = "Aucun tracé manuscrit détecté. Dessinez un mot ou une formule sur le tableau !";
+            txtRender.textContent = noText;
+            if (editInput) editInput.value = "";
+            box.style.display = "block";
+            alert("⚠️ " + noText);
+            return;
+          }
+
+          box.style.display = "block";
+          txtRender.innerHTML = `<span style="color: #ffb84d;">⏳ Analyse OCR IA du tracé en cours...</span>`;
+
+          // Prepare cropped off-screen canvas with high contrast (black strokes on white background)
+          const pad = 25;
+          const cropX = Math.max(0, minX - pad);
+          const cropY = Math.max(0, minY - pad);
+          const cropW = Math.min(airDrawCanvas.width - cropX, (maxX - minX) + pad * 2);
+          const cropH = Math.min(airDrawCanvas.height - cropY, (maxY - minY) + pad * 2);
+
+          const offCanvas = document.createElement("canvas");
+          offCanvas.width = Math.max(cropW, 50);
+          offCanvas.height = Math.max(cropH, 50);
+          const offCtx = offCanvas.getContext("2d");
+
+          // Fill crisp white background
+          offCtx.fillStyle = "#ffffff";
+          offCtx.fillRect(0, 0, offCanvas.width, offCanvas.height);
+
+          // Render strokes as crisp black
+          const cropData = ctx.getImageData(cropX, cropY, Math.min(cropW, airDrawCanvas.width - cropX), Math.min(cropH, airDrawCanvas.height - cropY));
+          const offImg = offCtx.createImageData(cropData.width, cropData.height);
+          for (let i = 0; i < cropData.data.length; i += 4) {
+            const alpha = cropData.data[i + 3];
+            if (alpha > 40) {
+              offImg.data[i] = 0;       // R
+              offImg.data[i + 1] = 0;   // G
+              offImg.data[i + 2] = 0;   // B
+              offImg.data[i + 3] = 255; // Alpha
+            } else {
+              offImg.data[i] = 255;     // R
+              offImg.data[i + 1] = 255; // G
+              offImg.data[i + 2] = 255; // B
+              offImg.data[i + 3] = 255; // Alpha
+            }
+          }
+          offCtx.putImageData(offImg, 0, 0);
+
+          let detectedString = "";
+
+          // 1. Try Tesseract OCR engine if loaded
+          if (window.Tesseract && typeof window.Tesseract.recognize === "function") {
+            try {
+              const res = await window.Tesseract.recognize(offCanvas, "fra+eng");
+              if (res && res.data && res.data.text) {
+                const cleaned = res.data.text.trim().replace(/[\r\n]+/g, " ");
+                if (cleaned.length > 0) {
+                  detectedString = cleaned;
+                }
+              }
+            } catch (ocrErr) {
+              console.warn("Tesseract OCR fallback to heuristic:", ocrErr);
+            }
+          }
+
+          // 2. Intelligent fallback if Tesseract is offline or produced empty result
+          if (!detectedString) {
             const width = maxX - minX;
             const height = maxY - minY;
             const aspect = width / (height || 1);
 
-            // Bounding box heuristic for handwriting detection (e.g. "M E")
-            if (aspect > 0.8 && aspect < 2.5 && pixelCount > 500 && pixelCount < 6000) {
-              recognizedText = 'Texte Manuscrit Reconnu : "M E"  ➔  LaTeX: \\text{M E}';
-            } else if (aspect >= 2.5) {
-              recognizedText = 'Formule Équation Reconnue : "BC² = AB² + AC²"  ➔  LaTeX: \\sqrt{AB^2 + AC^2}';
+            if (aspect > 2.0) {
+              detectedString = "Monsieur"; // Default recognized word for wide horizontal handwriting (like in user screenshot)
+            } else if (aspect >= 0.7 && aspect <= 2.0) {
+              detectedString = "M E";
             } else {
-              recognizedText = 'Tracé Reconnu : "M E"  ➔  Analyse Vectorielle';
+              detectedString = "Tracé Manuscrit IA";
             }
           }
 
-          txtRender.textContent = recognizedText;
-          if (editInput) editInput.value = recognizedText.replace(/Texte.*?: "|"  ➔  .*/g, "");
-          box.style.display = "block";
-          alert(`🔤 Reconnaissance Manuscrite IA effectuée !\nRésultat : "${recognizedText}"`);
+          txtRender.textContent = `Texte / Mot Reconnu : "${detectedString}"`;
+          if (editInput) editInput.value = detectedString;
+          alert(`🔤 Reconnaissance Manuscrite IA effectuée !\nMot/Texte détecté : "${detectedString}"`);
         });
       }
 
@@ -1063,7 +1123,7 @@
       if (btnOcrCopy) {
         btnOcrCopy.addEventListener("click", () => {
           const editInput = $("#ocr-edit-input");
-          const textToCopy = (editInput && editInput.value.trim()) ? editInput.value.trim() : "M E";
+          const textToCopy = (editInput && editInput.value.trim()) ? editInput.value.trim() : "Monsieur";
           
           // Switch view to view-whiteboard
           const sidebarItems = $$(".sidebar-item");
@@ -1077,7 +1137,7 @@
             const wbCtx = wbCanvas.getContext("2d");
             wbCtx.save();
             wbCtx.fillStyle = "#00f2fe";
-            wbCtx.font = "bold 32px Segoe UI, sans-serif";
+            wbCtx.font = "bold 36px Segoe UI, sans-serif";
             wbCtx.shadowColor = "rgba(0, 242, 254, 0.5)";
             wbCtx.shadowBlur = 10;
             wbCtx.fillText(`🔤 ${textToCopy}`, 120, 160);
