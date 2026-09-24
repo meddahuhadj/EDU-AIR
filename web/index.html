@@ -799,30 +799,7 @@
 
         <div style="background: rgba(10,20,38,0.8); border: 1px solid rgba(126,195,255,0.2); padding: 1.5rem; border-radius: 14px;">
           <h3 style="color: #fff; margin-bottom: 1rem;" id="lab-sim-title" data-i18n="labTitleOhm">⚡ Simulation Circuit Électrique (Loi d'Ohm U = R × I)</h3>
-          
-          <div style="display: flex; gap: 2rem; align-items: center; flex-wrap: wrap;">
-            <div>
-              <label style="font-weight: 700; color: #00f2fe;"><span data-i18n="labVoltage">Tension U (Volts) :</span> <span id="val-u">9V</span></label>
-              <input type="range" id="slider-u" min="1" max="24" value="9" style="width: 200px; display: block; margin-top: 0.5rem;">
-            </div>
-            <div>
-              <label style="font-weight: 700; color: #ffb84d;"><span data-i18n="labResistance">Résistance R (Ohms) :</span> <span id="val-r">10Ω</span></label>
-              <input type="range" id="slider-r" min="1" max="100" value="10" style="width: 200px; display: block; margin-top: 0.5rem;">
-            </div>
-            <div style="font-size: 1.2rem; font-weight: 800; color: #3ddc97;">
-              <span data-i18n="labCurrent">Courant I =</span> <span id="val-i">0.90 A</span>
-            </div>
-          </div>
-
-          <div style="margin-top: 1.2rem; background: rgba(0,242,254,0.1); padding: 0.8rem; border-radius: 8px; font-weight: 600; color: #00f2fe; display: flex; justify-content: space-between;">
-            <span data-i18n="labTheoVal">Valeur Théorique : 0.90 A</span>
-            <span data-i18n="labErrorCalc">% Écart Calculé : 0.0% (Conforme)</span>
-          </div>
-
-          <div style="margin-top: 1.5rem; text-align: center; padding: 2rem; background: #060912; border-radius: 12px; border: 1px solid rgba(0,242,254,0.3);">
-            <div id="bulb-glow" style="width: 60px; height: 60px; border-radius: 50%; background: #ffea00; margin: 0 auto; box-shadow: 0 0 30px #ffea00; transition: all 0.2s ease;"></div>
-            <p style="margin-top: 0.8rem; font-weight: 700; color: #fff;" data-i18n="labBulbTitle">Luminosité Ampoule en Temps Réel</p>
-          </div>
+          <div id="lab-sim-body"></div>
         </div>
       </div>
 

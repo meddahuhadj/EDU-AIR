@@ -1512,42 +1512,435 @@
     }
 
     // ============================================================
-    // MODULE 7: LABO AIR ELECTRIC CIRCUIT SIMULATOR
+    // MODULE 7: LABO AIR — SIMULATIONS STEM (Ohm, Punnett, pH, Électromagnétisme)
     // ============================================================
-    const sliderU = $("#slider-u");
-    const sliderR = $("#slider-r");
-    const valU = $("#val-u");
-    const valR = $("#val-r");
-    const valI = $("#val-i");
-    const bulb = $("#bulb-glow");
+    const labSelect = $("#lab-sim-select");
+    let labActiveKind = "";
+    let labRaf = null;
+    const labEmState = { compass: { x: 480, y: 210 }, angle: 0 };
+    const labSims = {
+      ohm: { html: labOhmHTML, bind: labBindOhm },
+      genetics: { html: labGenHTML, bind: labBindGen },
+      ph: { html: labPhHTML, bind: labBindPh },
+      em: { html: labEmHTML, bind: labBindEm }
+    };
 
-    function updateCircuit() {
-      if (!sliderU || !sliderR) return;
-      const u = parseFloat(sliderU.value);
-      const r = parseFloat(sliderR.value);
-      const i = (u / r).toFixed(2);
+    function labGcd(a, b) { return b ? labGcd(b, a % b) : Math.abs(a); }
 
-      if (valU) valU.textContent = `${u}V`;
-      if (valR) valR.textContent = `${r}Ω`;
-      if (valI) valI.textContent = `${i} A`;
+    function labStopRaf() {
+      if (labRaf) { cancelAnimationFrame(labRaf); labRaf = null; }
+    }
 
-      if (bulb) {
-        const brightness = Math.min(1.0, u / 18);
-        bulb.style.opacity = brightness;
-        bulb.style.boxShadow = `0 0 ${brightness * 40}px #ffea00`;
+    function labRenderSim(kind, silent) {
+      labStopRaf();
+      const sim = labSims[kind] || labSims.ohm;
+      labActiveKind = kind;
+      const body = $("#lab-sim-body");
+      if (body) body.innerHTML = sim.html();
+      sim.bind();
+      const titleEl = $("#lab-sim-title");
+      if (titleEl) {
+        titleEl.removeAttribute("data-i18n");
+        if (labSelect && labSelect.options[labSelect.selectedIndex]) {
+          titleEl.textContent = labSelect.options[labSelect.selectedIndex].text;
+        }
+      }
+      if (!silent && labSelect && labSelect.options[labSelect.selectedIndex]) {
+        visionShowToast("🧪 " + labSelect.options[labSelect.selectedIndex].text);
       }
     }
 
-    if (sliderU) sliderU.addEventListener("input", updateCircuit);
-    if (sliderR) sliderR.addEventListener("input", updateCircuit);
-
-    const labSelect = $("#lab-sim-select");
     if (labSelect) {
-      labSelect.addEventListener("change", (e) => {
-        const titleEl = $("#lab-sim-title");
-        if (titleEl) titleEl.textContent = `⚡ ${e.target.options[e.target.selectedIndex].text}`;
-        alert(`🧪 Simulation chargée : ${e.target.options[e.target.selectedIndex].text}`);
+      labSelect.addEventListener("change", () => labRenderSim(labSelect.value));
+      labRenderSim(labSelect.value || "ohm", true);
+    }
+
+    // --- Simulation 1 : Circuit électrique (Loi d'Ohm) ---
+    function labOhmHTML() {
+      return `<div style="display:flex; gap:2rem; align-items:center; flex-wrap:wrap; margin-bottom:1rem;">
+        <div>
+          <label style="font-weight:700; color:#00f2fe; font-size:.9rem;">${visionT("labVoltage")} <span id="val-u" style="color:#fff;">9V</span></label>
+          <input type="range" id="slider-u" min="1" max="24" value="9" style="width:200px; display:block; margin-top:.5rem;">
+        </div>
+        <div>
+          <label style="font-weight:700; color:#ffb84d; font-size:.9rem;">${visionT("labResistance")} <span id="val-r" style="color:#fff;">10Ω</span></label>
+          <input type="range" id="slider-r" min="1" max="100" value="10" style="width:200px; display:block; margin-top:.5rem;">
+        </div>
+        <div style="font-size:1.2rem; font-weight:800; color:#3ddc97;">
+          ${visionT("labCurrent")} <span id="val-i">0.90 A</span>
+        </div>
+      </div>
+      <div style="margin-bottom:1rem; background:rgba(0,242,254,0.1); padding:.8rem; border-radius:8px; font-weight:600; color:#00f2fe; display:flex; justify-content:space-between; flex-wrap:wrap; gap:.4rem;">
+        <span>${visionT("labTheoVal")}</span>
+        <span>${visionT("labErrorCalc")}</span>
+      </div>
+      <div style="text-align:center; padding:2rem; background:#060912; border-radius:12px; border:1px solid rgba(0,242,254,0.3);">
+        <div id="bulb-glow" style="width:60px; height:60px; border-radius:50%; background:#ffea00; margin:0 auto; box-shadow:0 0 30px #ffea00; transition:all .2s ease;"></div>
+        <p style="margin-top:.8rem; font-weight:700; color:#fff; font-size:.85rem;">${visionT("labBulbTitle")}</p>
+      </div>`;
+    }
+
+    function labBindOhm() {
+      const su = $("#slider-u"), sr = $("#slider-r");
+      const vu = $("#val-u"), vr = $("#val-r"), vi = $("#val-i");
+      const bulb = $("#bulb-glow");
+      if (!su || !sr) return;
+      const upd = () => {
+        const u = parseFloat(su.value), r = parseFloat(sr.value);
+        const i = u / r;
+        if (vu) vu.textContent = `${u}V`;
+        if (vr) vr.textContent = `${r}Ω`;
+        if (vi) vi.textContent = `${i.toFixed(2)} A`;
+        if (bulb) {
+          const b = Math.min(1.0, u / 18);
+          bulb.style.opacity = b;
+          bulb.style.boxShadow = `0 0 ${(b * 40).toFixed(1)}px #ffea00`;
+        }
+      };
+      su.addEventListener("input", upd);
+      sr.addEventListener("input", upd);
+      upd();
+    }
+
+    // --- Simulation 2 : Tableau de Punnett (Génétique) ---
+    function labGenHTML() {
+      return `<div style="display:flex; gap:1rem; flex-wrap:wrap; align-items:center; margin-bottom:1rem;">
+        <label style="color:#9fb0cf; font-size:.82rem;">${visionT("labGeneLabel")}
+          <input id="gen-letter" value="T" maxlength="1" style="width:44px; text-align:center; background:#040710; color:#fff; border:1px solid rgba(126,195,255,0.3); border-radius:6px; padding:4px; font-size:1rem; margin-left:.4rem;">
+        </label>
+        <label style="color:#9fb0cf; font-size:.82rem;">${visionT("labMother")}
+          <select id="gen-mom" class="select-custom"><option value="AA">AA</option><option value="Aa" selected>Aa</option><option value="aa">aa</option></select>
+        </label>
+        <label style="color:#9fb0cf; font-size:.82rem;">${visionT("labFather")}
+          <select id="gen-dad" class="select-custom"><option value="AA">AA</option><option value="Aa" selected>Aa</option><option value="aa">aa</option></select>
+        </label>
+      </div>
+      <h4 style="color:#fff; margin-bottom:.6rem; font-size:.9rem;">${visionT("labGenGrid")}</h4>
+      <div id="gen-table" style="display:flex; justify-content:center; overflow-x:auto;"></div>
+      <div id="gen-ratios" style="display:flex; gap:1rem; flex-wrap:wrap; margin-top:1rem;"></div>`;
+    }
+
+    function labGenRedraw() {
+      const mom = $("#gen-mom"), dad = $("#gen-dad"), letterIn = $("#gen-letter");
+      if (!mom || !dad || !letterIn) return;
+      const letter = (letterIn.value || "T").trim().charAt(0) || "T";
+      const L = letter.toUpperCase();
+      const l = L.toLowerCase();
+      const toL = (allele) => allele === "A" ? L : l;
+      const gam = (g) => [toL(g.charAt(0)), toL(g.charAt(1))];
+      const mg = gam(mom.value), dg = gam(dad.value);
+      const table = $("#gen-table");
+      let html = `<table style="border-collapse:collapse; font-size:1.05rem;"><tr><td style="width:40px;"></td>`;
+      dg.forEach(x => { html += `<th style="color:#ffd166; padding:10px; font-size:1.15rem; border:1px solid rgba(126,195,255,0.3);">${x}</th>`; });
+      html += "</tr>";
+      const counts = { [L + L]: 0, [L + l]: 0, [l + l]: 0 };
+      mg.forEach(ma => {
+        html += `<tr><td style="color:#3ddc97; padding:10px; font-size:1.15rem; border:1px solid rgba(126,195,255,0.3);">${ma}</td>`;
+        dg.forEach(da => {
+          const pair = [ma, da].sort();
+          const key = pair.join("");
+          counts[key] = (counts[key] || 0) + 1;
+          const dom = pair[0] === L;
+          html += `<td style="padding:12px 20px; text-align:center; border:1px solid rgba(126,195,255,0.3); background:${dom ? "rgba(0,242,254,0.12)" : "rgba(255,93,93,0.12)"}; color:#fff; font-weight:800; font-size:1.1rem;">${key}</td>`;
+        });
+        html += "</tr>";
       });
+      html += "</table>";
+      table.innerHTML = html;
+      const dom = counts[L + L] + counts[L + l];
+      const rec = counts[l + l];
+      const gGcd = labGcd(labGcd(counts[L + L], counts[L + l]), counts[l + l]);
+      const genoRatio = [counts[L + L], counts[L + l], counts[l + l]].map(n => gGcd ? n / gGcd : n).join(" : ");
+      const pGcd = labGcd(dom, rec);
+      const phenoRatio = (pGcd ? dom / pGcd : dom) + " : " + (pGcd ? rec / pGcd : rec);
+      const ratios = $("#gen-ratios");
+      if (ratios) {
+        ratios.innerHTML =
+          `<span style="background:rgba(10,20,38,0.8); border:1px solid rgba(126,195,255,0.2); padding:.5rem .8rem; border-radius:10px; color:#fff; font-size:.85rem;">${visionT("labGenoRatio")} <b style="color:#00f2fe;">${genoRatio}</b> <span style="color:#9fb0cf;">(${L}${L}×${counts[L + L]} · ${L}${l}×${counts[L + l]} · ${l}${l}×${counts[l + l]})</span></span>` +
+          `<span style="background:rgba(10,20,38,0.8); border:1px solid rgba(126,195,255,0.2); padding:.5rem .8rem; border-radius:10px; color:#fff; font-size:.85rem;">${visionT("labPhenoRatio")} <b style="color:#3ddc97;">${phenoRatio}</b></span>`;
+      }
+    }
+
+    function labBindGen() {
+      const mom = $("#gen-mom"), dad = $("#gen-dad"), letterIn = $("#gen-letter");
+      if (mom) mom.addEventListener("change", labGenRedraw);
+      if (dad) dad.addEventListener("change", labGenRedraw);
+      if (letterIn) letterIn.addEventListener("input", labGenRedraw);
+      labGenRedraw();
+    }
+
+    // --- Simulation 3 : Titrage Acide-Base (courbe de pH) ---
+    function labPhHTML() {
+      return `<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:1rem; margin-bottom:1rem;">
+        <label style="color:#00f2fe; font-size:.82rem; font-weight:700;">${visionT("labPhCa")}<br><input type="range" id="ph-ca" min="0.05" max="2" step="0.05" value="0.1" style="width:100%;"></label>
+        <label style="color:#00f2fe; font-size:.82rem; font-weight:700;">${visionT("labPhVa")}<br><input type="range" id="ph-va" min="10" max="50" step="1" value="25" style="width:100%;"></label>
+        <label style="color:#ffb84d; font-size:.82rem; font-weight:700;">${visionT("labPhCb")}<br><input type="range" id="ph-cb" min="0.05" max="1" step="0.05" value="0.1" style="width:100%;"></label>
+        <label style="color:#3ddc97; font-size:.82rem; font-weight:700;">${visionT("labPhVb")}<br><input type="range" id="ph-vb" min="0" max="80" step="0.5" value="0" style="width:100%;"></label>
+      </div>
+      <div style="display:flex; gap:1rem; flex-wrap:wrap;">
+        <canvas id="ph-curve" width="620" height="360" style="flex:1; min-width:300px; border:1px solid rgba(126,195,255,0.25); border-radius:10px; background:#060912;"></canvas>
+        <div style="width:250px; min-width:220px;">
+          <div style="display:flex; align-items:center; gap:.6rem; background:rgba(10,20,38,0.8); border:1px solid rgba(126,195,255,0.2); padding:.8rem; border-radius:10px; margin-bottom:.6rem;">
+            <span style="color:#9fb0cf; font-size:.85rem;">${visionT("labPhCurrent")}</span>
+            <span id="ph-val" style="font-size:1.5rem; font-weight:800; margin-left:auto;">7.00</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:.6rem; background:rgba(10,20,38,0.8); border:1px solid rgba(126,195,255,0.2); padding:.8rem; border-radius:10px; margin-bottom:.6rem;">
+            <span id="ph-chip" style="width:26px; height:26px; border-radius:6px; background:#7f7f7f; border:1px solid rgba(255,255,255,0.2);"></span>
+            <span style="color:#9fb0cf; font-size:.85rem;">${visionT("labPhEquiv")} <b id="ph-ve" style="color:#00f2fe;">0.0 mL</b></span>
+          </div>
+          <div style="background:rgba(10,20,38,0.8); border:1px solid rgba(126,195,255,0.2); padding:.8rem; border-radius:10px;">
+            <div style="color:#9fb0cf; font-size:.85rem; margin-bottom:.5rem;">${visionT("labPhIndic")}</div>
+            <div style="display:flex; gap:.7rem; align-items:center;">
+              <div id="ph-pheno" style="width:18px; height:44px; border-radius:9px; border:1px solid rgba(255,255,255,0.25); background:linear-gradient(180deg,#ffffff,#e0e0e0); transition:background .3s;"></div>
+              <span id="ph-pheno-label" style="font-size:.8rem; color:#9fb0cf;">${visionT("labPhColorless")}</span>
+            </div>
+            <p style="color:#5f7ea0; font-size:.75rem; margin-top:.5rem;">pH &lt; 8.2 → ${visionT("labPhColorless")} · pH &gt; 8.2 → ${visionT("labPhPink")}</p>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    function labPhAt(Vb, Ca, Va, Cb) {
+      const Ve = (Ca * Va) / Cb;
+      if (Math.abs(Vb - Ve) < 1e-9) return 7;
+      if (Vb < Ve) {
+        const H = (Ca * Va - Cb * Vb) / (Va + Vb);
+        return H > 0 ? Math.max(0, -Math.log10(H)) : 7;
+      }
+      const OH = (Cb * Vb - Ca * Va) / (Va + Vb);
+      return OH > 0 ? Math.min(14, 14 + Math.log10(OH)) : 7;
+    }
+
+    function labPhColor(pH) {
+      const stops = [[0, "#ff1744"], [2, "#ff6d00"], [4, "#ffd600"], [6, "#aeea00"], [7, "#00c853"], [9, "#00b0ff"], [11, "#2979ff"], [13, "#6200ea"]];
+      let a = stops[0], b = stops[stops.length - 1];
+      for (let i = 0; i < stops.length - 1; i++) {
+        if (pH >= stops[i][0] && pH <= stops[i + 1][0]) { a = stops[i]; b = stops[i + 1]; break; }
+      }
+      const t = Math.max(0, Math.min(1, (pH - a[0]) / ((b[0] - a[0]) || 1)));
+      const hr = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+      const ra = hr(a[1]), rb = hr(b[1]);
+      return `rgb(${Math.round(ra[0] + (rb[0] - ra[0]) * t)},${Math.round(ra[1] + (rb[1] - ra[1]) * t)},${Math.round(ra[2] + (rb[2] - ra[2]) * t)})`;
+    }
+
+    function labPhRedraw() {
+      const cv = $("#ph-curve");
+      if (!cv) return;
+      const g = cv.getContext("2d");
+      const W = cv.width, H = cv.height;
+      const Ca = parseFloat($("#ph-ca").value) || 0.1;
+      const Va = parseFloat($("#ph-va").value) || 25;
+      const Cb = parseFloat($("#ph-cb").value) || 0.1;
+      const Vb = parseFloat($("#ph-vb").value) || 0;
+      const Ve = (Ca * Va) / Cb;
+      const xMax = Math.min(Math.max(Ve * 2.6, 30), 90);
+      const padL = 42, padR = 12, padT = 12, padB = 28;
+      const pw = W - padL - padR, ph = H - padT - padB;
+      const X = (v) => padL + (v / xMax) * pw;
+      const Y = (p) => padT + (1 - p / 14) * ph;
+      g.clearRect(0, 0, W, H);
+      g.fillStyle = "#060912";
+      g.fillRect(0, 0, W, H);
+      g.strokeStyle = "rgba(126,195,255,0.15)";
+      g.lineWidth = 1;
+      for (let p = 0; p <= 14; p += 2) { g.beginPath(); g.moveTo(padL, Y(p)); g.lineTo(W - padR, Y(p)); g.stroke(); }
+      for (let v = 0; v <= xMax; v += 5) { g.beginPath(); g.moveTo(X(v), padT); g.lineTo(X(v), H - padB); g.stroke(); }
+      g.strokeStyle = "#9fb0cf";
+      g.beginPath(); g.moveTo(padL, padT); g.lineTo(padL, H - padB); g.stroke();
+      g.beginPath(); g.moveTo(padL, H - padB); g.lineTo(W - padR, H - padB); g.stroke();
+      g.fillStyle = "#9fb0cf";
+      g.font = "11px Segoe UI, sans-serif";
+      g.textAlign = "right";
+      for (let p = 0; p <= 14; p += 2) g.fillText(String(p), padL - 5, Y(p) + 4);
+      g.textAlign = "center";
+      for (let v = 0; v <= xMax; v += 5) g.fillText(String(v), X(v), H - padB + 14);
+      g.strokeStyle = "#00f2fe";
+      g.lineWidth = 2.5;
+      g.beginPath();
+      const steps = 300;
+      for (let i = 0; i <= steps; i++) {
+        const v = (i / steps) * xMax;
+        const pv = labPhAt(v, Ca, Va, Cb);
+        if (i === 0) g.moveTo(X(v), Y(pv)); else g.lineTo(X(v), Y(pv));
+      }
+      g.stroke();
+      g.strokeStyle = "rgba(255,93,93,0.7)";
+      g.setLineDash([5, 4]);
+      g.lineWidth = 1.5;
+      g.beginPath(); g.moveTo(X(Ve), padT); g.lineTo(X(Ve), H - padB); g.stroke();
+      g.setLineDash([]);
+      g.fillStyle = "#ff5d5d";
+      g.beginPath(); g.arc(X(Ve), Y(7), 5, 0, 2 * Math.PI); g.fill();
+      g.font = "bold 11px Segoe UI, sans-serif";
+      g.textAlign = "center";
+      g.fillText(visionT("labPhEquiv") + " " + Ve.toFixed(1) + " mL", Math.min(X(Ve) + 38, W - 60), Y(3));
+      const cur = labPhAt(Vb, Ca, Va, Cb);
+      if (Vb <= xMax) {
+        g.fillStyle = "#ffd166";
+        g.beginPath(); g.arc(X(Vb), Y(cur), 5.5, 0, 2 * Math.PI); g.fill();
+        g.strokeStyle = "#ffd166";
+        g.lineWidth = 1;
+        g.beginPath(); g.arc(X(Vb), Y(cur), 9, 0, 2 * Math.PI); g.stroke();
+        g.fillStyle = "#fff";
+        g.textAlign = "left";
+        g.font = "bold 12px Segoe UI, sans-serif";
+        g.fillText("pH " + cur.toFixed(2), Math.min(X(Vb) + 12, W - 110), Y(cur) - 10);
+      }
+      const valEl = $("#ph-val");
+      if (valEl) { valEl.textContent = cur.toFixed(2); valEl.style.color = labPhColor(cur); }
+      const veEl = $("#ph-ve");
+      if (veEl) veEl.textContent = Ve.toFixed(1) + " mL";
+      const chip = $("#ph-chip");
+      if (chip) chip.style.background = labPhColor(cur);
+      const tube = $("#ph-pheno");
+      if (tube) tube.style.background = cur > 8.2 ? "linear-gradient(180deg,#ff4081,#c51162)" : "linear-gradient(180deg,#ffffff,#e0e0e0)";
+      const plabel = $("#ph-pheno-label");
+      if (plabel) plabel.textContent = cur > 8.2 ? visionT("labPhPink") : visionT("labPhColorless");
+    }
+
+    function labBindPh() {
+      ["#ph-ca", "#ph-va", "#ph-cb", "#ph-vb"].forEach(sel => {
+        const el = $(sel);
+        if (el) el.addEventListener("input", labPhRedraw);
+      });
+      labPhRedraw();
+    }
+
+    // --- Simulation 4 : Champ magnétique d'un fil droit ---
+    function labEmHTML() {
+      return `<div style="display:flex; gap:1rem; flex-wrap:wrap; align-items:center; margin-bottom:.8rem;">
+        <label style="color:#9fb0cf; font-size:.82rem; font-weight:700;">${visionT("labEmCurrent")}
+          <input type="range" id="em-I" min="-5" max="5" step="0.1" value="3" style="width:200px; vertical-align:middle; margin-left:.5rem;">
+        </label>
+        <span id="em-Ival" style="color:#fff; font-weight:800; font-size:1.1rem;">3.0 A</span>
+        <span id="em-dir" style="color:#3ddc97; font-size:.8rem; font-weight:700;"></span>
+      </div>
+      <div style="display:flex; gap:1rem; flex-wrap:wrap;">
+        <canvas id="em-canvas" width="640" height="420" style="flex:1; min-width:320px; border:1px solid rgba(126,195,255,0.25); border-radius:10px; background:#060912; touch-action:none; cursor:grab;"></canvas>
+        <div style="width:250px; min-width:220px; align-self:flex-start; background:rgba(10,20,38,0.8); border:1px solid rgba(126,195,255,0.2); padding:.9rem; border-radius:10px;">
+          <div style="color:#9fb0cf; font-size:.85rem; margin-bottom:.4rem;">${visionT("labEmField")}</div>
+          <div style="font-size:1.6rem; font-weight:800; color:#00f2fe;" id="em-B">0.0 µT</div>
+          <div style="font-size:.78rem; color:#9fb0cf; margin-top:.4rem;" id="em-dir2"></div>
+        </div>
+      </div>
+      <p style="color:#9fb0cf; font-size:.8rem; margin-top:.6rem;">${visionT("labEmHint")}</p>`;
+    }
+
+    function labEmRedraw() {
+      const cv = $("#em-canvas");
+      if (!cv) return;
+      const I = parseFloat(($("#em-I") || { value: 3 }).value || 3);
+      const g = cv.getContext("2d");
+      const W = cv.width, H = cv.height;
+      const cx = W / 2, cy = H / 2;
+      g.clearRect(0, 0, W, H);
+      g.fillStyle = "#060912";
+      g.fillRect(0, 0, W, H);
+      const sign = I >= 0 ? 1 : -1;
+      const Iabs = Math.abs(I);
+      const radii = [46, 92, 140, 190];
+      g.strokeStyle = "rgba(0,242,254,0.22)";
+      g.lineWidth = 1.5;
+      radii.forEach(r => { g.beginPath(); g.arc(cx, cy, r, 0, 2 * Math.PI); g.stroke(); });
+      if (Iabs > 0.01) {
+        g.strokeStyle = "rgba(0,242,254,0.75)";
+        g.lineWidth = 2;
+        const angles = [0, Math.PI / 4, Math.PI / 2, 3 * Math.PI / 4, Math.PI, 5 * Math.PI / 4, 3 * Math.PI / 2, 7 * Math.PI / 4];
+        radii.forEach(r => {
+          angles.forEach(a => {
+            const px = cx + r * Math.cos(a), py = cy + r * Math.sin(a);
+            const dx = -Math.sin(a) * sign, dy = Math.cos(a) * sign;
+            const hx = px + dx * 8, hy = py + dy * 8;
+            g.beginPath(); g.moveTo(px - dx * 8, py - dy * 8); g.lineTo(hx, hy); g.stroke();
+            const qax = hx - dy * 5, qay = hy + dx * 5;
+            const qbx = hx + dy * 5, qby = hy - dx * 5;
+            g.beginPath(); g.moveTo(hx + dx * 6, hy + dy * 6); g.lineTo(qax, qay); g.lineTo(qbx, qby); g.closePath();
+            g.fillStyle = "rgba(0,242,254,0.85)"; g.fill();
+          });
+        });
+      }
+      const R = 190, n = 4;
+      for (let i = 0; i < n; i++) {
+        const a = (2 * Math.PI * i / n) + labEmState.angle;
+        g.beginPath(); g.arc(cx + R * Math.cos(a), cy + R * Math.sin(a), 4, 0, 2 * Math.PI);
+        g.fillStyle = "rgba(61,220,151,0.8)"; g.fill();
+      }
+      g.strokeStyle = "#fff";
+      g.lineWidth = 2;
+      g.beginPath(); g.arc(cx, cy, 13, 0, 2 * Math.PI);
+      g.fillStyle = sign >= 0 ? "#7cc3ff" : "#ff5d5d";
+      g.fill(); g.stroke();
+      g.fillStyle = "#fff";
+      g.font = "bold 16px Segoe UI, sans-serif";
+      g.textAlign = "center";
+      g.textBaseline = "middle";
+      g.fillText(sign >= 0 ? "•" : "×", cx, cy + (sign >= 0 ? 1 : 0));
+      g.textBaseline = "alphabetic";
+      const comp = labEmState.compass;
+      const dxc = comp.x - cx, dyc = comp.y - cy;
+      const r = Math.hypot(dxc, dyc);
+      let needleAngle = null;
+      if (r > 18 && Iabs > 0.01) needleAngle = Math.atan2(dyc, dxc) + (Math.PI / 2) * sign;
+      g.strokeStyle = "rgba(255,255,255,0.3)";
+      g.lineWidth = 1.5;
+      g.beginPath(); g.arc(comp.x, comp.y, 26, 0, 2 * Math.PI); g.stroke();
+      g.fillStyle = "#9fb0cf";
+      g.font = "10px Segoe UI, sans-serif";
+      g.textAlign = "center";
+      g.fillText("N", comp.x, comp.y - 29);
+      if (needleAngle !== null) {
+        g.lineWidth = 3.5;
+        g.strokeStyle = "#ff5d5d";
+        g.beginPath(); g.moveTo(comp.x, comp.y); g.lineTo(comp.x + 20 * Math.cos(needleAngle), comp.y + 20 * Math.sin(needleAngle)); g.stroke();
+        g.strokeStyle = "#e8effc";
+        g.beginPath(); g.moveTo(comp.x, comp.y); g.lineTo(comp.x - 20 * Math.cos(needleAngle), comp.y - 20 * Math.sin(needleAngle)); g.stroke();
+        g.beginPath(); g.arc(comp.x + 20 * Math.cos(needleAngle), comp.y + 20 * Math.sin(needleAngle), 3, 0, 2 * Math.PI);
+        g.fillStyle = "#ff5d5d"; g.fill();
+      } else {
+        g.strokeStyle = "#666";
+        g.lineWidth = 2.5;
+        g.beginPath(); g.moveTo(comp.x - 7, comp.y); g.lineTo(comp.x + 7, comp.y); g.stroke();
+      }
+      const rMeter = r * 0.002;
+      const Bval = Iabs > 0.01 && rMeter > 0.02 ? (0.2 * Iabs) / rMeter : 0;
+      const bEl = $("#em-B");
+      if (bEl) bEl.textContent = Bval.toFixed(1) + " µT";
+      const dEl = $("#em-dir2");
+      if (dEl) dEl.textContent = I >= 0 ? visionT("labEmDirOut") : visionT("labEmDirIn");
+    }
+
+    function labEmLoop() {
+      if (labActiveKind !== "em") { labRaf = null; return; }
+      const I = parseFloat(($("#em-I") || { value: 3 }).value || 3);
+      const S = I >= 0 ? 1 : -1;
+      labEmState.angle = (labEmState.angle + 0.012 * S + 2 * Math.PI) % (2 * Math.PI);
+      labEmRedraw();
+      labRaf = requestAnimationFrame(labEmLoop);
+    }
+
+    function labBindEm() {
+      const I = $("#em-I"), Iv = $("#em-Ival"), dirEl = $("#em-dir");
+      const setDir = (v) => {
+        const iv = parseFloat(v) || 0;
+        if (Iv) Iv.textContent = iv.toFixed(1) + " A";
+        if (dirEl) {
+          dirEl.textContent = iv >= 0 ? visionT("labEmDirOut") : visionT("labEmDirIn");
+          dirEl.style.color = iv >= 0 ? "#3ddc97" : "#ff5d5d";
+        }
+        labEmRedraw();
+      };
+      if (I) I.addEventListener("input", () => setDir(I.value));
+      const cv = $("#em-canvas");
+      if (cv) {
+        const pos = (ev) => {
+          const rect = cv.getBoundingClientRect();
+          return { x: (ev.clientX - rect.left) * (cv.width / rect.width), y: (ev.clientY - rect.top) * (cv.height / rect.height) };
+        };
+        cv.addEventListener("pointerdown", (ev) => { labEmState.compass = pos(ev); try { cv.setPointerCapture(ev.pointerId); } catch (e) {} });
+        cv.addEventListener("pointermove", (ev) => { labEmState.compass = pos(ev); labEmRedraw(); });
+      }
+      setDir(I ? I.value : 3);
+      labEmLoop();
     }
 
     // ============================================================
