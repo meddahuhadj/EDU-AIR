@@ -434,27 +434,190 @@
 
       <!-- ================= MODULE 3: POINTEUR AIR ================= -->
       <div class="module-view" id="view-pointer">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
-          <h2 style="color: #00f2fe;" data-i18n="pointerTitle">🎯 Pointeur Air — Test & Laser Virtuel</h2>
-          <button type="button" class="btn-app btn-app-primary" id="btn-pointer-laser-mode" data-i18n="btnLaserMode">🔴 Mode Laser Virtuel (Désignation)</button>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem; flex-wrap: wrap; gap: 0.5rem;">
+          <h2 style="color: #00f2fe;" data-i18n="pointerTitle">🎯 Pointeur Air — Télécommande Pédagogique Intelligente</h2>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button type="button" class="btn-app btn-app-primary" id="btn-pointer-laser-mode" data-i18n="btnLaserMode">🔴 Mode Laser Virtuel (Désignation)</button>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-toggle-command-center" style="border-color: #3ddc97; color: #3ddc97;">⚙️ Gesture Command Center</button>
+          </div>
         </div>
 
-        <div style="background: rgba(10,20,38,0.8); border: 1px solid rgba(126,195,255,0.2); padding: 1.5rem; border-radius: 14px; margin-bottom: 1rem;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-            <p data-i18n="pointerDesc">Déplacez votre pointeur dans la zone ci-dessous pour tester la sensibilité et la précision.</p>
-            <div style="display: flex; gap: 0.5rem; align-items: center;">
+        <!-- Remote Modes Selection Bar (10 Pedagogical Remote Modes) -->
+        <div style="background: rgba(6,9,18,0.85); border: 1px solid rgba(0,242,254,0.3); padding: 0.8rem 1rem; border-radius: 12px; margin-bottom: 0.8rem;">
+          <div style="font-size: 0.82rem; color: #9fb0cf; margin-bottom: 0.5rem; font-weight: 600;">🎛️ MODES TÉLÉCOMMANDE PÉDAGOGIQUE :</div>
+          <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;" id="pointer-modes-bar">
+            <button type="button" class="tool-chip active" data-pointer-mode="cursor">🖱️ Cursor</button>
+            <button type="button" class="tool-chip" data-pointer-mode="click">👆 Click</button>
+            <button type="button" class="tool-chip" data-pointer-mode="scroll">✋ Scroll</button>
+            <button type="button" class="tool-chip" data-pointer-mode="prev">👈 Previous</button>
+            <button type="button" class="tool-chip" data-pointer-mode="next">👉 Next</button>
+            <button type="button" class="tool-chip" data-pointer-mode="zoom">🤏 Zoom</button>
+            <button type="button" class="tool-chip" data-pointer-mode="hold">✊ Hold</button>
+            <button type="button" class="tool-chip" data-pointer-mode="pause">✌️ Pause</button>
+            <button type="button" class="tool-chip" data-pointer-mode="confirm">👍 Confirm</button>
+            <button type="button" class="tool-chip" data-pointer-mode="return">👋 Return</button>
+          </div>
+        </div>
+
+        <!-- Telemetry & Test Zone Grid -->
+        <div style="display: grid; grid-template-columns: 1fr 310px; gap: 1rem; margin-bottom: 1rem;" class="pointer-stage-grid">
+          <!-- Main Laser Field -->
+          <div style="background: #060912; border: 2px dashed rgba(0,242,254,0.4); border-radius: 14px; position: relative; min-height: 360px; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; padding: 1rem;" id="pointer-test-zone">
+            <!-- Top Target Interactive Row -->
+            <div style="display: flex; justify-content: space-around; width: 100%; z-index: 5; flex-wrap: wrap; gap: 0.4rem;">
+              <button class="btn-app btn-app-ghost pointer-target-btn" data-target-gesture="pinch" style="border: 1px solid #00f2fe; color: #00f2fe; font-size: 0.8rem;">🎯 Cible (Pinch)</button>
+              <button class="btn-app btn-app-ghost pointer-target-btn" data-target-gesture="swipe_left" style="border: 1px solid #ffb84d; color: #ffb84d; font-size: 0.8rem;">👈 Swipe Gauche</button>
+              <button class="btn-app btn-app-ghost pointer-target-btn" data-target-gesture="swipe_right" style="border: 1px solid #3ddc97; color: #3ddc97; font-size: 0.8rem;">👉 Swipe Droit</button>
+              <button class="btn-app btn-app-ghost pointer-target-btn" data-target-gesture="thumbs_up" style="border: 1px solid #ff5d5d; color: #ff5d5d; font-size: 0.8rem;">👍 Confirmer</button>
+            </div>
+
+            <!-- Center Target Display -->
+            <div style="text-align: center; z-index: 5; pointer-events: none; margin-block: 1.5rem;">
+              <span style="font-size: 3.2rem;" id="pointer-mode-icon">🎯</span>
+              <p style="color: #00f2fe; font-weight: 700; margin-top: 0.4rem; font-size: 1.1rem;" id="pointer-mode-label" data-i18n="pointerActiveLabel">Mode Pointeur Laser Actif</p>
+              <p style="font-size: 0.85rem; color: #9fb0cf;" id="pointer-hint-text" data-i18n="pointerHint">Pincez (index + pouce) pour cliquer sur les cibles</p>
+            </div>
+
+            <!-- User Selector Footer -->
+            <div style="display: flex; justify-content: space-between; align-items: center; z-index: 5; background: rgba(10,20,38,0.7); padding: 0.4rem 0.8rem; border-radius: 8px;">
               <span style="font-size: 0.8rem; color: #9fb0cf;">Curseur Utilisateur :</span>
-              <button class="btn-app btn-app-ghost" style="padding: 0.2rem 0.5rem; color: #00f2fe;" data-i18n="user1Label">User 1 (Cyan)</button>
-              <button class="btn-app btn-app-ghost" style="padding: 0.2rem 0.5rem; color: #ffb84d;" data-i18n="user2Label">User 2 (Amber)</button>
+              <div style="display: flex; gap: 0.4rem;">
+                <button class="btn-app btn-app-ghost" style="padding: 0.2rem 0.5rem; color: #00f2fe; font-size: 0.78rem;" data-i18n="user1Label">User 1 (Cyan)</button>
+                <button class="btn-app btn-app-ghost" style="padding: 0.2rem 0.5rem; color: #ffb84d; font-size: 0.78rem;" data-i18n="user2Label">User 2 (Amber)</button>
+              </div>
             </div>
           </div>
 
-          <div style="width: 100%; height: 350px; background: #060912; border: 2px dashed rgba(0,242,254,0.4); border-radius: 12px; display: flex; align-items: center; justify-content: center; position: relative;" id="pointer-test-zone">
-            <div style="text-align: center;">
-              <span style="font-size: 3rem;">🎯</span>
-              <p style="color: #00f2fe; font-weight: 700; margin-top: 0.5rem;" id="pointer-mode-label" data-i18n="pointerActiveLabel">Mode Pointeur Laser Actif</p>
-              <p style="font-size: 0.85rem; color: #9fb0cf;" data-i18n="pointerHint">Pincez (index + pouce) pour cliquer sur les cibles</p>
+          <!-- Real-Time Gesture Telemetry & Confidence HUD -->
+          <div style="background: rgba(10,20,38,0.9); border: 1px solid rgba(0,242,254,0.4); padding: 1.2rem; border-radius: 14px; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.8rem; border-bottom: 1px solid rgba(0,242,254,0.2); padding-bottom: 0.5rem;">
+                <h4 style="color: #00f2fe; margin: 0; font-size: 0.95rem;">📡 Telemetry HUD & Confidence</h4>
+                <span class="dot" style="background: #3ddc97; box-shadow: 0 0 8px #3ddc97;"></span>
+              </div>
+
+              <!-- Live Gesture Detected Badge -->
+              <div style="background: rgba(6,9,18,0.85); border: 1px solid rgba(61,220,151,0.4); padding: 0.8rem; border-radius: 10px; margin-bottom: 0.8rem;">
+                <div style="font-size: 0.75rem; color: #9fb0cf; text-transform: uppercase; letter-spacing: 0.5px;">Gesture Detected :</div>
+                <div id="hud-gesture-detected" style="font-size: 1.4rem; font-weight: 800; color: #3ddc97; font-family: monospace; margin-top: 0.2rem;">
+                  PINCH
+                </div>
+              </div>
+
+              <!-- Confidence Progress Bar -->
+              <div style="margin-bottom: 1rem;">
+                <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: #e8effc; margin-bottom: 0.3rem;">
+                  <span>Confidence Level:</span>
+                  <strong id="hud-confidence-val" style="color: #00f2fe;">96%</strong>
+                </div>
+                <div style="width: 100%; height: 10px; background: rgba(255,255,255,0.1); border-radius: 5px; overflow: hidden; border: 1px solid rgba(0,242,254,0.3);">
+                  <div id="hud-confidence-bar" style="width: 96%; height: 100%; background: linear-gradient(90deg, #00f2fe, #3ddc97); transition: width 0.3s ease; box-shadow: 0 0 10px #3ddc97;"></div>
+                </div>
+              </div>
+
+              <!-- Additional Telemetry Stats -->
+              <div style="font-size: 0.8rem; color: #9fb0cf; display: flex; flex-direction: column; gap: 0.4rem; background: rgba(6,9,18,0.6); padding: 0.6rem; border-radius: 8px;">
+                <div>📍 Coordonnées : <strong id="hud-coords" style="color: #fff;">X=369px, Y=27px</strong></div>
+                <div>⚡ Latence : <strong style="color: #3ddc97;">12 ms</strong> | FPS : <strong style="color: #00f2fe;">60 FPS</strong></div>
+                <div>🎬 Mode Actif : <strong id="hud-active-mode" style="color: #ffb84d;">🖱️ Cursor</strong></div>
+              </div>
             </div>
+
+            <div style="font-size: 0.75rem; color: #3ddc97; background: rgba(61,220,151,0.15); border: 1px solid rgba(61,220,151,0.3); padding: 0.4rem 0.6rem; border-radius: 6px; text-align: center; margin-top: 0.8rem;">
+              ✓ Télécommande Pédagogique Active
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= GESTURE COMMAND CENTER (CENTRE DE COMMANDE DES GESTES) ================= -->
+        <div id="gesture-command-center-box" style="background: rgba(10,20,38,0.9); border: 1px solid rgba(61,220,151,0.4); padding: 1.2rem; border-radius: 14px; margin-top: 1rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+            <h3 style="color: #3ddc97; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+              <span>⚙️ Gesture Command Center</span>
+              <small style="font-size: 0.78rem; color: #9fb0cf; font-weight: normal;">(Personnalisation des actions enseignants)</small>
+            </h3>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-reset-gestures" style="font-size: 0.8rem;">🔄 Réinitialiser par Défaut</button>
+          </div>
+
+          <!-- Gesture Mapping Table Grid -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 0.8rem; margin-bottom: 1rem;">
+            
+            <div style="background: #060912; border: 1px solid rgba(0,242,254,0.3); padding: 0.8rem; border-radius: 10px;">
+              <div style="font-weight: bold; color: #00f2fe; margin-bottom: 0.4rem; font-size: 0.88rem;">🤏 Pinch (Pincement)</div>
+              <select class="select-custom gesture-action-select" data-gesture="pinch" style="width: 100%; font-size: 0.82rem; padding: 0.3rem 0.5rem;">
+                <option value="click" selected>👆 Cliquer</option>
+                <option value="zoom">🤏 Zoom / Loupe</option>
+                <option value="select">🎯 Sélectionner</option>
+              </select>
+            </div>
+
+            <div style="background: #060912; border: 1px solid rgba(0,242,254,0.3); padding: 0.8rem; border-radius: 10px;">
+              <div style="font-weight: bold; color: #00f2fe; margin-bottom: 0.4rem; font-size: 0.88rem;">👈 Swipe Gauche</div>
+              <select class="select-custom gesture-action-select" data-gesture="swipe_left" style="width: 100%; font-size: 0.82rem; padding: 0.3rem 0.5rem;">
+                <option value="prev" selected>👈 Page précédente</option>
+                <option value="undo">↩ Annuler action</option>
+                <option value="return">👋 Return</option>
+              </select>
+            </div>
+
+            <div style="background: #060912; border: 1px solid rgba(0,242,254,0.3); padding: 0.8rem; border-radius: 10px;">
+              <div style="font-weight: bold; color: #00f2fe; margin-bottom: 0.4rem; font-size: 0.88rem;">👉 Swipe Droit</div>
+              <select class="select-custom gesture-action-select" data-gesture="swipe_right" style="width: 100%; font-size: 0.82rem; padding: 0.3rem 0.5rem;">
+                <option value="next" selected>👉 Page suivante</option>
+                <option value="confirm">👍 Confirmer</option>
+                <option value="export">📤 Export TNI</option>
+              </select>
+            </div>
+
+            <div style="background: #060912; border: 1px solid rgba(0,242,254,0.3); padding: 0.8rem; border-radius: 10px;">
+              <div style="font-weight: bold; color: #00f2fe; margin-bottom: 0.4rem; font-size: 0.88rem;">✌️ Deux Doigts</div>
+              <select class="select-custom gesture-action-select" data-gesture="two_fingers" style="width: 100%; font-size: 0.82rem; padding: 0.3rem 0.5rem;">
+                <option value="zoom" selected>🤏 Zoom / Agrandir</option>
+                <option value="scroll">✋ Défiler / Scroll</option>
+                <option value="pause">✌️ Pause</option>
+              </select>
+            </div>
+
+            <div style="background: #060912; border: 1px solid rgba(0,242,254,0.3); padding: 0.8rem; border-radius: 10px;">
+              <div style="font-weight: bold; color: #00f2fe; margin-bottom: 0.4rem; font-size: 0.88rem;">✊ Poing (Fist)</div>
+              <select class="select-custom gesture-action-select" data-gesture="fist" style="width: 100%; font-size: 0.82rem; padding: 0.3rem 0.5rem;">
+                <option value="pause" selected>✌️ Pause / Gel</option>
+                <option value="hold">✊ Hold / Maintien</option>
+                <option value="clear">🗑️ Effacer</option>
+              </select>
+            </div>
+
+            <div style="background: #060912; border: 1px solid rgba(0,242,254,0.3); padding: 0.8rem; border-radius: 10px;">
+              <div style="font-weight: bold; color: #00f2fe; margin-bottom: 0.4rem; font-size: 0.88rem;">👋 Main Ouverte</div>
+              <select class="select-custom gesture-action-select" data-gesture="open_palm" style="width: 100%; font-size: 0.82rem; padding: 0.3rem 0.5rem;">
+                <option value="menu" selected>📋 Menu Principal</option>
+                <option value="spotlight">🔦 Spotlight</option>
+                <option value="cursor">🖱️ Cursor</option>
+              </select>
+            </div>
+
+            <div style="background: #060912; border: 1px solid rgba(0,242,254,0.3); padding: 0.8rem; border-radius: 10px;">
+              <div style="font-weight: bold; color: #00f2fe; margin-bottom: 0.4rem; font-size: 0.88rem;">👍 Pouce (Thumbs Up)</div>
+              <select class="select-custom gesture-action-select" data-gesture="thumbs_up" style="width: 100%; font-size: 0.82rem; padding: 0.3rem 0.5rem;">
+                <option value="confirm" selected>👍 Valider / Confirmer</option>
+                <option value="save">💾 Sauvegarder</option>
+                <option value="next">👉 Suivant</option>
+              </select>
+            </div>
+
+            <div style="background: #060912; border: 1px solid rgba(0,242,254,0.3); padding: 0.8rem; border-radius: 10px;">
+              <div style="font-weight: bold; color: #00f2fe; margin-bottom: 0.4rem; font-size: 0.88rem;">✌️ Signe V</div>
+              <select class="select-custom gesture-action-select" data-gesture="v_sign" style="width: 100%; font-size: 0.82rem; padding: 0.3rem 0.5rem;">
+                <option value="screenshot" selected>📷 Capture écran</option>
+                <option value="pause">✌️ Pause</option>
+                <option value="loupe">🔍 Loupe</option>
+              </select>
+            </div>
+
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+            <button type="button" class="btn-app btn-app-primary" id="btn-save-gesture-config" style="padding: 0.5rem 1rem;">💾 Enregistrer la Configuration Gestes</button>
           </div>
         </div>
       </div>

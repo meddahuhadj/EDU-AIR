@@ -694,13 +694,82 @@
     }
 
     // ============================================================
-    // MODULE 3: POINTEUR AIR & LASER VIRTUEL
+    // MODULE 3: POINTEUR AIR — TÉLÉCOMMANDE PÉDAGOGIQUE & GESTURE COMMAND CENTER
     // ============================================================
     const pointerZone = $("#pointer-test-zone");
-    if (pointerZone) {
-      let currentUser = 1;
-      const userColors = { 1: "#00f2fe", 2: "#ffb84d" };
+    let activePointerMode = "cursor";
+    let currentUser = 1;
+    const userColors = { 1: "#00f2fe", 2: "#ffb84d" };
 
+    const remoteModesDict = {
+      cursor: { icon: "🖱️", name: "Cursor", hint: "Contrôle fluide du curseur à l'écran" },
+      click: { icon: "👆", name: "Click", hint: "Pincement ou tap d'index pour cliquer" },
+      scroll: { icon: "✋", name: "Scroll", hint: "Défiler la page / diapo verticalement" },
+      prev: { icon: "👈", name: "Previous", hint: "Revenir à la page ou diapo précédente" },
+      next: { icon: "👉", name: "Next", hint: "Passer à la page ou diapo suivante" },
+      zoom: { icon: "🤏", name: "Zoom", hint: "Agrandir la zone ciblée / Loupe" },
+      hold: { icon: "✊", name: "Hold", hint: "Maintien / Gel de la position du pointeur" },
+      pause: { icon: "✌️", name: "Pause", hint: "Mettre en pause le suivi de mouvement" },
+      confirm: { icon: "👍", name: "Confirm", hint: "Validation / Confirmation de réponse" },
+      return: { icon: "👋", name: "Return", hint: "Retour au menu principal / vue d'accueil" }
+    };
+
+    // Helper: Update Gesture Telemetry HUD
+    window.updateGestureHUD = (gestureName, confidencePct, x = 369, y = 27) => {
+      const hudDetected = $("#hud-gesture-detected");
+      const hudVal = $("#hud-confidence-val");
+      const hudBar = $("#hud-confidence-bar");
+      const hudCoords = $("#hud-coords");
+      const hudMode = $("#hud-active-mode");
+
+      if (hudDetected) hudDetected.textContent = gestureName.toUpperCase();
+      if (hudVal) hudVal.textContent = `${confidencePct}%`;
+      if (hudBar) {
+        hudBar.style.width = `${confidencePct}%`;
+        if (confidencePct >= 90) {
+          hudBar.style.background = "linear-gradient(90deg, #00f2fe, #3ddc97)";
+          hudBar.style.boxShadow = "0 0 10px #3ddc97";
+        } else if (confidencePct >= 75) {
+          hudBar.style.background = "linear-gradient(90deg, #00f2fe, #ffb84d)";
+          hudBar.style.boxShadow = "0 0 10px #ffb84d";
+        } else {
+          hudBar.style.background = "linear-gradient(90deg, #ffb84d, #ff5d5d)";
+          hudBar.style.boxShadow = "0 0 10px #ff5d5d";
+        }
+      }
+      if (hudCoords) hudCoords.textContent = `X=${Math.round(x)}px, Y=${Math.round(y)}px`;
+      if (hudMode && remoteModesDict[activePointerMode]) {
+        hudMode.textContent = `${remoteModesDict[activePointerMode].icon} ${remoteModesDict[activePointerMode].name}`;
+      }
+    };
+
+    // 1. Remote Modes Bar Click Listeners
+    const modeChips = $$("[data-pointer-mode]");
+    modeChips.forEach(chip => {
+      chip.addEventListener("click", () => {
+        modeChips.forEach(c => c.classList.remove("active"));
+        chip.classList.add("active");
+        
+        const modeKey = chip.getAttribute("data-pointer-mode");
+        if (remoteModesDict[modeKey]) {
+          activePointerMode = modeKey;
+          const info = remoteModesDict[modeKey];
+
+          const modeIcon = $("#pointer-mode-icon");
+          const modeLabel = $("#pointer-mode-label");
+          const modeHint = $("#pointer-hint-text");
+
+          if (modeIcon) modeIcon.textContent = info.icon;
+          if (modeLabel) modeLabel.textContent = `Mode ${info.name} Actif`;
+          if (modeHint) modeHint.textContent = info.hint;
+
+          window.updateGestureHUD("MODE_SWITCH", 98);
+        }
+      });
+    });
+
+    // 2. Laser Field Pointer Interaction
+    if (pointerZone) {
       const laserDot = document.createElement("div");
       laserDot.style.cssText = "position: absolute; width: 24px; height: 24px; border-radius: 50%; border: 2px solid #00f2fe; box-shadow: 0 0 18px #00f2fe; pointer-events: none; transform: translate(-50%, -50%); display: none; z-index: 20;";
       pointerZone.appendChild(laserDot);
@@ -716,11 +785,9 @@
         laserDot.style.borderColor = userColors[currentUser];
         laserDot.style.boxShadow = `0 0 18px ${userColors[currentUser]}`;
 
-        const label = $("#pointer-mode-label");
-        if (label) {
-          label.textContent = `🎯 User ${currentUser} Laser — Position: X=${Math.round(x)}px, Y=${Math.round(y)}px`;
-          label.style.color = userColors[currentUser];
-        }
+        // Dynamic smooth confidence telemetry simulation (94% - 99%)
+        const simConfidence = Math.floor(94 + Math.sin(Date.now() / 300) * 5);
+        window.updateGestureHUD(activePointerMode.toUpperCase(), simConfidence, x, y);
       });
 
       pointerZone.addEventListener("mouseleave", () => {
@@ -731,8 +798,30 @@
       const btnUser2 = $("[data-i18n='user2Label']");
       if (btnUser1) btnUser1.addEventListener("click", () => { currentUser = 1; alert("🎯 Pointeur attribué à l'Utilisateur 1 (Cyan)"); });
       if (btnUser2) btnUser2.addEventListener("click", () => { currentUser = 2; alert("🎯 Pointeur attribué à l'Utilisateur 2 (Amber)"); });
+
+      // Interactive Targets in Pointer Test Field
+      const targetBtns = $$(".pointer-target-btn");
+      targetBtns.forEach(btn => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const targetGesture = btn.getAttribute("data-target-gesture") || "PINCH";
+          const confidence = Math.floor(95 + Math.random() * 4);
+          window.updateGestureHUD(targetGesture, confidence);
+
+          if (targetGesture === "swipe_left") {
+            alert("👈 BALAYAGE GAUCHE DÉTECTÉ (Confiance 96%)\nAction : Page précédente déclenchée !");
+          } else if (targetGesture === "swipe_right") {
+            alert("👉 BALAYAGE DROIT DÉTECTÉ (Confiance 97%)\nAction : Page suivante déclenchée !");
+          } else if (targetGesture === "thumbs_up") {
+            alert("👍 POUCE LEVÉ DÉTECTÉ (Confiance 99%)\nAction : Confirmation enregistrée !");
+          } else {
+            alert("🎯 PINCH DÉTECTÉ (Confiance 98%)\nAction : Clic virtuel effectué !");
+          }
+        });
+      });
     }
 
+    // 3. Laser Mode Toggle
     const btnLaserMode = $("#btn-pointer-laser-mode");
     let isLaserActive = false;
     if (btnLaserMode) {
@@ -742,6 +831,37 @@
         btnLaserMode.classList.toggle("btn-app-ghost", !isLaserActive);
         document.body.classList.toggle("laser-pointer-active", isLaserActive);
         alert(isLaserActive ? "🔦 Pointeur Laser Virtuel ACTIF (désignation sans écriture)" : "✋ Mode Pointeur standard réactivé");
+      });
+    }
+
+    // 4. Gesture Command Center Logic
+    const btnToggleCmdCenter = $("#btn-toggle-command-center");
+    const cmdCenterBox = $("#gesture-command-center-box");
+    if (btnToggleCmdCenter && cmdCenterBox) {
+      btnToggleCmdCenter.addEventListener("click", () => {
+        cmdCenterBox.scrollIntoView({ behavior: "smooth" });
+      });
+    }
+
+    const btnSaveGestureConfig = $("#btn-save-gesture-config");
+    if (btnSaveGestureConfig) {
+      btnSaveGestureConfig.addEventListener("click", () => {
+        const gestureSelects = $$(".gesture-action-select");
+        const configMap = {};
+        gestureSelects.forEach(select => {
+          const key = select.getAttribute("data-gesture");
+          configMap[key] = select.value;
+        });
+        localStorage.setItem("edu_air_gesture_config", JSON.stringify(configMap));
+        alert("💾 Configuration du Gesture Command Center enregistrée avec succès !\nVos raccourcis gestuels personnalisés sont maintenant actifs sur EDU-AIR.");
+      });
+    }
+
+    const btnResetGestures = $("#btn-reset-gestures");
+    if (btnResetGestures) {
+      btnResetGestures.addEventListener("click", () => {
+        localStorage.removeItem("edu_air_gesture_config");
+        alert("🔄 Raccourcis gestuels réinitialisés aux valeurs d'usine !");
       });
     }
 
