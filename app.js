@@ -2165,6 +2165,9 @@
     const pipStatusTag = $("#pip-status-tag") || $(".pip-status-tag");
     const txtCamStatus = $("#txt-cam-status");
     const pillModeHand = $("#pill-mode-hand");
+    const pillModeCam = $("#pill-mode-cam");
+    const btnTogglePip = $("#btn-toggle-pip");
+    const pipWebcamBox = $("#pip-webcam-box");
     const airPointer = $("#air-pointer-cursor");
     const airCursorLabel = $("#air-cursor-label");
 
@@ -2175,6 +2178,26 @@
     let smoothedY = window.innerHeight / 2;
     let lastGestureTime = 0;
     let handsEngine = null;
+
+    // Toggle PiP WebCam visibility
+    if (btnTogglePip && pipWebcamBox) {
+      btnTogglePip.addEventListener("click", () => {
+        const isHidden = pipWebcamBox.style.display === "none";
+        pipWebcamBox.style.display = isHidden ? "block" : "none";
+        btnTogglePip.style.opacity = isHidden ? "1" : "0.5";
+      });
+    }
+
+    // Toggle Hand Mode Pill
+    if (pillModeHand) {
+      pillModeHand.addEventListener("click", () => {
+        handTrackerActive = !handTrackerActive;
+        pillModeHand.classList.toggle("active", handTrackerActive);
+        if (txtCamStatus) {
+          txtCamStatus.textContent = handTrackerActive ? "Montrez votre main devant la caméra" : "📷 Suivi Main Désactivé";
+        }
+      });
+    }
 
     // MediaPipe Hand connections (pairs of landmark indices)
     const HAND_CONNECTIONS = [
@@ -2194,7 +2217,7 @@
       ctx.lineWidth = 2.5;
       ctx.strokeStyle = "#00f2fe";
       ctx.shadowColor = "#00f2fe";
-      ctx.shadowBlur = 6;
+      ctx.shadowBlur = 8;
 
       HAND_CONNECTIONS.forEach(([i, j]) => {
         const p1 = landmarks[i];
@@ -2214,16 +2237,16 @@
         ctx.beginPath();
         if (idx === 8) {
           // Index tip: cyan target
-          ctx.arc(px, py, 6, 0, 2 * Math.PI);
+          ctx.arc(px, py, 6.5, 0, 2 * Math.PI);
           ctx.fillStyle = "#00f2fe";
           ctx.shadowColor = "#00f2fe";
-          ctx.shadowBlur = 10;
+          ctx.shadowBlur = 12;
         } else if (idx === 4) {
           // Thumb tip: golden tip
-          ctx.arc(px, py, 5, 0, 2 * Math.PI);
+          ctx.arc(px, py, 5.5, 0, 2 * Math.PI);
           ctx.fillStyle = "#ffd166";
           ctx.shadowColor = "#ffd166";
-          ctx.shadowBlur = 8;
+          ctx.shadowBlur = 10;
         } else {
           ctx.arc(px, py, 3.5, 0, 2 * Math.PI);
           ctx.fillStyle = "#3ddc97";
@@ -2233,34 +2256,43 @@
       });
     }
 
-    function classifyHandGesture(lm) {
-      // Finger heights check (lm[8] is index tip, lm[6] is index PIP joint)
-      const indexUp = lm[8].y < lm[6].y;
-      const middleUp = lm[12].y < lm[10].y;
-      const ringUp = lm[16].y < lm[14].y;
-      const pinkyUp = lm[20].y < lm[18].y;
+    function classifyHandGestureRotationInvariant(lm) {
+      // Rotation-invariant extension check relative to wrist (lm[0])
+      const wrist = lm[0];
+      const distIndexTip = Math.hypot(lm[8].x - wrist.x, lm[8].y - wrist.y);
+      const distIndexMCP = Math.hypot(lm[5].x - wrist.x, lm[5].y - wrist.y);
+      const indexExtended = distIndexTip > distIndexMCP * 1.35;
 
-      // Distance between index tip (#8) and thumb tip (#4)
+      const distMiddleTip = Math.hypot(lm[12].x - wrist.x, lm[12].y - wrist.y);
+      const distMiddleMCP = Math.hypot(lm[9].x - wrist.x, lm[9].y - wrist.y);
+      const middleExtended = distMiddleTip > distMiddleMCP * 1.35;
+
+      const distRingTip = Math.hypot(lm[16].x - wrist.x, lm[16].y - wrist.y);
+      const distRingMCP = Math.hypot(lm[13].x - wrist.x, lm[13].y - wrist.y);
+      const ringExtended = distRingTip > distRingMCP * 1.35;
+
+      const distPinkyTip = Math.hypot(lm[20].x - wrist.x, lm[20].y - wrist.y);
+      const distPinkyMCP = Math.hypot(lm[17].x - wrist.x, lm[17].y - wrist.y);
+      const pinkyExtended = distPinkyTip > distPinkyMCP * 1.35;
+
+      // Pinch distance between index tip (#8) and thumb tip (#4)
       const pinchDist = Math.hypot(lm[8].x - lm[4].x, lm[8].y - lm[4].y);
-      const pinchActive = pinchDist < 0.08;
+      const pinchActive = pinchDist < 0.085;
 
       if (pinchActive) {
         return { name: "PINCH", label: "🎯 Pincement (Clic / Dessin)", code: "🤏 Pincement" };
       }
-      if (indexUp && !middleUp && !ringUp && !pinkyUp) {
+      if (indexExtended && !middleExtended && !ringExtended && !pinkyExtended) {
         return { name: "POINT", label: "☝️ Pointeur Air Actif (Index Pointé)", code: "☝️ Pointeur Air" };
       }
-      if (indexUp && middleUp && !ringUp && !pinkyUp) {
+      if (indexExtended && middleExtended && !ringExtended && !pinkyExtended) {
         return { name: "PEACE", label: "✌️ Geste Diaporama (Slide Suivante)", code: "✌️ Slide Suivante" };
       }
-      if (indexUp && middleUp && ringUp && pinkyUp) {
+      if (indexExtended && middleExtended && ringExtended && pinkyExtended) {
         return { name: "PALM", label: "🖐️ Paume Ouverte (Navigation Surface)", code: "🖐️ Paume Ouverte" };
       }
-      if (!indexUp && !middleUp && !ringUp && !pinkyUp) {
+      if (!indexExtended && !middleExtended && !ringExtended && !pinkyExtended) {
         return { name: "FIST", label: "✊ Poing Fermé (Effacer / Pause)", code: "✊ Poing Fermé" };
-      }
-      if (lm[4].y < lm[2].y && !indexUp && !middleUp && !ringUp && !pinkyUp) {
-        return { name: "THUMBS_UP", label: "👍 Pouce Levé (Confirmation)", code: "👍 Valider" };
       }
 
       return { name: "GESTURE", label: "✋ Main Détectée — Contrôle Actif", code: "✋ Main Détectée" };
@@ -2342,7 +2374,7 @@
       smoothedX += (rawX - smoothedX) * 0.35;
       smoothedY += (rawY - smoothedY) * 0.35;
 
-      const gest = classifyHandGesture(lm);
+      const gest = classifyHandGestureRotationInvariant(lm);
       currentGesture = gest.name;
       isPinching = gest.name === "PINCH";
 
@@ -2527,18 +2559,49 @@
       return false;
     }
 
-    // Fail-proof Instant Camera Initialization & Tracking Loop
-    if (pipVideo && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" } })
-        .then((stream) => {
-          pipVideo.srcObject = stream;
+    // Fail-proof Camera Utility Initialization (Uses MediaPipe Camera Utils when available)
+    function startCameraTracking() {
+      initMediaPipeHands();
 
-          let loopStarted = false;
-          function startCameraTracking() {
-            if (loopStarted) return;
-            loopStarted = true;
+      if (typeof window.Camera !== "undefined" && pipVideo) {
+        try {
+          const camera = new window.Camera(pipVideo, {
+            onFrame: async () => {
+              if (pipVideo && pipVideo.readyState >= 2 && handTrackerActive) {
+                if (handsEngine) {
+                  try {
+                    await handsEngine.send({ image: pipVideo });
+                  } catch (e) {
+                    processFallbackHandTracker(pipVideo);
+                  }
+                } else {
+                  processFallbackHandTracker(pipVideo);
+                }
+              }
+            },
+            width: 640,
+            height: 480
+          });
+          camera.start().then(() => {
+            console.log("📷 MediaPipe Camera Utility démarré avec succès.");
+          }).catch(err => {
+            console.warn("Camera Utility fallback:", err);
+            fallbackGetUserMediaLoop();
+          });
+          return;
+        } catch (err) {
+          console.warn("Camera init exception:", err);
+        }
+      }
+      fallbackGetUserMediaLoop();
+    }
+
+    function fallbackGetUserMediaLoop() {
+      if (pipVideo && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" } })
+          .then((stream) => {
+            pipVideo.srcObject = stream;
             pipVideo.play().catch(() => {});
-            initMediaPipeHands();
 
             let processingFrame = false;
             async function videoProcessLoop() {
@@ -2558,18 +2621,17 @@
               requestAnimationFrame(videoProcessLoop);
             }
             requestAnimationFrame(videoProcessLoop);
-          }
-
-          pipVideo.onloadedmetadata = startCameraTracking;
-          pipVideo.onloadeddata = startCameraTracking;
-          setTimeout(startCameraTracking, 300);
-          setTimeout(startCameraTracking, 1200);
-        })
-        .catch((err) => {
-          console.log("Webcam notice:", err.message);
-          if (txtCamStatus) txtCamStatus.textContent = "📷 Activez la caméra pour le contrôle gestuel";
-        });
+          })
+          .catch((err) => {
+            console.log("Webcam notice:", err.message);
+            if (txtCamStatus) txtCamStatus.textContent = "📷 Activez la caméra pour le contrôle gestuel";
+          });
+      }
     }
+
+    // Start camera tracking
+    startCameraTracking();
+    setTimeout(startCameraTracking, 600);
 
     // Allow Manual Pointer Simulation on Canvas when moving mouse with Shift key pressed
     document.addEventListener("mousemove", (e) => {
