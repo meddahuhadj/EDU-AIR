@@ -2690,4 +2690,130 @@ html[data-theme="light"] .lang-pill.active {
   transform: translateX(-50%) translateY(0);
 }
 
+/* ============================================================
+   ENRICHISSEMENTS EDU-AIR — M1..M12 (nouveaux styles)
+   ============================================================ */
+/* Dashboard : jauge d'attention + phases d'enseignement */
+.dash-stage-chip.active {
+  background: #0284c7 !important;
+  color: #fff !important;
+  border-color: #0284c7 !important;
+}
+
+/* Post-its virtuels magnétiques */
+#wb-sticky-container .wb-sticky-note {
+  position: absolute;
+  width: 150px;
+  min-height: 110px;
+  border-radius: 6px;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+  cursor: grab;
+  z-index: 13;
+  pointer-events: auto;
+  font-family: "Segoe UI", sans-serif;
+}
+#wb-sticky-container .wb-sticky-note:active { cursor: grabbing; }
+#wb-sticky-container .wb-sticky-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #1e293b;
+  background: rgba(0, 0, 0, 0.12);
+  user-select: none;
+}
+#wb-sticky-container .wb-sticky-del {
+  border: none;
+  background: transparent;
+  color: #475569;
+  font-weight: 900;
+  cursor: pointer;
+  padding: 0 4px;
+  font-size: 0.8rem;
+}
+#wb-sticky-container .wb-sticky-del:hover { color: #dc2626; }
+#wb-sticky-container .wb-sticky-text {
+  width: 100%;
+  height: 70px;
+  resize: none;
+  border: none;
+  outline: none;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.8rem;
+  color: #1e293b;
+  background: transparent;
+  font-family: inherit;
+}
+
+/* Scratch-to-Reveal */
+#scratch-cover-layer {
+  border-radius: 8px;
+  overflow: hidden;
+}
+#scratch-cover-canvas { touch-action: none; }
+
+/* Contraste inversé sur le diaporama */
+.eduair-contrast-invert #slide-content-render,
+.eduair-contrast-invert #presentation-draw-canvas {
+  filter: invert(1) hue-rotate(180deg) contrast(1.12) brightness(1.05);
+}
+
+/* Pie Menu (menu circulaire gestuel) */
+#eduair-pie-menu {
+  width: 0;
+  height: 0;
+}
+.eduair-pie-item {
+  position: absolute;
+  left: -34px;
+  top: -34px;
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  border: 2px solid #00f2fe;
+  background: rgba(6, 9, 18, 0.95);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.6);
+  font-size: 0.62rem;
+}
+.eduair-pie-item:hover {
+  background: rgba(0, 242, 254, 0.25);
+  border-color: #3ddc97;
+}
+.eduair-pie-ic { font-size: 1.15rem; line-height: 1.1; }
+.eduair-pie-lb { font-weight: 800; letter-spacing: 0.4px; margin-top: 1px; }
+
+/* Accessibilité : contraste élevé + police lisible */
+body.eduai-a11y {
+  font-size: 1.06em;
+}
+body.eduai-a11y .btn-app {
+  border-width: 2px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+body.eduai-a11y .sidebar-item { font-size: 0.96em; }
+body.eduai-a11y .module-view { background: rgba(4, 7, 14, 0.94); }
+body.eduai-a11y .app-content,
+body.eduai-a11y .module-view {
+  filter: contrast(1.09);
+}
+body.eduai-a11y * {
+  font-family: "OpenDyslexic", "Comic Sans MS", "Segoe UI", sans-serif !important;
+}
+body.eduai-a11y .vision-toast { font-size: 1rem; }
+
+/* Zone éclatée 3D : bouton actif */
+#btn-3d-explode.btn-app-primary {
+  border-color: #ff5d5d !important;
+  background: rgba(255, 93, 93, 0.25) !important;
+}
+
 

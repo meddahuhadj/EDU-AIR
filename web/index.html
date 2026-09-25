@@ -51,8 +51,10 @@
       <div class="topbar-quick-btns">
         <button type="button" class="btn-app btn-app-ghost" id="btn-toggle-pip" title="Afficher/Masquer WebCam">📷</button>
         <button type="button" class="btn-app btn-app-ghost" id="btn-toggle-theme" title="Changer de thème">☀️</button>
+        <button type="button" class="btn-app btn-app-ghost" id="btn-toggle-a11y" title="Contraste élevé & police dyslexie" data-i18n="btnA11y">♿</button>
         <button type="button" class="btn-app btn-app-ghost" id="btn-toggle-fullscreen" title="Mode Plein Écran (TNI)">⛶</button>
         <button type="button" class="btn-app btn-app-ghost" id="btn-toggle-audio" title="Commandes vocales">🎤</button>
+        <button type="button" class="btn-app btn-app-ghost" id="btn-open-guide" title="Guide de prise en main EDU-AIR">❓</button>
       </div>
 
       <div class="lang-switch-pills">
@@ -179,6 +181,12 @@
           <div class="loupe-lens-box" id="loupe-lens-layer">
             <canvas id="loupe-canvas-render" width="180" height="180"></canvas>
           </div>
+
+          <!-- Scratch-to-Reveal Overlay (Zone masquée) -->
+          <div class="scratch-cover-layer" id="scratch-cover-layer" style="display:none; position:absolute; inset:0; z-index:9; pointer-events:none;">
+            <canvas id="scratch-cover-canvas" width="960" height="480" style="width:100%; height:100%; display:block; background:rgba(120,130,150,0.96);"></canvas>
+            <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:rgba(255,255,255,0.85); font-size:1.2rem; font-weight:700; pointer-events:none;" id="scratch-cover-hint">🩹 Grattez au geste / à la gomme pour révéler la réponse</div>
+          </div>
         </div>
 
         <!-- Slide Bottom Navigation & Toggle Bar -->
@@ -196,7 +204,22 @@
           <div style="display: flex; align-items: center; gap: 0.6rem;">
             <button type="button" class="btn-app btn-app-ghost" id="btn-toggle-spotlight" data-i18n="btnSpotlight">🔦 SPOTLIGHT</button>
             <button type="button" class="btn-app btn-app-ghost" id="btn-toggle-loupe" data-i18n="btnLoupe">🔍 LOUPE ZOOM</button>
+            <select class="select-custom" id="loupe-zoom-factor" style="padding:0.25rem 0.4rem; font-size:0.78rem;" title="Facteur de zoom de la loupe">
+              <option value="2">Loupe ×2</option>
+              <option value="3">Loupe ×3</option>
+              <option value="4" selected>Loupe ×4</option>
+            </select>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-toggle-contrast" title="Inversion de contraste (malvoyants)" data-i18n="btnContrast">🌗 Contraste</button>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-scratch-reveal" title="Zone masquée à révéler au geste" data-i18n="btnScratch">🩹 Scratch-to-Reveal</button>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-notes-mode" data-i18n="btnNotes">📑 Volet Notes</button>
           </div>
+        </div>
+
+        <!-- Volet Notes du Présentateur -->
+        <div id="presenter-notes-bar" style="display:none; background:rgba(10,20,38,0.9); border:1px solid rgba(255,209,102,0.35); border-radius:12px; padding:0.6rem 0.9rem; margin-top:0.6rem; font-size:0.85rem; color:#ffe9a8;">
+          <strong style="color:#ffd166;">📑 Notes du cours :</strong>
+          <span id="presenter-notes-caption" style="color:#ffd166;"></span>
+          <textarea id="presenter-notes-input" rows="2" placeholder="Écrivez ici les notes de cette diapositive (sauvegardées localement)..." style="width:100%; margin-top:0.4rem; background:#060912; color:#fff; border:1px solid rgba(255,209,102,0.3); border-radius:8px; padding:0.5rem 0.7rem; resize:vertical;"></textarea>
         </div>
 
         <!-- MINUTEUR DE CLASSE TNI (GESTION DU TEMPS) -->
@@ -247,6 +270,44 @@
           <div style="background: rgba(10,20,38,0.8); border: 1px solid rgba(126,195,255,0.2); padding: 1.25rem; border-radius: 12px;">
             <div style="font-size: 0.8rem; color: #9fb0cf;" data-i18n="dashStatTime">Temps de Session</div>
             <div style="font-size: 1.4rem; font-weight: 800; color: #ffb84d;">42:15 min</div>
+          </div>
+        </div>
+
+        <!-- Baromètre d'Attention & Rythme de Cours -->
+        <div style="background: rgba(10,20,38,0.85); border: 1px solid rgba(0,242,254,0.3); padding: 1.5rem; border-radius: 14px; margin-bottom: 1.5rem;">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom:1rem;">
+            <h3 style="color:#00f2fe; margin:0;" data-i18n="dashRhythmTitle">🧭 Rythme de Cours & Baromètre d'Attention</h3>
+            <button type="button" class="btn-app btn-app-primary" id="btn-ready-class" data-i18n="btnReadyClass">🚀 PRÊT POUR LA CLASSE (1-CLIC)</button>
+          </div>
+
+          <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:1rem; margin-bottom:1.2rem;">
+            <div style="background:rgba(6,9,18,0.6); padding:1rem; border-radius:12px; text-align:center;">
+              <div style="font-size:0.8rem; color:#9fb0cf; margin-bottom:0.4rem;" data-i18n="dashGaugeLabel">Jauge d'Attention de la Classe</div>
+              <canvas id="dash-attention-gauge" width="190" height="110" style="display:block; margin:0 auto;"></canvas>
+              <div id="dash-attention-value" style="font-weight:800; color:#3ddc97; font-size:1.3rem;">76%</div>
+            </div>
+            <div style="background:rgba(6,9,18,0.6); padding:1rem; border-radius:12px;">
+              <div style="font-size:0.8rem; color:#9fb0cf; margin-bottom:0.6rem;" data-i18n="dashStageLabel">Phase d'enseignement</div>
+              <div style="display:flex; gap:0.4rem; flex-wrap:wrap; margin-bottom:0.8rem;" id="dash-stage-chips">
+                <button type="button" class="tool-chip dash-stage-chip" data-stage="0">🔥 Échauffement</button>
+                <button type="button" class="tool-chip dash-stage-chip" data-stage="1">📖 Magistral</button>
+                <button type="button" class="tool-chip dash-stage-chip" data-stage="2">🧰 Pratique</button>
+                <button type="button" class="tool-chip dash-stage-chip" data-stage="3">📝 Évaluation</button>
+              </div>
+              <div style="display:flex; gap:0.4rem; flex-wrap:wrap;" id="dash-energy-btns">
+                <button type="button" class="btn-app btn-app-ghost" data-energy="-10" style="font-size:0.75rem; padding:0.25rem 0.5rem;">🔻 Énergie −</button>
+                <button type="button" class="btn-app btn-app-ghost" data-energy="+10" style="font-size:0.75rem; padding:0.25rem 0.5rem;">🔺 Énergie +</button>
+              </div>
+            </div>
+            <div style="background:rgba(6,9,18,0.6); padding:1rem; border-radius:12px;">
+              <div style="font-size:0.8rem; color:#9fb0cf; margin-bottom:0.6rem;" data-i18n="dashStatLiveLabel">Statistiques de Session en Direct</div>
+              <div style="display:flex; flex-direction:column; gap:0.5rem; font-size:0.85rem; color:#e8effc;">
+                <div>⏱️ Durée de la leçon : <strong id="dash-session-duration" style="color:#3ddc97;">00:00</strong></div>
+                <div>🖼️ Diapositives annotées : <strong id="dash-slides-annotated" style="color:#00f2fe;">0</strong></div>
+                <div>📝 Quiz complétés : <strong id="dash-quizzes-done" style="color:#ffb84d;">0</strong></div>
+                <div>✋ Temps élève au tableau : <strong id="dash-board-minutes" style="color:#8b7bff;">0 min</strong></div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -343,6 +404,9 @@
 
           <button type="button" class="btn-app btn-app-ghost" id="btn-wb-speech-dictate" style="padding: 0.25rem 0.6rem; font-size: 0.8rem; border-color: #00f2fe; color: #00f2fe;" title="Parlez et vos paroles s'écriront au tableau">🎙️ Dictée Vocale</button>
           <button type="button" class="btn-app btn-app-ghost" id="btn-wb-undo" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;" data-i18n="btnDrawUndo">↩ Annuler</button>
+          <button type="button" class="btn-app btn-app-ghost" id="btn-wb-redo" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;" data-i18n="btnWbRedo">↪ Rétablir</button>
+          <button type="button" class="btn-app btn-app-ghost" id="btn-wb-text" style="padding: 0.25rem 0.6rem; font-size: 0.8rem; border-color:#ffb84d; color:#ffb84d;" title="Texte typographié & formule LaTeX" data-i18n="btnWbText">✍️ Texte / LaTeX</button>
+          <button type="button" class="btn-app btn-app-ghost" id="btn-wb-sticky" style="padding: 0.25rem 0.6rem; font-size: 0.8rem; border-color:#8b7bff; color:#8b7bff;" title="Post-it virtuel magnétique" data-i18n="btnWbSticky">📌 Post-it</button>
           <button type="button" class="btn-app btn-app-ghost" id="btn-wb-clear" style="padding: 0.25rem 0.6rem; font-size: 0.8rem;" data-i18n="btnDrawClear">🗑️ Effacer</button>
         </div>
 
@@ -429,6 +493,9 @@
             </svg>
             <button type="button" class="btn-geo-close" data-close-geo="geo-compass-overlay" style="position: absolute; top: 8px; right: 8px; background: #dc2626; color: #fff; border: none; border-radius: 50%; width: 22px; height: 22px; font-weight: bold; cursor: pointer; font-size: 11px;">✕</button>
           </div>
+
+          <!-- Post-its Virtuels Magnétiques -->
+          <div id="wb-sticky-container" style="position:absolute; inset:0; z-index:12; pointer-events:none;"></div>
         </div>
       </div>
 
@@ -438,6 +505,7 @@
           <h2 style="color: #00f2fe;" data-i18n="pointerTitle">🎯 Pointeur Air — Télécommande Pédagogique Intelligente</h2>
           <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
             <button type="button" class="btn-app btn-app-primary" id="btn-pointer-laser-mode" data-i18n="btnLaserMode">🔴 Mode Laser Virtuel (Désignation)</button>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-pointer-stable" style="border-color:#8b7bff; color:#8b7bff;" title="Filtre anti-tremblement (gigue)">🎯 Mode Stable (Anti-Gigue)</button>
             <button type="button" class="btn-app btn-app-ghost" id="btn-toggle-command-center" style="border-color: #3ddc97; color: #3ddc97;">⚙️ Gesture Command Center</button>
           </div>
         </div>
@@ -629,6 +697,12 @@
           <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
             <button type="button" class="btn-app btn-app-ghost" id="btn-stamp-frise" data-i18n="btnFrise">📐 Gabarit Frise</button>
             <button type="button" class="btn-app btn-app-ghost" id="btn-stamp-table" data-i18n="btnTable">📊 Gabarit Tableau</button>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-gab-mindmap">🧠 Carte Mentale</button>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-gab-venn">⭕ Diagramme de Venn</button>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-gab-ortho">📐 Repère Orthonormé</button>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-gab-timeline2">⏳ Ligne du Temps</button>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-snap-to-shape" title="Cercle/rectangle tracé à main levée → forme parfaite">🧲 Snap-to-Shape</button>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-draw-export-svg" title="Exporter SVG + PNG haute résolution">📤 SVG / PNG</button>
             <button type="button" class="btn-app btn-app-primary" id="btn-ocr-convert" data-i18n="btnOcrConvert">🔤 Reconnaissance Texte/LaTeX</button>
           </div>
         </div>
@@ -697,12 +771,16 @@
           </div>
         </div>
 
-        <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
-          <button type="button" class="btn-app btn-app-primary" id="btn-3d-h2o" data-i18n="btn3dH2o">💧 Molécule H₂O</button>
-          <button type="button" class="btn-app btn-app-ghost" id="btn-3d-cell" data-i18n="btn3dCell">🧫 Cellule Végétale</button>
-          <button type="button" class="btn-app btn-app-ghost" id="btn-3d-tecto" data-i18n="btn3dTecto">🌍 Tectonique des Plaques</button>
-          <button type="button" class="btn-app btn-app-ghost" id="btn-3d-orbit" data-i18n="btn3dOrbit">🪐 Système Solaire</button>
-        </div>
+<div style="display: flex; gap: 0.5rem;">
+            <button type="button" class="btn-app btn-app-primary" id="btn-3d-h2o" data-i18n="btn3dH2o">💧 Molécule H₂O</button>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-3d-cell" data-i18n="btn3dCell">🧫 Cellule Végétale</button>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-3d-tecto" data-i18n="btn3dTecto">🌍 Tectonique des Plaques</button>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-3d-orbit" data-i18n="btn3dOrbit">🪐 Système Solaire</button>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-3d-dna">🧬 Double Hélice ADN</button>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-3d-earth">🌋 Volcan & Coupe de la Terre</button>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-3d-engine">⚙️ Moteur 4 Temps</button>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-3d-explode" style="border-color:#ff5d5d; color:#ff5d5d;">💥 Mode Éclaté</button>
+          </div>
 
         <div style="width: 100%; height: 420px; background: #040710; border: 2px solid rgba(0,242,254,0.3); border-radius: 14px; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center;" id="canvas-3d-holder">
           <canvas id="air3d-canvas" width="800" height="420" style="cursor: grab;"></canvas>
@@ -717,6 +795,7 @@
           <button type="button" class="btn-app btn-app-primary vision-tab active" id="vtab-correct" data-i18n="visionTabCorrect">📝 Correcteur de feuille</button>
           <button type="button" class="btn-app btn-app-ghost vision-tab" id="vtab-posture" data-i18n="visionTabPosture">🧍 Suivi EPS</button>
           <button type="button" class="btn-app btn-app-ghost vision-tab" id="vtab-doc" data-i18n="visionTabDoc">📸 Capture document</button>
+          <button type="button" class="btn-app btn-app-ghost vision-tab" id="vtab-qcm" data-i18n="visionTabQcm">✅ Grille QCM papier</button>
         </div>
 
         <!-- Pane: Correcteur sous caméra -->
@@ -783,6 +862,22 @@
         </div>
 
         <div class="vision-toast" id="vision-toast"></div>
+
+        <!-- Pane: Correction Express Grille QCM papier -->
+        <div class="vision-pane" id="vpane-qcm" style="display: none;">
+          <div class="vision-toolbar">
+            <span style="color:#00f2fe; font-weight:700; font-size:0.85rem;" data-i18n="qcmTeacherLabel">✓ Bonnes réponses attendues :</span>
+            <input type="text" id="qcm-answer-key" value="ACD B C A C B D A C D" placeholder="A B C D..." style="width:170px; background:#060912; color:#fff; border:1px solid rgba(0,242,254,0.3); border-radius:6px; padding:4px 8px;">
+            <button type="button" class="btn-app btn-app-primary" id="btn-qcm-marks" data-i18n="qcmMarksBtn">🧮 Noter la copie</button>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-qcm-flip" data-i18n="qcmFlipBtn">🔄 Détecter captures (feuille)</button>
+            <span class="vision-status" id="qcm-status"></span>
+          </div>
+          <div class="vision-stage">
+            <canvas id="qcm-canvas" width="960" height="540" style="width:100%; height:100%; background:#0b1020; touch-action:none;"></canvas>
+            <div class="vision-hint" data-i18n="visionHintQcm">✅ Cliquez sur les cases noircies de l'élève, puis « Noter la copie »</div>
+          </div>
+          <div id="qcm-result" style="display:none; margin-top:0.6rem; background:rgba(61,220,151,0.12); border:1px solid rgba(61,220,151,0.4); border-radius:10px; padding:0.8rem 1rem; color:#fff; font-size:0.9rem;"></div>
+        </div>
       </div>
 
       <!-- ================= MODULE 7: LABO AIR ================= -->
@@ -799,6 +894,9 @@
               <option value="waves" data-i18n="labSimWaves">🌊 Ondes</option>
               <option value="optics" data-i18n="labSimOptics">🔍 Optique</option>
               <option value="planets" data-i18n="labSimPlanets">🪐 Planètes</option>
+              <option value="gravity" data-i18n="labSimGravity">🚀 Gravité & Chute des Corps (Galilée/Newton)</option>
+              <option value="acoustic" data-i18n="labSimAcoustic">🔊 Acoustique & Ondes Sonores</option>
+              <option value="periodic" data-i18n="labSimPeriodic">🧪 Tableau Périodique Dynamique</option>
             </select>
             <button id="lab-report-btn" class="select-custom" style="font-weight: 800; letter-spacing: .5px;">🏆 AI LAB REPORT</button>
           </div>
@@ -820,14 +918,26 @@
       <div class="module-view" id="view-quiz">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap;">
           <h2 style="color: #00f2fe;" data-i18n="quizTitle">📝 Quiz Air & Vote Collaboratif</h2>
-          <div style="display: flex; gap: 0.5rem;">
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
             <select class="select-custom" id="quiz-import-format">
               <option value="moodle" data-i18n="quizImportMoodle">Import: Moodle XML / GIFT</option>
               <option value="csv" data-i18n="quizImportCsv">Import: CSV / Excel</option>
               <option value="json" data-i18n="quizImportJson">Import: JSON Standard</option>
             </select>
-            <button type="button" class="btn-app btn-app-primary" id="btn-quiz-qr" data-i18n="btnQuizQrModal">📱 Quiz QR Code Smartphone</button>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-quiz-qr" data-i18n="btnQuizQrModal">📱 Quiz QR Code Smartphone</button>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-quiz-duel" style="border-color:#ff5d5d; color:#ff5d5d;" data-i18n="btnQuizDuel">⚔️ Mode Duel 2 Joueurs</button>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-quiz-sfx" data-i18n="btnQuizSfx">🎉 Son & Confettis</button>
           </div>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; align-items:center;">
+          <span style="font-size:0.8rem; color:#9fb0cf;" data-i18n="quizGenLabel">🤖 Générer un QCM par matière & niveau :</span>
+          <select class="select-custom" id="quiz-gen-level">
+            <option value="primaire" data-i18n="quizGenPrim">🏫 Primaire</option>
+            <option value="college" data-i18n="quizGenCollege">📚 Collège</option>
+            <option value="lycee" data-i18n="quizGenLycee">🎓 Lycée</option>
+          </select>
+          <button type="button" class="btn-app btn-app-primary" id="btn-quiz-generate" data-i18n="btnQuizGenerat">⚡ Générer</button>
         </div>
 
         <div style="background: rgba(10,20,38,0.8); border: 1px solid rgba(126,195,255,0.2); padding: 1.5rem; border-radius: 14px;">
@@ -854,15 +964,45 @@
             <button type="button" class="btn-app btn-app-ghost" id="btn-quiz-next" data-i18n="btnQuizNext">Question suivante ▶</button>
           </div>
         </div>
+
+        <!-- Arena Mode Duel 2 Joueurs -->
+        <div id="quiz-duel-arena" style="display: none; gap: 1rem; margin-top: 1rem;">
+          <div style="flex:1; background:rgba(10,20,38,0.85); border:1px solid rgba(0,242,254,0.4); border-radius:14px; padding:1.2rem; text-align:center;">
+            <div style="font-size:1.1rem; font-weight:800; color:#00f2fe;" data-i18n="quizDuelP1">🔵 Joueur 1 (Zone Gauche)</div>
+            <div id="duel-p1-score" style="font-size:2.6rem; font-weight:900; color:#00f2fe; margin:0.4rem 0;">0</div>
+            <div style="display:flex; gap:0.4rem; justify-content:center; flex-wrap:wrap;" id="duel-p1-btns">
+              <button type="button" class="btn-app btn-app-ghost" data-duel="p1" data-opt="A" style="font-size:0.85rem;">A</button>
+              <button type="button" class="btn-app btn-app-ghost" data-duel="p1" data-opt="B" style="font-size:0.85rem;">B</button>
+              <button type="button" class="btn-app btn-app-ghost" data-duel="p1" data-opt="C" style="font-size:0.85rem;">C</button>
+              <button type="button" class="btn-app btn-app-ghost" data-duel="p1" data-opt="D" style="font-size:0.85rem;">D</button>
+            </div>
+            <div id="duel-p1-last" style="font-size:0.85rem; color:#9fb0cf; margin-top:0.5rem;">—</div>
+          </div>
+          <div style="flex:1; background:rgba(10,20,38,0.85); border:1px solid rgba(255,184,77,0.4); border-radius:14px; padding:1.2rem; text-align:center;">
+            <div style="font-size:1.1rem; font-weight:800; color:#ffb84d;" data-i18n="quizDuelP2">🟠 Joueur 2 (Zone Droite)</div>
+            <div id="duel-p2-score" style="font-size:2.6rem; font-weight:900; color:#ffb84d; margin:0.4rem 0;">0</div>
+            <div style="display:flex; gap:0.4rem; justify-content:center; flex-wrap:wrap;" id="duel-p2-btns">
+              <button type="button" class="btn-app btn-app-ghost" data-duel="p2" data-opt="A" style="font-size:0.85rem;">A</button>
+              <button type="button" class="btn-app btn-app-ghost" data-duel="p2" data-opt="B" style="font-size:0.85rem;">B</button>
+              <button type="button" class="btn-app btn-app-ghost" data-duel="p2" data-opt="C" style="font-size:0.85rem;">C</button>
+              <button type="button" class="btn-app btn-app-ghost" data-duel="p2" data-opt="D" style="font-size:0.85rem;">D</button>
+            </div>
+            <div id="duel-p2-last" style="font-size:0.85rem; color:#9fb0cf; margin-top:0.5rem;">—</div>
+          </div>
+        </div>
+
+        <!-- Confetti Canvas (Effets Gamifiés) -->
+        <canvas id="quiz-confetti-canvas" style="display:none; position:fixed; inset:0; width:100vw; height:100vh; pointer-events:none; z-index:9999;"></canvas>
       </div>
 
       <!-- ================= MODULE 10: PROF IA ================= -->
       <div class="module-view" id="view-profai">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap;">
           <h2 style="color: #00f2fe;" data-i18n="aiTitle">🤖 Prof IA — Assistant Pédagogique</h2>
-          <div style="display: flex; gap: 0.5rem;">
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
             <button type="button" class="btn-app btn-app-primary" id="btn-ai-diff-ex" data-i18n="btnAiDiffEx">🎯 Exercice 3 Niveaux</button>
             <button type="button" class="btn-app btn-app-ghost" id="btn-ai-tts" data-i18n="btnAiTts">🔊 Synthèse Vocale</button>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-ai-eli5" title="Explique-moi comme si j'avais 10 ans" data-i18n="btnAiEli5">🗣️ ELI5 (Language Simple)</button>
           </div>
         </div>
 
@@ -908,7 +1048,10 @@
 
       <!-- ================= MODULE 12: HISTORIQUE ================= -->
       <div class="module-view" id="view-history">
-        <h2 style="color: #00f2fe; margin-bottom: 1rem;" data-i18n="historyTitle">📜 Historique des Sessions & Replay Éléves</h2>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
+          <h2 style="color: #00f2fe;" data-i18n="historyTitle">📜 Historique des Sessions & Replay Éléves</h2>
+          <button type="button" class="btn-app btn-app-primary" id="btn-export-pdf-cahier" data-i18n="btnExportCahier">📄 EXPORT PDF — Cahier de Cours</button>
+        </div>
         <div style="background: rgba(10,20,38,0.8); border: 1px solid rgba(126,195,255,0.2); padding: 1.5rem; border-radius: 14px;">
           <table style="width: 100%; border-collapse: collapse; text-align: left;">
             <thead>
@@ -1060,6 +1203,52 @@
     <div class="air-cursor-dot"></div>
     <div class="air-cursor-ring"></div>
     <div class="air-cursor-label" id="air-cursor-label">Pointeur Air ☝️</div>
+  </div>
+
+  <!-- ================= GUIDE DE PRISE EN MAIN — ONBOARDING ================= -->
+
+  <!-- ÉCRAN DE BIENVENUE -->
+  <div id="onboarding-welcome">
+    <div class="onb-welcome-box">
+      <span class="onb-welcome-logo">✈️</span>
+      <h2 class="onb-welcome-title">Bienvenue sur <span>EDU-AIR</span></h2>
+      <p class="onb-welcome-subtitle">
+        Votre surface interactive intelligente sans contact pour la classe.<br>
+        Ce guide vous présente les <strong style="color:#00f2fe">12 modules</strong> en 2 minutes.
+      </p>
+      <div class="onb-welcome-features">
+        <div class="onb-welcome-feature"><span>✋</span><span>Contrôle gestuel sans contact via votre caméra</span></div>
+        <div class="onb-welcome-feature"><span>✨</span><span>Tableau blanc interactif avec outils d'annotation</span></div>
+        <div class="onb-welcome-feature"><span>📝</span><span>Quiz air, diaporamas, labo 3D et Prof IA intégrés</span></div>
+        <div class="onb-welcome-feature"><span>⚙️</span><span>Calibrage et profils pour votre marque de TNI</span></div>
+      </div>
+      <div class="onb-welcome-actions">
+        <button class="onb-welcome-start" id="onb-welcome-start-btn">🚀 Démarrer le guide</button>
+        <button class="onb-welcome-skip" id="onb-welcome-skip-btn">Passer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CARTE TOOLTIP WALKTHROUGH -->
+  <div id="onboarding-card" style="display:none;">
+    <div class="onb-arrow" id="onb-arrow"></div>
+    <div class="onb-header">
+      <span class="onb-logo">EDU-AIR Guide</span>
+      <span class="onb-step-badge" id="onb-step-badge">Étape 1 / 12</span>
+    </div>
+    <span class="onb-step-icon" id="onb-step-icon">📊</span>
+    <div class="onb-progress-bar">
+      <div class="onb-progress-fill" id="onb-progress-fill" style="width: 8%"></div>
+    </div>
+    <div class="onb-dots" id="onb-dots"></div>
+    <div class="onb-title" id="onb-card-title">Tableau de Bord</div>
+    <div class="onb-desc" id="onb-card-desc">Votre cockpit central.</div>
+    <div class="onb-actions">
+      <button class="onb-btn-skip" id="onb-btn-quit">✕ Terminer</button>
+      <button class="onb-btn-prev" id="onb-btn-prev">◀ Préc.</button>
+      <button class="onb-btn-next" id="onb-btn-next">Suivant ▶</button>
+    </div>
+    <div class="onb-keyboard-hint"><kbd>←</kbd> <kbd>→</kbd> pour naviguer · <kbd>Échap</kbd> pour quitter</div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>

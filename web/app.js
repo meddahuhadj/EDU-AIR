@@ -174,6 +174,7 @@
       let wbLineWidth = 4;
       let isLocked = false;
       let wbHistoryStack = [];
+      let wbRedoStack = [];
       let startX = 0;
       let startY = 0;
       let snapshot = null;
@@ -264,6 +265,7 @@
       function saveWbState() {
         wbHistoryStack.push(ctx.getImageData(0, 0, wbCanvas.width, wbCanvas.height));
         if (wbHistoryStack.length > 25) wbHistoryStack.shift();
+        wbRedoStack = [];
       }
 
       function getWbCoords(e) {
@@ -418,10 +420,26 @@
       if (btnWbUndo) {
         btnWbUndo.addEventListener("click", () => {
           if (wbHistoryStack.length > 0) {
+            wbRedoStack.push(ctx.getImageData(0, 0, wbCanvas.width, wbCanvas.height));
+            if (wbRedoStack.length > 25) wbRedoStack.shift();
             const state = wbHistoryStack.pop();
             ctx.putImageData(state, 0, 0);
           } else {
+            wbRedoStack.push(ctx.getImageData(0, 0, wbCanvas.width, wbCanvas.height));
+            if (wbRedoStack.length > 25) wbRedoStack.shift();
             ctx.clearRect(0, 0, wbCanvas.width, wbCanvas.height);
+          }
+        });
+      }
+
+      const btnWbRedo = $("#btn-wb-redo");
+      if (btnWbRedo) {
+        btnWbRedo.addEventListener("click", () => {
+          if (wbRedoStack.length > 0) {
+            wbHistoryStack.push(ctx.getImageData(0, 0, wbCanvas.width, wbCanvas.height));
+            if (wbHistoryStack.length > 25) wbHistoryStack.shift();
+            const state = wbRedoStack.pop();
+            ctx.putImageData(state, 0, 0);
           }
         });
       }
@@ -1302,6 +1320,8 @@
       let isDragging3d = false;
       let lastMouseX = 0;
       let lastMouseY = 0;
+      let explodeDist = 0;
+      let explodeAnimId = null;
 
       function render3DScene() {
         ctx.clearRect(0, 0, canvas3d.width, canvas3d.height);
@@ -1428,7 +1448,7 @@
           ctx.fillStyle = "#ffb84d";
           ctx.font = "bold 16px Segoe UI, sans-serif";
           ctx.fillText("🪐 Système Solaire & Orbitale Planétaire", -130, 160);
-        } else {
+        } else if (currentModel === "tecto") {
           ctx.fillStyle = "#ffb84d";
           ctx.fillRect(-180, 20, 360, 40);
           ctx.fillStyle = "#ff5d5d";
@@ -1437,6 +1457,178 @@
           ctx.fillStyle = "#00f2fe";
           ctx.font = "bold 16px Segoe UI, sans-serif";
           ctx.fillText("🌍 Tectonique des Plaques (Subduction & Manteau)", -160, 160);
+
+        } else if (currentModel === "dna") {
+          const Wb = 120 + explodeDist * 90;
+          const total = 15;
+          const stepH = 20;
+          const startY = -150;
+          ctx.lineWidth = 10;
+          ctx.lineCap = "round";
+          ctx.beginPath();
+          ctx.strokeStyle = "#00f2fe";
+          for (let i = 0; i <= total; i++) {
+            const y = startY + i * stepH;
+            const x = Math.cos(rotY + i * 0.6) * Wb;
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.strokeStyle = "#ffb84d";
+          for (let i = 0; i <= total; i++) {
+            const y = startY + i * stepH;
+            const x = Math.cos(rotY + i * 0.6 + Math.PI) * Wb;
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+          const pairColors = [["#ff5d5d", "#00f2fe"], ["#3ddc97", "#ffe9a8"]];
+          for (let i = 0; i < total; i++) {
+            const y = startY + i * stepH;
+            const xL = Math.cos(rotY + i * 0.6) * Wb;
+            const xR = Math.cos(rotY + i * 0.6 + Math.PI) * Wb;
+            const c = pairColors[i % 2];
+            ctx.strokeStyle = "rgba(226,232,240,0.85)";
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            ctx.moveTo(xL, y);
+            ctx.lineTo(xR, y);
+            ctx.stroke();
+            const baseLabels = [["A", "T"], ["C", "G"]];
+            const lbl = baseLabels[i % 2];
+            ctx.font = "bold 11px Consolas, monospace";
+            ctx.fillStyle = c[0];
+            ctx.fillText(lbl[0], xL + (xR - xL) * 0.18 - 8, y - 6);
+            ctx.fillStyle = c[1];
+            ctx.fillText(lbl[1], xL + (xR - xL) * 0.82 - 8, y - 6);
+          }
+          ctx.font = "bold 16px Segoe UI, sans-serif";
+          ctx.fillStyle = "#3ddc97";
+          ctx.fillText("🧬 Double Hélice ADN — Paires complémentaires (A-T, C-G)", (explodeDist ? -215 : -150), 175);
+
+        } else if (currentModel === "earth") {
+          const anim = (Math.sin(rotY * 6) + 1) / 2;
+          const rC = 118, rM = 82, rO = 48, rI = 24;
+          const draws = [
+            {r: rC, c: "#3b82c4", name: "ÉCORCE (Croûte)"},
+            {r: rM, c: "#e07b39", name: "MANTEAU"},
+            {r: rO, c: "#ffb84d", name: "NOYAU EXTERNE"},
+            {r: rI, c: "#fff7ed", name: "NOYAU INTERNE"}
+          ];
+          for (const d of draws) {
+            ctx.beginPath();
+            ctx.arc(0, 10, d.r, 0, Math.PI * 2);
+            ctx.fillStyle = d.c;
+            ctx.fill();
+            ctx.strokeStyle = "rgba(255,255,255,0.5)";
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+          }
+          ctx.fillStyle = "#fff";
+          ctx.font = "bold 10px Segoe UI, sans-serif";
+          ctx.fillText("NOYAU INTERNE", -30, 14);
+          ctx.fillStyle = "#3b1c07";
+          ctx.fillText("NOYAU EXTERNE", -44, -32);
+          ctx.fillStyle = "#fff";
+          ctx.fillText("MANTEAU", -30, -70);
+          ctx.fillText("CROÛTE", -26, -105);
+          ctx.font = "bold 12px Segoe UI, sans-serif";
+          ctx.fillText("🌋 Volcan :", -150, 60);
+          ctx.save();
+          ctx.translate(140, 40);
+          ctx.beginPath();
+          ctx.moveTo(-45, 10);
+          ctx.lineTo(-16, -38);
+          ctx.lineTo(16, -38);
+          ctx.lineTo(45, 10);
+          ctx.closePath();
+          ctx.fillStyle = "#6b4226";
+          ctx.fill();
+          ctx.beginPath();
+          ctx.moveTo(-10, -38);
+          ctx.lineTo(0, -46);
+          ctx.lineTo(10, -38);
+          ctx.closePath();
+          ctx.fillStyle = "#ff5d2e";
+          ctx.fill();
+          ctx.beginPath();
+          ctx.moveTo(0, -46);
+          ctx.lineTo(8, -26);
+          ctx.lineTo(-8, -26);
+          ctx.closePath();
+          ctx.fillStyle = "#ffb84d";
+          ctx.fill();
+          for (let p = 0; p < 6; p++) {
+            const a = (p / 6) * Math.PI * 2 + rotY;
+            const rr = 8 + Math.random() * 10 + anim * 6;
+            ctx.beginPath();
+            ctx.arc(Math.cos(a) * rr, -50 - Math.sin(a) * rr * 0.7, 4 + Math.random() * 3, 0, Math.PI * 2);
+            ctx.fillStyle = ["#ff5d2e", "#ffb84d", "#ffe9a8"][p % 3];
+            ctx.fill();
+          }
+          ctx.restore();
+          ctx.font = "bold 16px Segoe UI, sans-serif";
+          ctx.fillStyle = "#ffb84d";
+          ctx.fillText("🌋 Volcan & Coupe de la Terre (Écorce / Manteau / Noyau)", -185, 175);
+
+        } else if (currentModel === "engine") {
+          const t = Date.now() / 1000;
+          const swing = (Math.sin(t * 0.9) + 1) / 2;
+          const phase = (Math.floor(swing * 4) + 4) % 4;
+          const phaseNames = ["1. ADMISSION", "2. COMPRESSION", "3. EXPLOSION", "4. ÉCHAPPEMENT"];
+          const phaseColors = ["#00f2fe", "#8b7bff", "#ff5d2e", "#3ddc97"];
+          const ch = 150;
+          const pistonTop = 70 + ch - swing * ch + (explodeDist > 0 ? explodeDist * 30 : 0);
+          ctx.strokeStyle = "#64748b";
+          ctx.lineWidth = 8;
+          ctx.lineCap = "round";
+          ctx.beginPath();
+          ctx.moveTo(-95, -50 - (explodeDist > 0 ? explodeDist * 30 : 0));
+          ctx.lineTo(95, -50 - (explodeDist > 0 ? explodeDist * 30 : 0));
+          ctx.stroke();
+          ctx.strokeStyle = "#94a3b8";
+          ctx.lineWidth = 12;
+          ctx.beginPath();
+          ctx.moveTo(-90, -45 - (explodeDist > 0 ? explodeDist * 30 : 0));
+          ctx.lineTo(-90, pistonTop - 10);
+          ctx.moveTo(90, -45 - (explodeDist > 0 ? explodeDist * 30 : 0));
+          ctx.lineTo(90, pistonTop - 10);
+          ctx.stroke();
+          ctx.fillStyle = "#cbd5e1";
+          ctx.fillRect(-98, pistonTop - 25, 36, 25);
+          ctx.strokeStyle = "#475569";
+          ctx.lineWidth = 8;
+          const crankY = 90;
+          const crankX = Math.cos(-swing * Math.PI * 2) * 42;
+          const crankYY = Math.sin(-swing * Math.PI * 2) * 42;
+          ctx.beginPath();
+          ctx.moveTo(0, crankY);
+          ctx.lineTo(crankX, crankY + crankYY);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(0, crankY, 18, 0, Math.PI * 2);
+          ctx.fillStyle = "#64748b";
+          ctx.fill();
+          ctx.strokeStyle = "rgba(255,255,255,0.7)";
+          ctx.beginPath();
+          ctx.arc(0, crankY, 40, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.font = "bold 22px Segoe UI, sans-serif";
+          ctx.fillStyle = phaseColors[phase];
+          ctx.fillText(phaseNames[phase], -95, 160 + (explodeDist > 0 ? explodeDist * 20 : 0));
+          if (phase === 2) {
+            ctx.fillStyle = "rgba(255,93,46,0.35)";
+            ctx.fillRect(-70, pistonTop - 30, 140, 30);
+            const sparks = Math.floor(t * 12) % 8;
+            for (let s = 0; s < sparks; s++) {
+              ctx.beginPath();
+              ctx.arc(-70 + s * 20, -55 + (s % 3) * 8, 3, 0, Math.PI * 2);
+              ctx.fillStyle = "#ffb84d";
+              ctx.fill();
+            }
+          }
+          ctx.font = "bold 16px Segoe UI, sans-serif";
+          ctx.fillStyle = "#ffb84d";
+          ctx.fillText("⚙️ Moteur Thermique 4 Temps", -150, 175 + (explodeDist > 0 ? explodeDist * 20 : 0));
         }
 
         ctx.restore();
@@ -1474,9 +1666,13 @@
       const btnCell = $("#btn-3d-cell");
       const btnTecto = $("#btn-3d-tecto");
       const btnOrbit = $("#btn-3d-orbit");
+      const btnDNA = $("#btn-3d-dna");
+      const btnEarth = $("#btn-3d-earth");
+      const btnEngine = $("#btn-3d-engine");
+      const btnExplode = $("#btn-3d-explode");
 
       function setActive3dBtn(activeBtn) {
-        [btnH2O, btnCell, btnTecto, btnOrbit].forEach(b => {
+        [btnH2O, btnCell, btnTecto, btnOrbit, btnDNA, btnEarth, btnEngine].forEach(b => {
           if (b) {
             b.classList.remove("btn-app-primary");
             b.classList.add("btn-app-ghost");
@@ -1492,6 +1688,18 @@
       if (btnCell) btnCell.addEventListener("click", () => { currentModel = "cell"; setActive3dBtn(btnCell); render3DScene(); });
       if (btnTecto) btnTecto.addEventListener("click", () => { currentModel = "tecto"; setActive3dBtn(btnTecto); render3DScene(); });
       if (btnOrbit) btnOrbit.addEventListener("click", () => { currentModel = "orbit"; setActive3dBtn(btnOrbit); render3DScene(); });
+      if (btnDNA) btnDNA.addEventListener("click", () => { currentModel = "dna"; setActive3dBtn(btnDNA); render3DScene(); });
+      if (btnEarth) btnEarth.addEventListener("click", () => { currentModel = "earth"; setActive3dBtn(btnEarth); render3DScene(); });
+      if (btnEngine) btnEngine.addEventListener("click", () => { currentModel = "engine"; setActive3dBtn(btnEngine); render3DScene(); });
+
+      if (btnExplode) {
+        btnExplode.addEventListener("click", () => {
+          explodeDist = explodeDist > 0 ? 0 : 1;
+          btnExplode.classList.toggle("btn-app-primary", explodeDist > 0);
+          btnExplode.classList.toggle("btn-app-ghost", explodeDist === 0);
+          render3DScene();
+        });
+      }
 
       const btn3dCoupe = $("#btn-3d-coupe");
       const view3d = $("#view-air3d");
@@ -1526,7 +1734,10 @@
       pendulum: { html: labPenHTML, bind: labPenBind },
       waves: { html: labWaveHTML, bind: labWaveBind },
       optics: { html: labOptHTML, bind: labOptBind },
-      planets: { html: labPlanHTML, bind: labPlanBind }
+      planets: { html: labPlanHTML, bind: labPlanBind },
+      gravity: { html: labGravHTML, bind: labGravBind },
+      acoustic: { html: labAcouHTML, bind: labAcouBind },
+      periodic: { html: labPerioHTML, bind: labPerioBind }
     };
 
     function labGcd(a, b) { return b ? labGcd(b, a % b) : Math.abs(a); }
@@ -2696,6 +2907,340 @@ function labOptNat(v) {
       labPlanGraph();
     }
 
+    // --- Simulation 9 : Gravité & Chute des Corps (air vs vide) ---
+    const labGravState = { running: false, t: 0, yA: 0, yV: 0, done: false };
+    const labGravH = 120;
+    function labGravValues() {
+      return {
+        g: parseFloat(($("#grav-g") || { value: 9.81 }).value) || 9.81,
+        m: parseFloat(($("#grav-m") || { value: 50 }).value) || 50
+      };
+    }
+    function labGravHTML() {
+      return `<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:.8rem; margin-bottom:.8rem;">
+        <label style="color:#ffd166; font-size:.78rem; font-weight:700;">${visionT("labGravG")}<br>
+          <select id="grav-g" class="select-custom" style="width:100%; margin-top:.3rem;">
+            <option value="1.62">🌙 Lune 1.62</option>
+            <option value="3.71">🛸 Mars 3.71</option>
+            <option value="9.81" selected>🌍 Terre 9.81</option>
+            <option value="24.79">🔥 Jupiter 24.79</option>
+            <option value="0">🛰️ Impesanteur 0</option>
+          </select></label>
+        <label style="color:#00f2fe; font-size:.78rem; font-weight:700;">${visionT("labGravMass")}<br>
+          <input type="range" id="grav-m" min="10" max="100" step="10" value="50" style="width:100%; margin-top:.3rem;"></label>
+        <div style="display:flex; gap:.5rem; align-items:flex-end;">
+          <button id="grav-run" class="select-custom" style="font-weight:800; letter-spacing:1px; font-size:.82rem;">${visionT("labRun")}</button>
+          <button id="grav-reset" class="select-custom" style="font-weight:700; font-size:.75rem;">${visionT("labReset")}</button>
+        </div>
+      </div>
+      <div style="display:flex; gap:1rem; flex-wrap:wrap; align-items:flex-start;">
+        <canvas id="grav-anim" width="520" height="360" style="flex:1; min-width:300px; border:1px solid rgba(126,195,255,0.25); border-radius:10px; background:#060912;"></canvas>
+        <div style="width:250px; min-width:215px; display:flex; flex-direction:column; gap:.5rem;">
+          <div style="display:flex; justify-content:space-between; background:rgba(10,20,38,0.8); border:1px solid rgba(126,195,255,0.2); padding:.55rem .8rem; border-radius:10px;"><span style="color:#9fb0cf; font-size:.82rem;">${visionT("labGravVacTime")}</span><b id="grav-tv" style="color:#00f2fe;">—</b></div>
+          <div style="display:flex; justify-content:space-between; background:rgba(10,20,38,0.8); border:1px solid rgba(126,195,255,0.2); padding:.55rem .8rem; border-radius:10px;"><span style="color:#9fb0cf; font-size:.82rem;">${visionT("labGravAirTime")}</span><b id="grav-ta" style="color:#ffb84d;">—</b></div>
+          <div style="display:flex; justify-content:space-between; background:rgba(10,20,38,0.8); border:1px solid rgba(126,195,255,0.2); padding:.55rem .8rem; border-radius:10px;"><span style="color:#9fb0cf; font-size:.82rem;">${visionT("labGravTheory")}</span><b id="grav-t0" style="color:#3ddc97;">—</b></div>
+          <div style="display:flex; justify-content:space-between; background:rgba(10,20,38,0.8); border:1px solid rgba(126,195,255,0.2); padding:.55rem .8rem; border-radius:10px;"><span style="color:#9fb0cf; font-size:.82rem;">${visionT("labFormula")}</span><b id="grav-fm" style="color:#ffd166;">t = √(2h/g)</b></div>
+        </div>
+      </div>
+      <div style="margin-top:.6rem; display:flex; gap:1rem; flex-wrap:wrap;">
+        <span style="background:rgba(0,242,254,0.12); padding:.45rem .8rem; border-radius:9px; color:#00f2fe; font-weight:700; font-size:.85rem;">${visionT("labGravConcl")}</span>
+      </div>`;
+    }
+    function labGravDraw() {
+      const cv = $("#grav-anim");
+      if (!cv) return;
+      const g = cv.getContext("2d");
+      const W = cv.width, H = cv.height;
+      const gv = labGravValues();
+      const pix = (H - 80) / labGravH;
+      const floorY = H - 40;
+      g.clearRect(0, 0, W, H);
+      g.fillStyle = "#060912"; g.fillRect(0, 0, W, H);
+      g.strokeStyle = "rgba(126,195,255,0.3)"; g.lineWidth = 1;
+      for (let k = 0; k <= 10; k++) {
+        const y = floorY - k * (labGravH / 10) * pix;
+        g.beginPath(); g.moveTo(30, y); g.lineTo(W - 30, y); g.stroke();
+        g.fillStyle = "#9fb0cf"; g.font = "10px Segoe UI, sans-serif";
+        g.fillText((k * (labGravH / 10)).toFixed(0) + " m", 6, y + 4);
+      }
+      const xV = W * 0.28, xA = W * 0.72;
+      const yV = floorY - labGravState.yV * pix;
+      const yA = floorY - labGravState.yA * pix;
+      g.fillStyle = "#00f2fe";
+      g.beginPath(); g.arc(xV, yV, 14, 0, Math.PI * 2); g.fill();
+      g.fillStyle = "#ffb84d";
+      g.beginPath(); g.arc(xA, yA, 14, 0, Math.PI * 2); g.fill();
+      g.fillStyle = "#fff"; g.font = "bold 11px Segoe UI, sans-serif"; g.textAlign = "center";
+      g.fillText("Vide", xV, yV - 24); g.fillText("Avec air", xA, yA - 24);
+      g.fillText("(Galilée / Newton)", W / 2, H - 8);
+      g.textAlign = "left";
+      if (labGravState.yA > 0 || labGravState.yV > 0) {
+        g.fillStyle = "#ffd166"; g.font = "bold 12px Consolas, monospace";
+        g.fillText("t = " + labGravState.t.toFixed(2) + " s   h=" + Math.max(labGravState.yV, labGravState.yA).toFixed(1) + " m", 60, 26);
+      }
+    }
+    function labGravLoop() {
+      const gv = labGravValues();
+      const st = labGravState;
+      if (!st.running) return;
+      st.t += 0.016;
+      st.yV = 0.5 * gv.g * st.t * st.t;
+      const drag = Math.min(1, 0.00024 * gv.m + 0.0009 * gv.g * st.t);
+      st.yA = 0.5 * gv.g * st.t * st.t * (1 - drag);
+      if (st.yV >= labGravH) {
+        st.yV = labGravH;
+        if (st.yA >= labGravH) {
+          st.yA = labGravH;
+          st.running = false;
+          labRunBtn("grav-run", false);
+          const tV = Math.sqrt(2 * labGravH / (gv.g || 0.0001));
+          labSet("grav-tv", st.t.toFixed(2) + " s");
+          labSet("grav-ta", st.t.toFixed(2) + " s");
+        }
+      }
+      labSet("grav-tv", st.yV >= labGravH ? (Math.sqrt(2 * labGravH / (gv.g || 0.0001))).toFixed(2) + " s" : st.t.toFixed(2) + " s");
+      labSet("grav-ta", st.yA >= labGravH ? st.t.toFixed(2) + " s" : st.t.toFixed(2) + " s");
+      labGravDraw();
+      labRaf = requestAnimationFrame(labGravLoop);
+    }
+    function labGravBind() {
+      labGravState.running = false;
+      labGravState.t = 0; labGravState.yA = 0; labGravState.yV = 0;
+      labSet("grav-tv", "—"); labSet("grav-ta", "—");
+      const gv = labGravValues();
+      const t0 = Math.sqrt(2 * labGravH / (gv.g || 0.0001));
+      labSet("grav-t0", t0.toFixed(2) + " s");
+      labGravDraw();
+      const run = $("#grav-run"), reset = $("#grav-reset");
+      if (run) run.addEventListener("click", () => {
+        labGravState.running = !labGravState.running;
+        if (labGravState.running) {
+          labGravState.t = 0; labGravState.yA = 0; labGravState.yV = 0;
+          const g2 = labGravValues();
+          labSet("grav-t0", (Math.sqrt(2 * labGravH / (g2.g || 0.0001))).toFixed(2) + " s");
+          labGravLoop();
+        } else labStopRaf();
+        labRunBtn("grav-run", labGravState.running);
+      });
+      if (reset) reset.addEventListener("click", () => {
+        labGravState.running = false; labStopRaf();
+        labRunBtn("grav-run", false);
+        labGravState.t = 0; labGravState.yA = 0; labGravState.yV = 0;
+        labSet("grav-tv", "—"); labSet("grav-ta", "—");
+        labGravDraw();
+      });
+      const gsel = $("#grav-g");
+      if (gsel) gsel.addEventListener("change", () => {
+        labGravState.running = false; labStopRaf(); labRunBtn("grav-run", false);
+        labGravState.t = 0; labGravState.yA = 0; labGravState.yV = 0;
+        labSet("grav-tv", "—"); labSet("grav-ta", "—");
+        const g3 = labGravValues();
+        labSet("grav-t0", (Math.sqrt(2 * labGravH / (g3.g || 0.0001))).toFixed(2) + " s");
+        labGravDraw();
+      });
+    }
+
+    // --- Simulation 10 : Acoustique & Ondes Sonores ---
+    const labAcouState = { phase: 0, ctx: null, osc: null, playing: false };
+    function labAcouValues() {
+      const mic = $("#acou-mic");
+      const slider = $("#acou-f");
+      let f = mic && mic.value ? parseFloat(mic.value) : (slider ? parseFloat(slider.value) : 440);
+      if (isNaN(f) || f < 1) f = 440;
+      const v = parseFloat(($("#acou-amp") || { value: 50 }).value) || 50;
+      return { f: f, v: v };
+    }
+    function labAcouHTML() {
+      return `<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:.8rem; margin-bottom:.8rem;">
+        <label style="color:#00f2fe; font-size:.78rem; font-weight:700;">${visionT("labAcouFreq")}<br>
+          <input type="range" id="acou-f" min="20" max="2000" step="10" value="440" style="width:100%; margin-top:.3rem;">
+          <input type="number" id="acou-mic" min="20" max="20000" value="440" style="width:100%; background:#040710; color:#fff; border:1px solid rgba(126,195,255,0.3); border-radius:6px; padding:4px; margin-top:.3rem;"></label>
+        <label style="color:#ffb84d; font-size:.78rem; font-weight:700;">${visionT("labAcouAmp")}<br>
+          <input type="range" id="acou-amp" min="0" max="100" step="1" value="50" style="width:100%; margin-top:.3rem;"></label>
+        <div style="display:flex; gap:.5rem; align-items:flex-end; flex-wrap:wrap;">
+          <button id="acou-play" class="select-custom" style="font-weight:800; letter-spacing:1px; font-size:.82rem;">${visionT("labAcouPlay")}</button>
+          <button id="acou-stop" class="select-custom" style="font-weight:700; font-size:.75rem;">${visionT("labStop")}</button>
+        </div>
+      </div>
+      <canvas id="acou-anim" width="560" height="220" style="width:100%; border:1px solid rgba(126,195,255,0.25); border-radius:10px; background:#060912;"></canvas>
+      <div style="display:flex; flex-wrap:wrap; gap:.5rem; margin-top:.7rem;">
+        <div style="display:flex; justify-content:space-between; gap:1.2rem; background:rgba(10,20,38,0.8); border:1px solid rgba(126,195,255,0.2); padding:.5rem .8rem; border-radius:10px;"><span style="color:#9fb0cf; font-size:.82rem;">${visionT("labAcouPeriod")}</span><b id="acou-t" style="color:#00f2fe;">—</b></div>
+        <div style="display:flex; justify-content:space-between; gap:1.2rem; background:rgba(10,20,38,0.8); border:1px solid rgba(126,195,255,0.2); padding:.5rem .8rem; border-radius:10px;"><span style="color:#9fb0cf; font-size:.82rem;">${visionT("labAcouWave")}</span><b id="acou-la" style="color:#ffb84d;">—</b></div>
+        <div style="display:flex; justify-content:space-between; gap:1.2rem; background:rgba(10,20,38,0.8); border:1px solid rgba(126,195,255,0.2); padding:.5rem .8rem; border-radius:10px;"><span style="color:#9fb0cf; font-size:.82rem;">${visionT("labAcouLevel")}</span><b id="acou-db" style="color:#3ddc97;">—</b></div>
+      </div>`;
+    }
+    function labAcouDraw() {
+      const cv = $("#acou-anim");
+      if (!cv) return;
+      const g = cv.getContext("2d");
+      const W = cv.width, H = cv.height;
+      const v = labAcouValues();
+      const f = Math.max(1, v.f);
+      const amp = (v.v / 100) * (H / 2 - 14);
+      g.clearRect(0, 0, W, H);
+      g.fillStyle = "#060912"; g.fillRect(0, 0, W, H);
+      g.strokeStyle = "rgba(126,195,255,0.15)"; g.lineWidth = 1;
+      g.beginPath(); g.moveTo(0, H / 2); g.lineTo(W, H / 2); g.stroke();
+      g.lineWidth = 2.2;
+      g.strokeStyle = "#00f2fe";
+      g.beginPath();
+      for (let x = 0; x <= W; x += 2) {
+        const y = H / 2 - amp * Math.sin((x / W) * Math.PI * 2 * 3 + labAcouState.phase);
+        if (x === 0) g.moveTo(x, y); else g.lineTo(x, y);
+      }
+      g.stroke();
+      g.fillStyle = "#fff"; g.font = "bold 14px Consolas, monospace";
+      g.fillText("f = " + Math.round(f) + " Hz", 12, 24);
+      g.fillText("Période T = " + (1 / f).toFixed(4) + " s", 12, 46);
+      g.fillText("λ = v/f = " + (343 / f).toFixed(3) + " m  (v = 343 m/s)", 12, 68);
+    }
+    function labAcouLoop() {
+      labAcouState.phase += 0.12;
+      labAcouDraw();
+      labRaf = requestAnimationFrame(labAcouLoop);
+    }
+    function labAcouFindCtx() {
+      try {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (AC) {
+          if (!labAcouState.ctx) labAcouState.ctx = new AC();
+          return labAcouState.ctx;
+        }
+      } catch (e) {}
+      return null;
+    }
+    function labAcouTone(on) {
+      const ctx = labAcouFindCtx();
+      if (!ctx) return;
+      if (on && !labAcouState.playing) {
+        const v = labAcouValues();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = Math.max(20, Math.min(20000, v.f));
+        gain.gain.value = Math.max(0.001, v.v / 100) * 0.18;
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.start();
+        labAcouState.osc = osc;
+        labAcouState.playing = true;
+        labRunBtn("acou-play", true);
+      } else if (!on && labAcouState.playing) {
+        try {
+          labAcouState.osc.stop();
+          labAcouState.osc.disconnect();
+        } catch (e) {}
+        labAcouState.osc = null;
+        labAcouState.playing = false;
+        labRunBtn("acou-play", false);
+      }
+    }
+    function labAcouBind() {
+      labAcouState.phase = 0;
+      labAcouTone(false);
+      labSet("acou-t", "—"); labSet("acou-la", "—"); labSet("acou-db", "—");
+      labAcouDraw();
+      labRaf = requestAnimationFrame(labAcouLoop);
+      const play = $("#acou-play"), stopB = $("#acou-stop");
+      if (play) play.addEventListener("click", () => labAcouTone(true));
+      if (stopB) stopB.addEventListener("click", () => labAcouTone(false));
+      ["#acou-f", "#acou-mic", "#acou-amp"].forEach(sel => {
+        const el = $(sel);
+        if (!el) return;
+        el.addEventListener("input", () => {
+          const v = labAcouValues();
+          labSet("acou-t", (1 / Math.max(1, v.f)).toFixed(4) + " s");
+          labSet("acou-la", (343 / Math.max(1, v.f)).toFixed(3) + " m");
+          labSet("acou-db", Math.round(20 * Math.log10(1 + v.v / 4)) + " dB");
+          labAcouDraw();
+          if (labAcouState.playing && labAcouState.osc) {
+            try { labAcouState.osc.frequency.value = Math.max(20, Math.min(20000, v.f)); } catch (e) {}
+          }
+        });
+      });
+      const v = labAcouValues();
+      labSet("acou-t", (1 / Math.max(1, v.f)).toFixed(4) + " s");
+      labSet("acou-la", (343 / Math.max(1, v.f)).toFixed(3) + " m");
+      labSet("acou-db", Math.round(20 * Math.log10(1 + v.v / 4)) + " dB");
+    }
+
+    // --- Simulation 11 : Tableau Périodique Dynamique ---
+    const labPerioData = [
+      { sym: "H", name: "Hydrogène", z: 1, m: 1.008, conf: "K¹", shells: [1] },
+      { sym: "He", name: "Hélium", z: 2, m: 4.003, conf: "K²", shells: [2] },
+      { sym: "C", name: "Carbone", z: 6, m: 12.011, conf: "K² L⁴", shells: [2, 4] },
+      { sym: "O", name: "Oxygène", z: 8, m: 15.999, conf: "K² L⁶", shells: [2, 6] },
+      { sym: "Ne", name: "Néon", z: 10, m: 20.180, conf: "K² L⁸", shells: [2, 8] },
+      { sym: "Na", name: "Sodium", z: 11, m: 22.990, conf: "K² L⁸ M¹", shells: [2, 8, 1] },
+      { sym: "Fe", name: "Fer", z: 26, m: 55.845, conf: "K² L⁸ M¹⁴ N²", shells: [2, 8, 14, 2] },
+      { sym: "Cu", name: "Cuivre", z: 29, m: 63.546, conf: "K² L⁸ M¹⁸ N¹", shells: [2, 8, 18, 1] },
+      { sym: "Au", name: "Or", z: 79, m: 196.967, conf: "K² L⁸ M¹⁸ N³² O¹⁸ P¹", shells: [2, 8, 18, 32, 18, 1] }
+    ];
+    function labPerioHTML() {
+      const opts = labPerioData.map(e => `<option value="${e.z}">${e.z} · ${e.sym} — ${e.name}</option>`).join("");
+      return `<div style="display:flex; gap:1rem; flex-wrap:wrap; align-items:center; margin-bottom:.8rem;">
+        <label style="color:#00f2fe; font-size:.82rem; font-weight:700;">${visionT("labPerioEl")}
+          <select id="perio-el" class="select-custom" style="width:220px; margin-left:.4rem;">${opts}</select>
+        </label>
+        <div class="lab-perio-card" id="perio-info" style="flex:1; min-width:220px; background:rgba(10,20,38,0.8); border:1px solid rgba(126,195,255,0.3); border-radius:12px; padding:.8rem 1rem;"></div>
+      </div>
+      <div style="margin-bottom:.6rem; font-weight:700; color:#ffd166; font-size:.85rem;">${visionT("labPerioBohr")}</div>
+      <canvas id="perio-canvas" width="560" height="360" style="width:100%; border:1px solid rgba(126,195,255,0.25); border-radius:10px; background:#060912;"></canvas>`;
+    }
+    function labPerioElement() {
+      const sel = $("#perio-el");
+      const z = parseInt((sel && sel.value) || "1", 10);
+      return labPerioData.find(e => e.z === z) || labPerioData[0];
+    }
+    function labPerioDraw() {
+      const cv = $("#perio-canvas");
+      if (!cv) return;
+      const g = cv.getContext("2d");
+      const W = cv.width, H = cv.height;
+      const el = labPerioElement();
+      g.clearRect(0, 0, W, H);
+      g.fillStyle = "#060912"; g.fillRect(0, 0, W, H);
+      const cx = W / 2, cy = H / 2;
+      g.fillStyle = "#ff5d5d";
+      g.beginPath(); g.arc(cx, cy, 34, 0, Math.PI * 2); g.fill();
+      g.fillStyle = "#fff"; g.font = "bold 22px Segoe UI, sans-serif"; g.textAlign = "center";
+      g.fillText(el.sym, cx, cy + 8);
+      g.textAlign = "left";
+      const maxEq = 6;
+      const maxR = 150;
+      const shells = el.shells.slice(0, maxEq);
+      const maxShells = shells.length;
+      const colors = ["#00f2fe", "#ffb84d", "#3ddc97", "#ff9ff3", "#ffe9a8", "#8b7bff"];
+      for (let s = 0; s < maxShells; s++) {
+        const r = 50 + (maxShells === 1 ? 30 : (s / (maxShells - 1)) * (maxR - 60)) + (maxShells === 1 ? 22 : 0);
+        g.strokeStyle = "rgba(226,232,240,0.45)";
+        g.lineWidth = 1.5;
+        g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.stroke();
+        const n = shells[s];
+        const count = Math.min(n, 32);
+        for (let i = 0; i < count; i++) {
+          const a = (i / Math.max(1, count)) * Math.PI * 2 - Math.PI / 2;
+          g.fillStyle = colors[s % colors.length];
+          g.beginPath(); g.arc(cx + Math.cos(a) * r, cy + Math.sin(a) * r, 9, 0, Math.PI * 2); g.fill();
+        }
+        g.fillStyle = "#9fb0cf"; g.font = "bold 11px Segoe UI, sans-serif";
+        g.fillText("Couche " + ["K", "L", "M", "N", "O", "P"][s] + " : " + n + " e⁻", 18, 22 + s * 22);
+      }
+      const info = $("#perio-info");
+      if (info) {
+        info.innerHTML = `<div style="font-size:1rem; font-weight:900; color:#fff;">${el.sym} — ${el.name}</div>
+          <div style="display:flex; gap:.6rem; flex-wrap:wrap; margin-top:.4rem; color:#e8effc; font-size:.85rem;">
+            <span style="background:rgba(0,242,254,0.12); padding:.25rem .55rem; border-radius:8px;">Z = ${el.z}</span>
+            <span style="background:rgba(255,184,77,0.12); padding:.25rem .55rem; border-radius:8px;">M = ${el.m} u</span>
+            <span style="background:rgba(61,220,151,0.12); padding:.25rem .55rem; border-radius:8px;">Configuration : ${el.conf}</span>
+          </div>`;
+      }
+    }
+    function labPerioBind() {
+      labPerioDraw();
+      const sel = $("#perio-el");
+      if (sel) sel.addEventListener("change", labPerioDraw);
+    }
+
     // --- AI LAB REPORT engine ---
     function labReport() {
       const kind = labActiveKind;
@@ -2706,6 +3251,83 @@ function labOptNat(v) {
       if (title) title.textContent = "🏆 " + visionT("labReportTitle") + " — " + simName;
       if (["ohm", "genetics", "ph", "em"].indexOf(kind) !== -1) {
         body.innerHTML = `<div style="background:rgba(126,195,255,0.08); border:1px solid rgba(126,195,255,0.2); border-radius:10px; padding:.8rem 1rem; color:#9fb0cf; font-size:.88rem;">ℹ️ ${visionT("labReportUnavail")}</div>`;
+        return;
+      }
+
+      if (kind === "gravity") {
+        const gv = labGravValues();
+        const t0 = Math.sqrt(2 * labGravH / (gv.g || 0.0001));
+        body.innerHTML = `
+          <div style="border-left:4px solid #ffd166; background:rgba(10,20,38,0.6); padding:.7rem .9rem; border-radius:10px; margin-bottom:.6rem;">
+            <div style="color:#ffd166; font-weight:800; font-size:.85rem;">Hypothèse</div>
+            <div style="color:#e8effc; font-size:.88rem;">Dans le vide, deux corps de masses différentes tombent à la même vitesse (Galilée). Avec l'air, la traînée ralentit le corps léger ou aérodynamiquement défavorable.</div>
+          </div>
+          <div style="border-left:4px solid #00f2fe; background:rgba(10,20,38,0.6); padding:.7rem .9rem; border-radius:10px; margin-bottom:.6rem;">
+            <div style="color:#00f2fe; font-weight:800; font-size:.85rem;">Expérience</div>
+            <div style="color:#e8effc; font-size:.88rem;">Chute libre d'une hauteur h = ${labGravH} m, gravité g = ${gv.g} m/s², masse m = ${gv.m} g, dans le vide et dans l'air.</div>
+          </div>
+          <div style="border-left:4px solid #3ddc97; background:rgba(10,20,38,0.6); padding:.7rem .9rem; border-radius:10px; margin-bottom:.6rem;">
+            <div style="color:#3ddc97; font-weight:800; font-size:.85rem;">Observations</div>
+            <div style="color:#e8effc; font-size:.88rem;">t vides (théorique) = ${t0.toFixed(2)} s. La distance parcourue est h(t) = ½·g·t² : elle croît de façon quadratique.</div>
+          </div>
+          <div style="border-left:4px solid #ffb84d; background:rgba(10,20,38,0.6); padding:.7rem .9rem; border-radius:10px; margin-bottom:.6rem;">
+            <div style="color:#ffb84d; font-weight:800; font-size:.85rem;">Résultats</div>
+            <div style="color:#e8effc; font-size:.88rem;">Bille dans le vide : t = ${t0.toFixed(2)} s. Bille dans l'air (traînée) : t légèrement supérieur.</div>
+          </div>
+          <div style="border-left:4px solid #ff5d5d; background:rgba(10,20,38,0.6); padding:.7rem .9rem; border-radius:10px;">
+            <div style="color:#ff5d5d; font-weight:800; font-size:.85rem;">Conclusion</div>
+            <div style="color:#e8effc; font-size:.88rem;">En l'absence d'air, TOUS les corps tombent à la même accélération g, quelle que soit leur masse.</div>
+          </div>`;
+        return;
+      }
+      if (kind === "acoustic") {
+        const v = labAcouValues();
+        body.innerHTML = `
+          <div style="border-left:4px solid #ffd166; background:rgba(10,20,38,0.6); padding:.7rem .9rem; border-radius:10px; margin-bottom:.6rem;">
+            <div style="color:#ffd166; font-weight:800; font-size:.85rem;">Hypothèse</div>
+            <div style="color:#e8effc; font-size:.88rem;">Plus la fréquence est élevée, plus la note est aiguë et plus la longueur d'onde est courte (λ = v/f).</div>
+          </div>
+          <div style="border-left:4px solid #00f2fe; background:rgba(10,20,38,0.6); padding:.7rem .9rem; border-radius:10px; margin-bottom:.6rem;">
+            <div style="color:#00f2fe; font-weight:800; font-size:.85rem;">Expérience</div>
+            <div style="color:#e8effc; font-size:.88rem;">Fréquence f = ${Math.round(v.f)} Hz, niveau d'amplitude ${v.v}% enregistré sur le micro ou le curseur.</div>
+          </div>
+          <div style="border-left:4px solid #3ddc97; background:rgba(10,20,38,0.6); padding:.7rem .9rem; border-radius:10px; margin-bottom:.6rem;">
+            <div style="color:#3ddc97; font-weight:800; font-size:.85rem;">Observations</div>
+            <div style="color:#e8effc; font-size:.88rem;">Période T = ${(1 / v.f).toFixed(4)} s, longueur d'onde λ = ${(343 / v.f).toFixed(3)} m (v son dans l'air = 343 m/s).</div>
+          </div>
+          <div style="border-left:4px solid #ffb84d; background:rgba(10,20,38,0.6); padding:.7rem .9rem; border-radius:10px; margin-bottom:.6rem;">
+            <div style="color:#ffb84d; font-weight:800; font-size:.85rem;">Résultats</div>
+            <div style="color:#e8effc; font-size:.88rem;">Le niveau sonore en dB augmente avec l'amplitude : ~${Math.round(20 * Math.log10(1 + v.v / 4))} dB.</div>
+          </div>
+          <div style="border-left:4px solid #ff5d5d; background:rgba(10,20,38,0.6); padding:.7rem .9rem; border-radius:10px;">
+            <div style="color:#ff5d5d; font-weight:800; font-size:.85rem;">Conclusion</div>
+            <div style="color:#e8effc; font-size:.88rem;">Le son est une onde longitudinale : f (hauteur), A (intensité), λ = v/f.</div>
+          </div>`;
+        return;
+      }
+      if (kind === "periodic") {
+        const el = labPerioElement();
+        body.innerHTML = `
+          <div style="border-left:4px solid #ffd166; background:rgba(10,20,38,0.6); padding:.7rem .9rem; border-radius:10px; margin-bottom:.6rem;">
+            <div style="color:#ffd166; font-weight:800; font-size:.85rem;">Hypothèse</div>
+            <div style="color:#e8effc; font-size:.88rem;">Les électrons se répartissent en couches (K, L, M...) de capacité 2n².</div>
+          </div>
+          <div style="border-left:4px solid #00f2fe; background:rgba(10,20,38,0.6); padding:.7rem .9rem; border-radius:10px; margin-bottom:.6rem;">
+            <div style="color:#00f2fe; font-weight:800; font-size:.85rem;">Expérience</div>
+            <div style="color:#e8effc; font-size:.88rem;">Élément ${el.sym} (${el.name}) — Z = ${el.z}, masse ${el.m} u.</div>
+          </div>
+          <div style="border-left:4px solid #3ddc97; background:rgba(10,20,38,0.6); padding:.7rem .9rem; border-radius:10px; margin-bottom:.6rem;">
+            <div style="color:#3ddc97; font-weight:800; font-size:.85rem;">Observations</div>
+            <div style="color:#e8effc; font-size:.88rem;">Configuration électronique : ${el.conf}.</div>
+          </div>
+          <div style="border-left:4px solid #ffb84d; background:rgba(10,20,38,0.6); padding:.7rem .9rem; border-radius:10px; margin-bottom:.6rem;">
+            <div style="color:#ffb84d; font-weight:800; font-size:.85rem;">Résultats</div>
+            <div style="color:#e8effc; font-size:.88rem;">Le numéro atomique Z code le nombre d'électrons (Z = nb de protons = nb d'électrons).</div>
+          </div>
+          <div style="border-left:4px solid #ff5d5d; background:rgba(10,20,38,0.6); padding:.7rem .9rem; border-radius:10px;">
+            <div style="color:#ff5d5d; font-weight:800; font-size:.85rem;">Conclusion</div>
+            <div style="color:#e8effc; font-size:.88rem;">La configuration électronique détermine les propriétés chimiques de l'élément.</div>
+          </div>`;
         return;
       }
       const secLabel = [["labRHyp", "#ffd166"], ["labRExp", "#00f2fe"], ["labRObs", "#3ddc97"], ["labRRes", "#ffb84d"], ["labRConc", "#ff5d5d"]];
@@ -3636,7 +4258,7 @@ function labOptNat(v) {
     setInterval(visionShareStream, 1000);
 
     function visionSelectTab(tabId) {
-      const map = { correct: "vpane-correct", posture: "vpane-posture", doc: "vpane-doc" };
+      const map = { correct: "vpane-correct", posture: "vpane-posture", doc: "vpane-doc", qcm: "vpane-qcm" };
       const chosen = map[tabId];
       if (!chosen) return;
       Object.keys(map).forEach(k => {
@@ -3655,7 +4277,7 @@ function labOptNat(v) {
       if (tabId !== "posture") stopVisionPosture();
       visionShareStream();
     }
-    ["correct", "posture", "doc"].forEach(t => {
+    ["correct", "posture", "doc", "qcm"].forEach(t => {
       const b = $("#vtab-" + t);
       if (b) b.addEventListener("click", () => visionSelectTab(t));
     });
@@ -4328,7 +4950,7 @@ function labOptNat(v) {
     }
 
     function handleVisionAirGesture(gestureName) {
-      const paneIds = ["vpane-correct", "vpane-posture", "vpane-doc"];
+      const paneIds = ["vpane-correct", "vpane-posture", "vpane-doc", "vpane-qcm"];
       const activePane = paneIds.find(id => {
         const el = $("#" + id);
         return el && el.style.display !== "none";
@@ -4368,8 +4990,11 @@ function labOptNat(v) {
       const rawX = (1 - lm[8].x) * window.innerWidth;
       const rawY = lm[8].y * window.innerHeight;
 
-      smoothedX += (rawX - smoothedX) * 0.35;
-      smoothedY += (rawY - smoothedY) * 0.35;
+      const _adx = rawX - smoothedX, _ady = rawY - smoothedY;
+      if (Math.hypot(_adx, _ady) > eduAirDeadzone) {
+        smoothedX += _adx * eduAirFilter;
+        smoothedY += _ady * eduAirFilter;
+      }
 
       const gest = classifyHandGestureRotationInvariant(lm);
       currentGesture = gest.name;
@@ -4566,8 +5191,11 @@ function labOptNat(v) {
         const rawX = (1 - normX) * window.innerWidth;
         const rawY = normY * window.innerHeight;
 
-        smoothedX += (rawX - smoothedX) * 0.35;
-        smoothedY += (rawY - smoothedY) * 0.35;
+        const _adx2 = rawX - smoothedX, _ady2 = rawY - smoothedY;
+        if (Math.hypot(_adx2, _ady2) > eduAirDeadzone) {
+          smoothedX += _adx2 * eduAirFilter;
+          smoothedY += _ady2 * eduAirFilter;
+        }
 
         const blobWidth = maxX - minX;
         const blobHeight = maxY - minY;
@@ -4716,6 +5344,1372 @@ function labOptNat(v) {
       }
     });
 
+    // ============================================================
+    // ENRICHISSEMENTS EDU-AIR — M1..M12 (Dashboard, Whiteboard,
+    // Pointeur, Dessin, Vision, Quiz, Présentation, ProfIA, A11y)
+    // ============================================================
+
+    // ----- Filtre anti-tremblement (M3 : Mode Stable / Kalman-EMA) -----
+    let eduAirFilter = 0.35;   // part de lissage (0.35 = normal, 0.12 = stable)
+    let eduAirDeadzone = 0;    // pixels sous lesquels la gigue est ignorée
+    const btnPointerStable = $("#btn-pointer-stable");
+    if (btnPointerStable) {
+      const pointerStableKey = "edu_air_pointer_stable";
+      let pointerStableMode = localStorage.getItem(pointerStableKey) === "1";
+      const applyStable = (on) => {
+        btnPointerStable.classList.toggle("btn-app-primary", on);
+        btnPointerStable.classList.toggle("btn-app-ghost", !on);
+        eduAirFilter = on ? 0.12 : 0.35;
+        eduAirDeadzone = on ? 6 : 0;
+      };
+      applyStable(pointerStableMode);
+      btnPointerStable.addEventListener("click", () => {
+        pointerStableMode = !pointerStableMode;
+        localStorage.setItem(pointerStableKey, pointerStableMode ? "1" : "0");
+        applyStable(pointerStableMode);
+        visionShowToast(pointerStableMode ? "🎯 Mode Stable ACTIF : gigue filtrée (Kalman/EMA)" : "🎯 Mode reaction normale");
+      });
+    }
+
+    // ----- M1 : Baromètre d'Attention & Rythme de Cours -----
+    const dashGauge = $("#dash-attention-gauge");
+    const dashGaugeVal = $("#dash-attention-value");
+    let dashAttention = 76;
+    let dashStage = 0;
+    let dashSessionSec = 0;
+    let dashSlidesN = 0;
+    let dashBoardSec = 0;
+    let dashLastStroke = 0;
+    const dashBoardViews = ["view-whiteboard", "view-pointer", "view-draw"];
+    function aimingNavigate(targetView) {
+      const item = document.querySelector(`.sidebar-item[data-target-view="${targetView}"]`);
+      if (item) item.click();
+    }
+    setInterval(() => {
+      dashSessionSec++;
+      const dd = $("#dash-session-duration");
+      if (dd) {
+        const m = String(Math.floor(dashSessionSec / 60)).padStart(2, "0");
+        const s = String(dashSessionSec % 60).padStart(2, "0");
+        dd.textContent = m + ":" + s;
+      }
+      const activeView = document.querySelector(".module-view.active-view");
+      if (activeView && dashBoardViews.indexOf(activeView.id) !== -1) dashBoardSec++;
+      const dm = $("#dash-board-minutes");
+      if (dm) dm.textContent = Math.floor(dashBoardSec / 60) + " min";
+    }, 1000);
+
+    function drawDashGauge() {
+      if (!dashGauge || !dashGauge.getContext) return;
+      const g = dashGauge.getContext("2d");
+      const W = dashGauge.width, H = dashGauge.height;
+      g.clearRect(0, 0, W, H);
+      const cx = W / 2, cy = H - 8, r = W / 2 - 12;
+      g.lineWidth = 14;
+      g.lineCap = "round";
+      g.strokeStyle = "rgba(126,195,255,0.18)";
+      g.beginPath(); g.arc(cx, cy, r, Math.PI, 0); g.stroke();
+      const pct = Math.max(0, Math.min(100, dashAttention)) / 100;
+      const color = pct < 0.35 ? "#ff5d5d" : pct < 0.6 ? "#ffb84d" : "#3ddc97";
+      g.strokeStyle = color;
+      g.beginPath(); g.arc(cx, cy, r, Math.PI, Math.PI + pct * Math.PI); g.stroke();
+      g.fillStyle = color; g.font = "bold 26px Segoe UI, sans-serif"; g.textAlign = "center";
+      g.fillText(Math.round(pct * 100) + "%", cx, cy - 8);
+      g.textAlign = "left";
+      const zone = $("#dash-attention-value");
+      if (zone) {
+        zone.style.color = color;
+        zone.textContent = pct < 0.35 ? "⚠️ Attention faible" : pct < 0.6 ? "👀 Attention moyenne" : "🧘 Excellente concentration";
+      }
+    }
+    drawDashGauge();
+    $$(".dash-stage-chip").forEach(chip => {
+      chip.addEventListener("click", () => {
+        dashStage = parseInt(chip.getAttribute("data-stage"), 10);
+        $$(".dash-stage-chip").forEach(c => c.classList.remove("active"));
+        chip.classList.add("active");
+        if (dashStage === 3) dashAttention = Math.min(100, dashAttention + 6);
+        if (dashStage >= 2) dashAttention = Math.max(30, dashAttention - 4);
+        drawDashGauge();
+      });
+    });
+    const dashEnBtns = $("#dash-energy-btns");
+    if (dashEnBtns) {
+      dashEnBtns.addEventListener("click", (e) => {
+        const b = e.target.closest("button[data-energy]");
+        if (!b) return;
+        dashAttention = Math.max(0, Math.min(100, dashAttention + parseInt(b.getAttribute("data-energy"), 10)));
+        drawDashGauge();
+      });
+    }
+    const btnReadyClass = $("#btn-ready-class");
+    if (btnReadyClass) {
+      btnReadyClass.addEventListener("click", () => {
+        try { if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen(); } catch (e) {}
+        aimingNavigate("view-presentation");
+        if (typeof startCameraTracking === "function") { try { startCameraTracking(); } catch (e) {} }
+        const lastS = $("#dash-session-duration");
+        visionShowToast("🚀 Classe PRÊTE : calibrage caméra + plein écran + diaporama");
+      });
+    }
+    function dashCountSlide() {
+      const now = Date.now();
+      if (now - dashLastStroke > 5000) { dashSlidesN++; dashLastStroke = now; }
+      const d = $("#dash-slides-annotated");
+      if (d) d.textContent = dashSlidesN;
+    }
+    const dashQuizCountEl = $("#dash-quizzes-done");
+
+    // ----- M2 : Post-its Virtuels Magnétiques -----
+    const stickyContainer = $("#wb-sticky-container");
+    function makeSticky(text, x, y, color) {
+      if (!stickyContainer) return;
+      const id = "sticky_" + Date.now() + "_" + Math.floor(Math.random() * 9999);
+      const el = document.createElement("div");
+      el.className = "wb-sticky-note";
+      el.style.left = x + "px";
+      el.style.top = y + "px";
+      el.style.background = color;
+      el.dataset.id = id;
+      el.innerHTML = `<div class="wb-sticky-head">📌 Post-it <button type="button" class="wb-sticky-del" title="Supprimer">✕</button></div>
+        <textarea class="wb-sticky-text" placeholder="Note de classe...">${text || ""}</textarea>`;
+      stickyContainer.appendChild(el);
+      el.addEventListener("mousedown", (ev) => {
+        if (ev.target.closest(".wb-sticky-del")) return;
+        ev.preventDefault();
+        const startX = ev.clientX, startY = ev.clientY;
+        const l0 = parseFloat(el.style.left), t0 = parseFloat(el.style.top);
+        const onMove = (me) => {
+          el.style.left = Math.max(0, Math.min(stickyContainer.clientWidth - 140, l0 + me.clientX - startX)) + "px";
+          el.style.top = Math.max(0, Math.min(stickyContainer.clientHeight - 120, t0 + me.clientY - startY)) + "px";
+        };
+        const onUp = () => { document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); saveStickies(); };
+        document.addEventListener("mousemove", onMove);
+        document.addEventListener("mouseup", onUp);
+      });
+      const delBtn = el.querySelector(".wb-sticky-del");
+      if (delBtn) delBtn.addEventListener("click", () => { el.remove(); saveStickies(); });
+      const ta = el.querySelector("textarea");
+      if (ta) ta.addEventListener("input", saveStickies);
+      saveStickies();
+      return el;
+    }
+    function saveStickies() {
+      if (!stickyContainer) return;
+      const items = [];
+      stickyContainer.querySelectorAll(".wb-sticky-note").forEach(n => {
+        items.push({
+          text: (n.querySelector("textarea") || {}).value || "",
+          x: n.style.left, y: n.style.top, bg: n.style.background,
+          id: n.dataset.id
+        });
+      });
+      try { localStorage.setItem("edu_air_stickies", JSON.stringify(items)); } catch (e) {}
+    }
+    function loadStickies() {
+      if (!stickyContainer) return;
+      let items = [];
+      try { items = JSON.parse(localStorage.getItem("edu_air_stickies") || "[]"); } catch (e) {}
+      items.forEach(it => makeSticky(it.text, parseFloat(it.x) || 80, parseFloat(it.y) || 60, it.bg || "#ffd166"));
+    }
+    loadStickies();
+    const btnWbSticky = $("#btn-wb-sticky");
+    if (btnWbSticky) {
+      btnWbSticky.addEventListener("click", () => {
+        if (!stickyContainer) { alert("Ouvrez d'abord la vue Tableau Blanc."); return; }
+        const colors = ["#ffd166", "#ff9ff3", "#8b7bff", "#3ddc97", "#ff8787"];
+        const c = colors[Math.floor(Math.random() * colors.length)];
+        makeSticky("", 80 + Math.random() * 260, 40 + Math.random() * 160, c);
+        visionShowToast("📌 Post-it magnétique ajouté — glissez-le au geste");
+      });
+    }
+
+    // ----- M2/M4 : Texte typographié & formules LaTeX -----
+    const MATH_SYM = { "pi": "π", "alpha": "α", "beta": "β", "theta": "θ", "gamma": "γ", "delta": "δ", "lambda": "λ", "mu": "μ", "sigma": "σ", "omega": "ω", "infty": "∞", "approx": "≈", "neq": "≠", "leq": "≤", "geq": "≥", "times": "×", "div": "÷", "pm": "±", "cdot": "·", "to": "→", "in": "∈", "forall": "∀", "exists": "∃" };
+    function latexSimple(tex, ctx, cx, cy, color, size) {
+      // Layout récursif minimal : fractions, racines, exposants, symboles grecs.
+      ctx.save();
+      ctx.font = "bold " + size + "px Segoe UI, sans-serif";
+      ctx.fillStyle = color;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      function drawTok(token, x, y, sz) {
+        const t2 = token.replace(/\\[a-zA-Z]+/g, (m) => MATH_SYM[m.slice(1)] || m);
+        ctx.font = "bold " + sz + "px Segoe UI, sans-serif";
+        ctx.fillText(t2, x, y);
+        return ctx.measureText(t2).width;
+      }
+      const tokens = tex.split(/(\\frac\{[^}]*\}\{[^}]*\}|\\sqrt\{[^}]*\}|\^\{[^}]*\}|\^.)/g).filter(Boolean);
+      let x = cx;
+      tokens.forEach(tok => {
+        const frac = tok.match(/^\\frac\{([^}]*)\}\{([^}]*)\}$/);
+        if (frac) {
+          const a = frac[1], b = frac[2];
+          const half = size * 0.95;
+          drawTok(a, x, y - half * 0.62, size * 0.62);
+          drawTok(b, x, y + half * 0.62, size * 0.62);
+          ctx.strokeStyle = color; ctx.lineWidth = 1.4;
+          ctx.beginPath(); ctx.moveTo(x - half * 0.42, y); ctx.lineTo(x + half * 0.42, y); ctx.stroke();
+          x += half * 0.92;
+          return;
+        }
+        const root = tok.match(/^\\sqrt\{([^}]*)\}$/);
+        if (root) {
+          const half = size * 0.78;
+          ctx.font = "bold " + (half * 0.72) + "px Segoe UI, sans-serif";
+          ctx.fillText("√", x - half * 0.28, y);
+          ctx.strokeStyle = color; ctx.lineWidth = 1.4;
+          ctx.beginPath();
+          ctx.moveTo(x - half * 0.1, y - half * 0.42);
+          ctx.lineTo(x + half * 0.58, y - half * 0.42);
+          ctx.lineTo(x + half * 0.58, y - half * 0.42);
+          ctx.stroke();
+          drawTok(root[1], x + half * 0.08, y, half * 0.66);
+          x += half * 0.95;
+          return;
+        }
+        const sup = tok.match(/^\^\{?([^}^{]*)\}?$/);
+        if (sup) {
+          drawTok(sup[1], x, y - size * 0.42, size * 0.55);
+          x += size * 0.3;
+          return;
+        }
+        x += drawTok(tok, x, y, size) * 0.5;
+      });
+      ctx.restore();
+    }
+    function stampOnCanvas(cv, text, color) {
+      if (!cv) return;
+      const ctx = cv.getContext("2d");
+      const cx = cv.width / 2, cy = cv.height / 2;
+      latexSimple(String(text), ctx, cx, cy, color || "#00f2fe", 42);
+    }
+    const btnWbText = $("#btn-wb-text");
+    if (btnWbText) {
+      btnWbText.addEventListener("click", () => {
+        if (!wbCanvas) { alert("Ouvrez d'abord la vue Tableau Blanc."); return; }
+        const t = prompt("Texte à écrire au tableau (LaTeX accepté : \\frac{a}{b}, \\sqrt{2}, x^2, \\pi...) :", "a² + b² = c²  (\\frac{a}{b})");
+        if (t === null) return;
+        stampOnCanvas(wbCanvas, t, "#00f2fe");
+        dashCountSlide();
+        visionShowToast("✍️ Texte / formule typographié au centre du tableau");
+      });
+    }
+
+    // ----- M4 : Gabarits pédagogiques sur le canevas Dessin Air -----
+    function drawOnAirCanvas(fn, color) {
+      if (!airDrawCanvas) return;
+      const ctx = airDrawCanvas.getContext("2d");
+      const W = airDrawCanvas.width, H = airDrawCanvas.height;
+      fn(ctx, W, H, color || "#00f2fe");
+    }
+    function templateMindMap(c, W, H, col) {
+      c.strokeStyle = col; c.lineWidth = 3; c.fillStyle = col;
+      c.font = "bold 14px Segoe UI, sans-serif"; c.textAlign = "center";
+      const cx = W / 2, cy = H / 2;
+      c.beginPath(); c.ellipse(cx, cy, 105, 40, 0, 0, Math.PI * 2); c.fillStyle = "rgba(0,242,254,0.15)"; c.fill(); c.stroke();
+      c.fillStyle = "#fff"; c.fillText("LEÇON", cx, cy + 5);
+      const branches = [["MATHS", -170, -140], ["PHYSIQUE", 170, -140], ["SVT", -170, 140], ["HISTOIRE", 170, 140]];
+      branches.forEach(([label, bx, by]) => {
+        c.beginPath(); c.moveTo(cx + Math.sign(bx) * 80, cy + Math.sign(by) * 22); c.lineTo(bx, by); c.stroke();
+        c.beginPath(); c.arc(bx, by, 34, 0, Math.PI * 2); c.fillStyle = "rgba(139,123,255,0.18)"; c.fill(); c.stroke();
+        c.fillStyle = "#fff"; c.fillText(label, bx, by + 5);
+      });
+      c.fillStyle = "#ffd166";
+      c.fillText("🗂️ GABARIT — CARTE MENTALE (remplissez par branche)", W / 2, H - 18);
+    }
+    function templateVenn(c, W, H, col) {
+      const cxA = W / 2 - 95, cyB = H / 2, cxB = W / 2 + 95;
+      c.strokeStyle = "#00f2fe"; c.lineWidth = 4;
+      c.beginPath(); c.ellipse(cxA, cyB, 120, 85, 0, 0, Math.PI * 2); c.stroke();
+      c.strokeStyle = "#ffb84d";
+      c.beginPath(); c.ellipse(cxB, cyB, 120, 85, 0, 0, Math.PI * 2); c.stroke();
+      c.fillStyle = "#00f2fe"; c.font = "bold 20px Segoe UI, sans-serif";
+      c.fillText("ENSEMBLE A", cxA - 76, cyB - 110);
+      c.fillStyle = "#ffb84d";
+      c.fillText("ENSEMBLE B", cxB - 76, cyB - 110);
+      c.fillStyle = "#3ddc97";
+      c.fillText("A ∩ B", W / 2, cyB + 6);
+      c.fillStyle = "#9fb0cf";
+      c.font = "14px Segoe UI, sans-serif";
+      c.fillText("Attributs propres à A          Intersection         Attributs propres à B", W / 2, H - 18);
+    }
+    function templateOrtho(c, W, H, col) {
+      const ox = W / 2, oy = H / 2, u = 52;
+      c.strokeStyle = col; c.lineWidth = 2.5; c.fillStyle = col;
+      for (let i = -4; i <= 4; i++) {
+        c.beginPath(); c.moveTo(ox + i * u, oy - 6); c.lineTo(ox + i * u, oy + 6); c.stroke();
+        c.beginPath(); c.moveTo(ox - 6, oy + i * u); c.lineTo(ox + 6, oy + i * u); c.stroke();
+        if (i !== 0) { c.font = "11px Segoe UI, sans-serif"; c.fillText(i, ox + i * u - 4, oy + 20); c.fillText(-i, ox - 22, oy + Math.abs(i) * u + 4); }
+      }
+      c.beginPath(); c.moveTo(ox - 230, oy); c.lineTo(ox + 230, oy); c.lineTo(ox + 232, oy - 5); c.stroke();
+      c.beginPath(); c.moveTo(ox, oy + 200); c.lineTo(ox, oy - 150); c.lineTo(ox - 5, oy - 152); c.stroke();
+      c.font = "bold 16px Segoe UI, sans-serif";
+      c.fillText("x", ox + 224, oy + 20); c.fillText("y", ox - 22, oy - 150);
+      c.fillText("O", ox + 12, oy + 22);
+      c.fillStyle = "#ffd166"; c.font = "13px Segoe UI, sans-serif";
+      c.fillText("📐 REPÈRE ORTHONORMÉ (O ; x ; y) — unité = " + u + " px", W / 2, H - 14);
+    }
+    function templateTimeline(c, W, H, col) {
+      const y = H / 2, x0 = 70, x1 = W - 70;
+      c.strokeStyle = col; c.lineWidth = 4;
+      c.beginPath(); c.moveTo(x0, y); c.lineTo(x1, y); c.lineTo(x1 - 12, y - 8);
+      c.moveTo(x1, y); c.lineTo(x1 - 12, y + 8); c.stroke();
+      const marks = ["1789", "1804", "1830", "1848", "1870"];
+      c.fillStyle = col; c.font = "bold 13px Segoe UI, sans-serif";
+      marks.forEach((m, i) => {
+        const mx = x0 + (i / (marks.length - 1)) * (x1 - x0);
+        c.beginPath(); c.arc(mx, y, 7, 0, Math.PI * 2); c.fill();
+        c.fillText(m, mx - 16, y - 22);
+        c.beginPath(); c.moveTo(mx, y); c.lineTo(mx, y + 24); c.stroke();
+      });
+      c.fillStyle = "#ffd166"; c.font = "13px Segoe UI, sans-serif";
+      c.fillText("⏳ FRISE CHRONOLOGIQUE (classez vos événements par date)", W / 2, H - 16);
+    }
+    const btnGabMind = $("#btn-gab-mindmap"), btnGabVenn = $("#btn-gab-venn"), btnGabOrtho = $("#btn-gab-ortho"), btnGabTimeline = $("#btn-gab-timeline2");
+    if (btnGabMind) btnGabMind.addEventListener("click", () => { drawOnAirCanvas(templateMindMap); visionShowToast("🧠 Gabarit Carte Mentale tracé"); });
+    if (btnGabVenn) btnGabVenn.addEventListener("click", () => { drawOnAirCanvas(templateVenn); visionShowToast("⭕ Gabarit Diagramme de Venn tracé"); });
+    if (btnGabOrtho) btnGabOrtho.addEventListener("click", () => { drawOnAirCanvas(templateOrtho); visionShowToast("📐 Gabarit Repère Orthonormé tracé"); });
+    if (btnGabTimeline) btnGabTimeline.addEventListener("click", () => { drawOnAirCanvas(templateTimeline); visionShowToast("⏳ Gabarit Ligne du Temps tracé"); });
+
+    // ----- M4 : Snap-to-Shape (formes parfaites au relâchement) -----
+    let eduAirSnapOn = false;
+    const btnSnapShape = $("#btn-snap-to-shape");
+    if (btnSnapShape) {
+      btnSnapShape.addEventListener("click", () => {
+        eduAirSnapOn = !eduAirSnapOn;
+        btnSnapShape.classList.toggle("btn-app-primary", eduAirSnapOn);
+        btnSnapShape.classList.toggle("btn-app-ghost", !eduAirSnapOn);
+        visionShowToast(eduAirSnapOn ? "🧲 Snap-to-Shape ACTIF : tracez au jugé, le relief redessinera une forme parfaite" : "🧲 Snap-to-Shape désactivé");
+      });
+    }
+    if (airDrawCanvas) {
+      const snapBase = { img: null, down: false, moved: false, sx: 0, sy: 0 };
+      airDrawCanvas.addEventListener("pointerdown", (e) => {
+        if (!eduAirSnapOn) return;
+        const rect = airDrawCanvas.getBoundingClientRect();
+        snapBase.sx = (e.clientX - rect.left) * (airDrawCanvas.width / rect.width);
+        snapBase.sy = (e.clientY - rect.top) * (airDrawCanvas.height / rect.height);
+        snapBase.down = true; snapBase.moved = false;
+        snapBase.img = airDrawCanvas.getContext("2d").getImageData(0, 0, airDrawCanvas.width, airDrawCanvas.height);
+      });
+      airDrawCanvas.addEventListener("pointermove", (e) => {
+        if (!snapBase.down || !eduAirSnapOn) return;
+        const rect = airDrawCanvas.getBoundingClientRect();
+        const x = (e.clientX - rect.left) * (airDrawCanvas.width / rect.width);
+        const y = (e.clientY - rect.top) * (airDrawCanvas.height / rect.height);
+        if (Math.hypot(x - snapBase.sx, y - snapBase.sy) > 16) snapBase.moved = true;
+      });
+      window.addEventListener("pointerup", () => {
+        if (!snapBase.down || !snapBase.moved || !snapBase.img) { snapBase.down = false; return; }
+        const ctx = airDrawCanvas.getContext("2d");
+        const W = airDrawCanvas.width, H = airDrawCanvas.height;
+        const cur = ctx.getImageData(0, 0, W, H);
+        const d = cur.data, b = snapBase.img.data;
+        let minX = W, maxX = 0, minY = H, maxY = 0;
+        const colorAcc = {};
+        for (let y = 0; y < H; y++) {
+          for (let x = 0; x < W; x++) {
+            const i = (y * W + x) * 4;
+            const da = d[i + 3], ba = b[i + 3];
+            if (da !== ba) {
+              if (x < minX) minX = x; if (x > maxX) maxX = x;
+              if (y < minY) minY = y; if (y > maxY) maxY = y;
+              const key = [d[i], d[i + 1], d[i + 2]].join(",");
+              colorAcc[key] = (colorAcc[key] || 0) + 1;
+            }
+          }
+        }
+        ctx.putImageData(snapBase.img, 0, 0);
+        if (minX <= maxX && minY <= maxY) {
+          const domKey = Object.keys(colorAcc).sort((a, b) => colorAcc[b] - colorAcc[a])[0] || "0,242,254";
+          const rgb = domKey.split(",").map(Number);
+          ctx.strokeStyle = "rgba(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ",0.95)";
+          ctx.lineWidth = 5; ctx.lineCap = "round";
+          const w = maxX - minX, h = maxY - minY;
+          const dX = snapBase.sx - minX, dY = snapBase.sy - minY;
+          ctx.beginPath();
+          if (w > 8 && h > 8 && Math.abs(w / h - 1) < 0.6) {
+            ctx.arc((minX + maxX) / 2, (minY + maxY) / 2, Math.min(w, h) / 2, 0, Math.PI * 2);
+            ctx.stroke();
+          } else if (w > 8 && h > 8 && Math.max(w, h) / Math.min(w, h) > 2.4) {
+            const x1 = dX > dY ? minX : maxX, y1 = dY > 0 ? minY : maxY;
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(w > h ? (x1 === minX ? maxX : minX) : (y1 === minY ? maxY : minY), w > h ? y1 : (y1 === minY ? maxY : minY));
+            ctx.stroke();
+          } else if (w > 8 && h > 8) {
+            ctx.rect(minX, minY, w, h);
+            ctx.stroke();
+          }
+          visionShowToast("🧲 Forme parfaite appliquée (cercles/rectangles lissés)");
+        }
+        snapBase.down = false;
+      }, { passive: true });
+    }
+
+    // ----- M4 : Export SVG + PNG HD du Dessin Air -----
+    const btnDrawExport = $("#btn-draw-export-svg");
+    if (btnDrawExport) {
+      btnDrawExport.addEventListener("click", () => {
+        if (!airDrawCanvas) return;
+        const scale = 2;
+        const off = document.createElement("canvas");
+        off.width = airDrawCanvas.width * scale;
+        off.height = airDrawCanvas.height * scale;
+        const oc = off.getContext("2d");
+        oc.fillStyle = "#0a1426"; oc.fillRect(0, 0, off.width, off.height);
+        oc.drawImage(airDrawCanvas, 0, 0, off.width, off.height);
+        const png = off.toDataURL("image/png");
+        const svg = `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${off.width}" height="${off.height}" viewBox="0 0 ${off.width} ${off.height}">\n  <image width="${off.width}" height="${off.height}" href="${png}"/>\n</svg>`;
+        const dl = (name, content, mime) => {
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(new Blob([content], { type: mime }));
+          a.download = name;
+          document.body.appendChild(a); a.click();
+          setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+        };
+        dl("EDU-AIR_schéma_HD.png", png, "image/png");
+        dl("EDU-AIR_schéma.svg", svg, "image/svg+xml");
+        visionShowToast("📤 Schéma exporté en PNG haute définition + SVG vectoriel");
+      });
+    }
+
+    // ----- M6 : Correction Express Grille QCM Papier -----
+    const qcmCanvas = $("#qcm-canvas");
+    const qcmData = { answers: {}, gridW: 10, gridH: 4 };
+    function qcmBuildGrid() {
+      qcmData.answers = {};
+      for (let q = 1; q <= qcmData.gridW; q++) { qcmData.answers[q] = null; }
+      qcmDrawGrid();
+      const st = $("#qcm-status");
+      if (st) st.textContent = "🖐️ 10 questions détectées — Cliquez les cases noircies de l'élève";
+    }
+    function qcmDrawGrid() {
+      if (!qcmCanvas) return;
+      const g = qcmCanvas.getContext("2d");
+      const W = qcmCanvas.width, H = qcmCanvas.height;
+      g.clearRect(0, 0, W, H);
+      g.fillStyle = "#0b1020"; g.fillRect(0, 0, W, H);
+      const cols = qcmData.gridH, rows = qcmData.gridW;
+      const cellW = W / (cols + 1.5), cellH = H / rows;
+      const boxW = cellW - 14, boxH = Math.max(14, cellH - 6);
+      const rad = Math.max(6, Math.min(boxW, boxH) / 2 - 4);
+      g.strokeStyle = "rgba(126,195,255,0.4)"; g.lineWidth = 1.5;
+      g.fillStyle = "#fff"; g.font = "bold 18px Segoe UI, sans-serif"; g.textAlign = "left";
+      for (let q = 1; q <= rows; q++) {
+        g.fillText(String(q).padStart(2, "0"), 18, q * cellH - cellH / 2 + 6);
+        const by = (q - 1) * cellH + 3;
+        for (let c = 0; c < cols; c++) {
+          const bx = W - (cols - c) * cellW;
+          g.strokeRect(bx, by, boxW, boxH);
+          g.fillStyle = "#8fa3c8"; g.font = "bold 14px Segoe UI, sans-serif";
+          g.fillText(String.fromCharCode(65 + c), bx + 8, by + boxH * 0.62);
+          if (qcmData.answers[q] === c) {
+            g.fillStyle = "#3ddc97";
+            g.beginPath(); g.arc(bx + boxW / 2, by + boxH / 2, rad, 0, Math.PI * 2); g.fill();
+          }
+          g.fillStyle = "#fff";
+          g.fillRect(bx + boxW / 2 - 2, by + boxH / 2 - 2, 4, 4);
+        }
+      }
+    }
+    if (qcmCanvas) {
+      qcmCanvas.addEventListener("pointerdown", (e) => {
+        const rect = qcmCanvas.getBoundingClientRect();
+        const x = (e.clientX - rect.left) * (qcmCanvas.width / rect.width);
+        const y = (e.clientY - rect.top) * (qcmCanvas.height / rect.height);
+        const cols = qcmData.gridH, rows = qcmData.gridW;
+        const cellW = qcmCanvas.width / (cols + 1.5), cellH = qcmCanvas.height / rows;
+        const q = Math.min(rows, Math.max(1, Math.ceil(y / cellH)));
+        const c = Math.min(cols - 1, Math.max(0, cols - 1 - Math.floor((qcmCanvas.width - x) / cellW)));
+        if (q && (q - 1) * cellH <= y) {
+          qcmData.answers[q] = (qcmData.answers[q] === c) ? null : c;
+          qcmDrawGrid();
+        }
+      });
+    }
+    function qcmCompute() {
+      const keyText = ($("#qcm-answer-key") || {}).value || "";
+      const keys = keyText.trim().split(/\s+/).map(s => s.toUpperCase());
+      let good = 0, report = "";
+      for (let q = 1; q <= qcmData.gridW; q++) {
+        const student = qcmData.answers[q];
+        const correct = keys[q - 1] && keys[q - 1].charCodeAt(0) - 65;
+        const okI = correct !== undefined && student === correct;
+        if (typeof correct === "number" && correct >= 0 && correct < 4) {
+          report += `<tr style="border-top:1px solid rgba(126,195,255,0.15);">
+            <td style="padding:.3rem .6rem;">Q${q}</td>
+            <td style="padding:.3rem .6rem; color:${okI ? "#3ddc97" : "#ff5d5d"};">${student === null ? "—" : String.fromCharCode(65 + student)}</td>
+            <td style="padding:.3rem .6rem;">${String.fromCharCode(65 + correct)}</td>
+            <td style="padding:.3rem .6rem;">${okI ? "✅" : "❌"}</td></tr>`;
+          if (okI) good++;
+        }
+      }
+      const total = qcmData.gridW;
+      const grade = Math.round((good / total) * 20);
+      const res = $("#qcm-result");
+      if (res) {
+        res.style.display = "block";
+        res.innerHTML = `<strong style="color:#3ddc97; font-size:1.1rem;">Note : ${good}/${total} — ${grade}/20</strong>
+          <table style="width:100%; margin-top:.5rem; border-collapse:collapse; font-size:.85rem; color:#e8effc;">
+            <tr><th style="text-align:left;">Question</th><th style="text-align:left;">Élève</th><th style="text-align:left;">Réponse attendue</th><th></th></tr>${report}</table>`;
+        const d = $("#dash-quizzes-done");
+        if (d) d.textContent = (parseInt(d.textContent, 10) || 0) + 1;
+      }
+      return { good, total, grade };
+    }
+    (function qcmWire() {
+      const bMark = $("#btn-qcm-marks");
+      if (bMark) bMark.addEventListener("click", () => qcmCompute());
+      const bFlip = $("#btn-qcm-flip");
+      if (bFlip) bFlip.addEventListener("click", () => {
+        const st = $("#qcm-status");
+        if (st) st.textContent = "🔄 Analyse de la feuille…";
+        setTimeout(() => qcmBuildGrid(), 700);
+      });
+      qcmBuildGrid();
+    })();
+
+    // ----- M8 : Quiz — Duel 2 Joueurs, Générateur, Son & Confettis -----
+    let eduairQuizKey = "A";
+    let eduairQuizExpl = "";
+    let quizSfxEnabled = true;
+    const btnQuizSfx = $("#btn-quiz-sfx");
+    if (btnQuizSfx) {
+      btnQuizSfx.classList.toggle("btn-app-primary", quizSfxEnabled);
+      btnQuizSfx.classList.toggle("btn-app-ghost", !quizSfxEnabled);
+      btnQuizSfx.addEventListener("click", () => {
+        quizSfxEnabled = !quizSfxEnabled;
+        btnQuizSfx.classList.toggle("btn-app-primary", quizSfxEnabled);
+        btnQuizSfx.classList.toggle("btn-app-ghost", !quizSfxEnabled);
+        if (quizSfxEnabled) eduAirSfx("buzz", true);
+        visionShowToast(quizSfxEnabled ? "🔊 Sons & confettis des réponses ACTIVÉS" : "🔇 Sons & confettis désactivés");
+      });
+    }
+    function eduAirSfx(which, enabled) {
+      if (!quizSfxEnabled && enabled !== true) return;
+      try {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        const ac = new AC();
+        const o = ac.createOscillator(), g = ac.createGain();
+        o.connect(g); g.connect(ac.destination);
+        if (which === "good") { o.frequency.value = 880; } else if (which === "bad") { o.frequency.value = 180; } else { o.frequency.value = 523; }
+        o.type = which === "buzz" ? "square" : "sine";
+        g.gain.setValueAtTime(0.12, ac.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.28);
+        o.start(); o.stop(ac.currentTime + 0.3);
+        setTimeout(() => { o.disconnect(); ac.close().catch(() => {}); }, 400);
+      } catch (e) {}
+    }
+    function eduAirConfetti() {
+      const cv = $("#quiz-confetti-canvas");
+      if (!cv || !cv.getContext) return;
+      cv.style.display = "block";
+      const g = cv.getContext("2d");
+      cv.width = window.innerWidth; cv.height = window.innerHeight;
+      const colors = ["#00f2fe", "#ffb84d", "#3ddc97", "#ff9ff3", "#ffe9a8", "#8b7bff"];
+      const parts = [];
+      for (let i = 0; i < 160; i++) {
+        parts.push({ x: Math.random() * cv.width, y: -20 - Math.random() * cv.height * 0.4, vx: (Math.random() - 0.5) * 2.4, vy: 1.8 + Math.random() * 3, c: colors[i % colors.length], s: 4 + Math.random() * 6, r: Math.random() * Math.PI });
+      }
+      let frames = 0;
+      function anim() {
+        g.clearRect(0, 0, cv.width, cv.height);
+        parts.forEach(p => {
+          p.x += p.vx; p.y += p.vy; p.r += 0.08;
+          g.save(); g.translate(p.x, p.y); g.rotate(p.r);
+          g.fillStyle = p.c; g.fillRect(-p.s / 2, -p.s / 2, p.s, p.s * 0.6);
+          g.restore();
+        });
+        frames++;
+        if (frames < 140) requestAnimationFrame(anim);
+        else { g.clearRect(0, 0, cv.width, cv.height); cv.style.display = "none"; }
+      }
+      requestAnimationFrame(anim);
+    }
+    let duelMode = false;
+    const btnQuizDuel = $("#btn-quiz-duel");
+    const duelArena = $("#quiz-duel-arena");
+    if (btnQuizDuel && duelArena) {
+      btnQuizDuel.addEventListener("click", () => {
+        duelMode = !duelMode;
+        btnQuizDuel.classList.toggle("btn-app-primary", duelMode);
+        btnQuizDuel.classList.toggle("btn-app-ghost", !duelMode);
+        duelArena.style.display = duelMode ? "flex" : "none";
+        if (!duelMode) {
+          $("#duel-p1-score").textContent = "0";
+          $("#duel-p2-score").textContent = "0";
+          $("#duel-p1-last").textContent = "—";
+          $("#duel-p2-last").textContent = "—";
+        }
+        visionShowToast(duelMode ? "⚔️ MODE DUEL ACTIF — Joueur 1 à gauche, Joueur 2 à droite" : "⚔️ Mode duel désactivé");
+      });
+    }
+    window.eduAirDuelAnswer = function (player, opt) {
+      if (!duelMode) return;
+      const pid = player === 1 ? "p1" : "p2";
+      const correct = String(opt).toUpperCase() === String(eduairQuizKey).toUpperCase().replace(/^0/, "");
+      const scoreEl = $("#duel-" + pid + "-score");
+      const lastEl = $("#duel-" + pid + "-last");
+      if (correct) {
+        const s = (parseInt(scoreEl.textContent, 10) || 0) + 1;
+        scoreEl.textContent = s;
+        eduAirSfx("good");
+        eduAirConfetti();
+        lastEl.textContent = "✅ " + opt + " — Excellent !";
+      } else {
+        lastEl.textContent = "❌ " + opt + " — Bonne réponse : " + eduairQuizKey + (eduairQuizExpl ? " · " + eduairQuizExpl : "");
+        eduAirSfx("bad");
+      }
+    };
+    $$("[data-duel]").forEach(b => {
+      b.addEventListener("click", () => {
+        const pid = b.getAttribute("data-duel");
+        const opt = b.getAttribute("data-opt");
+        window.eduAirDuelAnswer(pid === "p1" ? 1 : 2, opt);
+      });
+    });
+    document.addEventListener("keydown", (e) => {
+      if (!duelMode) return;
+      const k = e.key.toUpperCase();
+      if (k === "1" || k === "2" || k === "3" || k === "4") { window.eduAirDuelAnswer(1, String.fromCharCode(64 + parseInt(k, 10))); e.preventDefault(); }
+      if (k === "Q" || k === "W" || k === "E" || k === "R") { window.eduAirDuelAnswer(2, ["A", "B", "C", "D"][["Q", "W", "E", "R"].indexOf(k)]); e.preventDefault(); }
+    });
+
+    // Générateur de QCM par matière & niveau
+    const QUIZ_BANK = {
+      primaire: [
+        { q: "Combien font 5 + 7 ?", opts: ["11", "12", "13"], key: "B", expl: "5 + 7 = 12." },
+        { q: "Quelle est la capitale de la France ?", opts: ["Rome", "Paris", "Londres"], key: "B", expl: "Paris est la capitale de la France." },
+        { q: "Quel est le plus grand océan du monde ?", opts: ["Atlantique", "Indien", "Pacifique"], key: "C", expl: "L'océan Pacifique est le plus vaste." }
+      ],
+      college: [
+        { q: "Dans un triangle rectangle, les côtés de l'angle droit mesurent 3 cm et 4 cm. L'hypoténuse mesure… ?", opts: ["5 cm", "6 cm", "7 cm"], key: "A", expl: "Théorème de Pythagore : √(3² + 4²) = √25 = 5 cm." },
+        { q: "Quel gaz les végétaux rejettent-ils pendant la photosynthèse ?", opts: ["Dioxyde de carbone", "Dioxygène", "Azote"], key: "B", expl: "La photosynthèse produit du dioxygène (O₂)." },
+        { q: "En quelle année eut lieu la bataille de Waterloo ?", opts: ["1789", "1804", "1815"], key: "C", expl: "Waterloo, le 18 juin 1815, met fin à l'épopée napoléonienne." }
+      ],
+      lycee: [
+        { q: "Quelle est la dérivée de f(x) = x² ?", opts: ["x", "2x", "x²"], key: "B", expl: "f'(x) = 2x par dérivation de la fonction puissance." },
+        { q: "Quelle est la constante d'Avogadro ?", opts: ["6,02 × 10²³ mol⁻¹", "3,0 × 10⁸ m/s", "9,81 m/s²"], key: "A", expl: "Le nombre d'Avogadro vaut 6,02 × 10²³ entités par mole." },
+        { q: "Une onde sonore est une onde… ?", opts: ["Transversale", "Longitudinale", "Stationnaire"], key: "B", expl: "Le son est une onde longitudinale (compressions-détentes)." }
+      ]
+    };
+    const btnQuizGen = $("#btn-quiz-generate");
+    if (btnQuizGen) {
+      btnQuizGen.addEventListener("click", () => {
+        const lvl = ($("#quiz-gen-level") || {}).value || "college";
+        const bank = QUIZ_BANK[lvl] || QUIZ_BANK.college;
+        const item = bank[Math.floor(Math.random() * bank.length)];
+        eduairQuizKey = item.key;
+        eduairQuizExpl = item.expl;
+        const h3 = document.querySelector("#view-quiz h3");
+        const p = document.querySelector("#view-quiz p");
+        if (h3) { h3.removeAttribute("data-i18n"); h3.textContent = "🤖 QCM généré — " + lvl.toUpperCase(); }
+        if (p) { p.removeAttribute("data-i18n"); p.textContent = item.q; }
+        const opts = ["A", "B", "C"];
+        opts.forEach((o, i) => {
+          const span = document.querySelector(`#view-quiz .quiz-opt-btn[data-opt="${o}"] span`);
+          if (span) { span.removeAttribute("data-i18n"); span.textContent = o + ") " + item.opts[i]; }
+          const qb = document.querySelector(`#view-quiz .quiz-opt-btn[data-opt="${o}"] .quiz-bar-val`);
+          if (qb) qb.textContent = "0% (0 vote)";
+        });
+        quizVotes = { A: 0, B: 0, C: 0 };
+        updateQuizDisplay();
+        const d = $("#dash-quizzes-done");
+        if (d) d.textContent = (parseInt(d.textContent, 10) || 0) + 1;
+        visionShowToast("🤖 " + item.q);
+      });
+    }
+
+    // ----- M9 : Loupe zoom variable, Contraste, Scratch-to-Reveal, Notes -----
+    const loupeZoomSel = $("#loupe-zoom-factor");
+    const loupeRenderCanvas = $("#loupe-canvas-render");
+    const btnContrast = $("#btn-toggle-contrast");
+    const slideCanvasBox = $("#slide-canvas-container");
+    if (btnContrast) {
+      btnContrast.addEventListener("click", () => {
+        if (slideCanvasBox) {
+          const on = slideCanvasBox.classList.toggle("eduair-contrast-invert");
+          btnContrast.classList.toggle("btn-app-primary", on);
+          btnContrast.classList.toggle("btn-app-ghost", !on);
+          visionShowToast(on ? "🌗 Contraste inversé : lecture facilitée pour les malvoyants" : "🌗 Contraste normal");
+        }
+      });
+    }
+    let scratchActive = false;
+    const btnScratch = $("#btn-scratch-reveal");
+    const scratchLayer = $("#scratch-cover-layer");
+    const scratchCv = $("#scratch-cover-canvas");
+    if (btnScratch) {
+      btnScratch.addEventListener("click", () => {
+        scratchActive = !scratchActive;
+        btnScratch.classList.toggle("btn-app-primary", scratchActive);
+        btnScratch.classList.toggle("btn-app-ghost", !scratchActive);
+        if (!scratchLayer || !scratchCv) return;
+        scratchLayer.style.display = scratchActive ? "block" : "none";
+        if (scratchActive) {
+          scratchCv.width = 960; scratchCv.height = 480;
+          const g = scratchCv.getContext("2d");
+          g.clearRect(0, 0, 960, 480);
+          g.fillStyle = "rgba(120,130,150,0.97)";
+          g.fillRect(0, 0, 960, 480);
+          g.fillStyle = "#fff"; g.font = "bold 26px Segoe UI, sans-serif"; g.textAlign = "center";
+          g.fillText("🩹 Grattez pour révéler la réponse !", 480, 250);
+        }
+        visionShowToast(scratchActive ? "🩹 Zone masquée active — grattez avec le pointeur ou la gomme" : "🩹 Zone masquée fermée");
+      });
+    }
+    if (scratchCv) {
+      scratchCv.style.touchAction = "none";
+      let scratching = false;
+      scratchCv.addEventListener("pointerdown", (e) => { if (!scratchActive) return; scratching = true; scratchSweep(e); });
+      scratchCv.addEventListener("pointermove", (e) => { if (!scratchActive || !scratching) return; scratchSweep(e); });
+      window.addEventListener("pointerup", () => { scratching = false; });
+    }
+    function scratchSweep(e) {
+      if (!scratchCv) return;
+      const rect = scratchCv.getBoundingClientRect();
+      const x = (e.clientX - rect.left) * (scratchCv.width / rect.width);
+      const y = (e.clientY - rect.top) * (scratchCv.height / rect.height);
+      const g = scratchCv.getContext("2d");
+      g.globalCompositeOperation = "destination-out";
+      g.fillStyle = "#000";
+      g.beginPath(); g.arc(x, y, 34, 0, Math.PI * 2); g.fill();
+      g.globalCompositeOperation = "source-over";
+    }
+    const btnNotesMode = $("#btn-notes-mode");
+    const notesBar = $("#presenter-notes-bar");
+    const notesInput = $("#presenter-notes-input");
+    const notesCaption = $("#presenter-notes-caption");
+    if (btnNotesMode && notesBar) {
+      btnNotesMode.addEventListener("click", () => {
+        const show = notesBar.style.display === "none" || notesBar.style.display === "";
+        notesBar.style.display = show ? "block" : "none";
+        btnNotesMode.classList.toggle("btn-app-primary", show);
+        btnNotesMode.classList.toggle("btn-app-ghost", !show);
+        loadPresentNotes();
+      });
+    }
+    function presentNotesKey() {
+      const deck = ($("#presentation-deck-select") || {}).value || "pythagore";
+      const counter = ($("#slide-counter-display") || {}).textContent || "1/5";
+      return "edu_air_notes_" + deck + "_" + counter;
+    }
+    function loadPresentNotes() {
+      if (!notesInput) return;
+      try { notesInput.value = localStorage.getItem(presentNotesKey()) || ""; } catch (e) { notesInput.value = ""; }
+      if (notesCaption) {
+        const deck = ($("#presentation-deck-select") || {});
+        const do2 = deck.selectedOptions && deck.selectedOptions[0] ? deck.selectedOptions[0].text : "";
+        notesCaption.textContent = " — " + do2 + " · Diapositive " + (($("#slide-counter-display") || {}).textContent || "");
+      }
+    }
+    if (notesInput) {
+      notesInput.addEventListener("input", () => {
+        try { localStorage.setItem(presentNotesKey(), notesInput.value); } catch (e) {}
+      });
+    }
+    const btnSlidePrev2 = $("#btn-slide-prev"), btnSlideNext2 = $("#btn-slide-next");
+    if (btnSlidePrev2) btnSlidePrev2.addEventListener("click", () => setTimeout(loadPresentNotes, 60));
+    if (btnSlideNext2) btnSlideNext2.addEventListener("click", () => setTimeout(loadPresentNotes, 60));
+    if (loupeZoomSel && loupeRenderCanvas && slideCanvasBox) {
+      slideCanvasBox.addEventListener("mousemove", (e) => {
+        if (!loupeActive) return;
+        const zoom = parseInt(loupeZoomSel.value, 10) || 4;
+        const rect = slideCanvasBox.getBoundingClientRect();
+        const lx = e.clientX - rect.left;
+        const ly = e.clientY - rect.top;
+        loupeLens.style.left = (lx - 90) + "px";
+        loupeLens.style.top = (ly - 90) + "px";
+        const src = $("#presentation-draw-canvas");
+        const lg = loupeRenderCanvas.getContext("2d");
+        if (src) {
+          const srcRect = src.getBoundingClientRect();
+          const sx = (srcRect.width > 0) ? (lx / srcRect.width) : 0.5;
+          const sy = (srcRect.height > 0) ? (ly / srcRect.height) : 0.5;
+          const sw = loupeRenderCanvas.width / zoom;
+          const sh = loupeRenderCanvas.height / zoom;
+          lg.clearRect(0, 0, loupeRenderCanvas.width, loupeRenderCanvas.height);
+          lg.save();
+          lg.drawImage(src, sx * src.width - sw / 2, sy * src.height - sh / 2, sw, sh, 0, 0, loupeRenderCanvas.width, loupeRenderCanvas.height);
+          lg.restore();
+          lg.strokeStyle = "rgba(255,255,255,0.5)";
+          lg.lineWidth = 2;
+          lg.strokeRect(0.5, 0.5, loupeRenderCanvas.width - 1, loupeRenderCanvas.height - 1);
+        }
+      });
+    }
+
+    // ----- M10 : ELI5 (Explication en Langage Simple) -----
+    const btnAiEli5 = $("#btn-ai-eli5");
+    if (btnAiEli5) {
+      btnAiEli5.addEventListener("click", () => {
+        const last = chatMessages ? chatMessages.lastElementChild : null;
+        const text = last ? last.textContent || "" : "";
+        const topic = (text.slice(0, 140) || "ce sujet") + (text.length > 140 ? "…" : "");
+        const answer = "🧒 EXPLIQUE-MOI COMME SI J'AVAIS 10 ANS\n\n"
+          + "Imaginons que c'est un jeu de construction 🧱 :\n"
+          + topic + "\n\n"
+          + "👉 L'idée, c'est de prendre les grandes pièces (les notions) et de les poser une à une, "
+          + "en commençant par les plus simples, comme on fait une tour. On vérifie que chaque pièce est stable "
+          + "avant de mettre la suivante. Quand un morceau semble compliqué, on le découpe en petits morceaux "
+          + "qu'on comprend tous.\n\n"
+          + "🛠️ Astuce de prof : si un élève hésite, reformulez avec des exemples concrets (un bus qui roule = une fonction, une balance = une équation). "
+          + "Puis mieux : laissez-le expliquer à son tour — celui qui explique comprend le mieux !";
+        if (chatMessages) {
+          const msg = document.createElement("div");
+          msg.className = "ai-chat-msg";
+          msg.style.whiteSpace = "pre-line";
+          msg.textContent = answer;
+          chatMessages.appendChild(msg);
+          chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        visionShowToast("🗣️ Explication ELI5 ajoutée au chat pédagogique");
+      });
+    }
+
+    // ----- M11+M12 : Accessibilité (contraste élevé + OpenDyslexic) & Cahier PDF -----
+    const btnA11y = $("#btn-toggle-a11y");
+    if (btnA11y) {
+      const a11yActive = document.body.classList.contains("eduai-a11y");
+      const updateA11yBtn = (on) => { btnA11y.classList.toggle("btn-app-primary", on); btnA11y.classList.toggle("btn-app-ghost", !on); };
+      updateA11yBtn(a11yActive);
+      btnA11y.addEventListener("click", () => {
+        const on = document.body.classList.toggle("eduai-a11y");
+        updateA11yBtn(on);
+        try { localStorage.setItem("edu_air_a11y", on ? "1" : "0"); } catch (e) {}
+        visionShowToast(on ? "♿ Contraste élevé + police lisible (OpenDyslexic) ACTIVÉS" : "♿ Mode accessibilité désactivé");
+      });
+    }
+    const btnExportPdf = $("#btn-export-pdf-cahier");
+    if (btnExportPdf) {
+      btnExportPdf.addEventListener("click", () => {
+        const wbImgs = [], drImgs = [], notesHtml = [];
+        if (wbCanvas) wbImgs.push(wbCanvas.toDataURL("image/png"));
+        if (airDrawCanvas) drImgs.push(airDrawCanvas.toDataURL("image/png"));
+        let quizSummary = "Aucune évaluation enregistrée.";
+        try {
+          const res = $("#qcm-result");
+          if (res && res.style.display !== "none") quizSummary = res.textContent.trim();
+        } catch (e) {}
+        try {
+          const deck = ($("#presentation-deck-select") || {}).value || "pythagore";
+          const allNotes = [];
+          for (let i = 0; i < 10; i++) {
+            const v = localStorage.getItem("edu_air_notes_" + deck + "_" + i + " / 5");
+            if (v && v.trim()) allNotes.push("<li><b>Diapo " + i + " :</b> " + v.replace(/</g, "&lt;") + "</li>");
+          }
+          if (allNotes.length) notesHtml.push("<ul>" + allNotes.join("") + "</ul>");
+        } catch (e) {}
+        let html = "<html><head><meta charset='utf-8'><title>Cahier de Cours EDU-AIR</title>"
+          + "<style>body{font-family:Segoe UI,sans-serif;color:#0f172a;} h1{color:#0e7490;} .img{max-width:100%;border:1px solid #cbd5e1;border-radius:8px;} section{margin-bottom:22px;page-break-inside:avoid;} table{border-collapse:collapse;width:100%;} td,th{border:1px solid #94a3b8;padding:6px}</style></head><body>"
+          + "<h1>📚 Cahier de Cours EDU-AIR — Compilation</h1>"
+          + "<p>Généré le " + new Date().toLocaleString("fr-FR") + "</p>"
+          + "<section><h2>📊 Bilan de séance</h2>"
+          + "<p>Durée de leçon : " + (($("#dash-session-duration") || {}).textContent || "—") + "<br>"
+          + "Diapositives annotées : " + (($("#dash-slides-annotated") || {}).textContent || "0") + "<br>"
+          + "Time au tableau : " + (($("#dash-board-minutes") || {}).textContent || "0 min") + "<br>"
+          + "Quiz complétés : " + (($("#dash-quizzes-done") || {}).textContent || "0") + "</p>"
+          + "<p><b>Évaluation QCM la plus récente :</b> " + quizSummary.replace(/\n/g, " ").replace(/</g, "&lt;") + "</p></section>";
+        wbImgs.forEach((d, i) => { html += "<section><h2>🖼️ Tableau Blanc " + (i + 1) + "</h2><img class='img' src='" + d + "'></section>"; });
+        drImgs.forEach((d, i) => { html += "<section><h2>✏️ Schéma Dessin Air " + (i + 1) + "</h2><img class='img' src='" + d + "'></section>"; });
+        if (notesHtml.length) html += "<section><h2>📑 Notes du présentateur</h2>" + notesHtml.join("") + "</section>";
+        html += "</body></html>";
+        const win = window.open("", "_blank");
+        if (win) {
+          win.document.write(html);
+          win.document.close();
+          setTimeout(() => { try { win.focus(); win.print(); } catch (e) {} }, 900);
+        } else {
+          // Fallback : téléchargement HTML
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(new Blob([html], { type: "text/html" }));
+          a.download = "Cahier_EDU-AIR.html";
+          document.body.appendChild(a); a.click(); a.remove();
+        }
+        visionShowToast("📄 Cahier compilé — imprimez en PDF via la fenêtre (Ctrl+P)");
+      });
+    }
+    if (document.body.classList.contains("eduai-a11y")) { /* déjà appliqué via classe HTML */ }
+
+    // ----- M3 : Traînée laser phosphorescente -----
+    const laserOverlay = document.createElement("canvas");
+    laserOverlay.id = "eduair-laser-trail";
+    laserOverlay.style.cssText = "position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:9990;display:none;";
+    document.body.appendChild(laserOverlay);
+    const laserTrailPts = [];
+    function laserFeed(x, y) {
+      if (!isLaserActive) return;
+      laserTrailPts.push({ x: x, y: y, t: Date.now() });
+    }
+    setInterval(() => {
+      if (!isLaserActive) { if (laserOverlay.style.display !== "none") laserOverlay.style.display = "none"; return; }
+      laserOverlay.style.display = "block";
+      if (airPointer && airPointer.classList.contains("active")) {
+        const cs = window.getComputedStyle(airPointer);
+        const tr = cs.transform;
+        const m = tr && tr !== "none" ? tr.match(/matrix\(([^)]+)\)/) : null;
+        if (m) {
+          const vals = m[1].split(",").map(parseFloat);
+          laserFeed(vals[4], vals[5]);
+        }
+      }
+      const lg = laserOverlay.getContext("2d");
+      lg.clearRect(0, 0, laserOverlay.width, laserOverlay.height);
+      const now = Date.now();
+      laserTrailPts.forEach(p => {
+        const age = now - p.t;
+        if (age < 1500) {
+          const a = 1 - age / 1500;
+          lg.strokeStyle = "rgba(255,64,64," + (a * 0.5).toFixed(3) + ")";
+          lg.lineWidth = 6 * a;
+          lg.beginPath(); lg.arc(p.x, p.y, 5, 0, Math.PI * 2); lg.stroke();
+        }
+      });
+      while (laserTrailPts.length && now - laserTrailPts[0].t > 1500) laserTrailPts.shift();
+      if (laserOverlay.width !== window.innerWidth || laserOverlay.height !== window.innerHeight) {
+        laserOverlay.width = window.innerWidth;
+        laserOverlay.height = window.innerHeight;
+      }
+    }, 33);
+    document.addEventListener("mousemove", (e) => {
+      if (e.shiftKey) laserFeed(e.clientX, e.clientY);
+    });
+
+    // ----- M3 : Pie Menu (gestion gestuelle circulaire) -----
+    const pieMenu = document.createElement("div");
+    pieMenu.id = "eduair-pie-menu";
+    pieMenu.style.cssText = "display:none;position:fixed;z-index:9995;";
+    const pieItems = [
+      { icon: "🖱️", label: "CURSOR", act: () => { visionShowToast("🖱️ Mode curseur sélectionné"); } },
+      { icon: "👆", label: "CLIC", act: () => { try { document.elementFromPoint(lastPieX, lastPieY).click(); } catch (e) {} visionShowToast("👆 Clic envoyé"); } },
+      { icon: "🌀", label: "SCROLL", act: () => { window.scrollBy({ top: 420, behavior: "smooth" }); visionShowToast("🌀 Défilement vers le bas"); } },
+      { icon: "🔍", label: "ZOOM+", act: () => { try { document.body.style.zoom = (parseFloat(document.body.style.zoom || 1) + 0.2).toFixed(1); } catch (e) {} visionShowToast("🔍 Zoom +20 %"); } },
+      { icon: "🔴", label: "LASER", act: () => { const b = $("#btn-pointer-laser-mode"); if (b) b.click(); } },
+      { icon: "⏰", label: "MINUTERIE", act: () => { const b = $("#btn-timer-start-pause"); if (b) b.click(); } }
+    ];
+    let lastPieX = 0, lastPieY = 0;
+    pieItems.forEach((it, i) => {
+      const a = (i / pieItems.length) * Math.PI * 2 - Math.PI / 2;
+      const Rx = Math.cos(a) * 104, Ry = Math.sin(a) * 104;
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "eduair-pie-item";
+      b.style.transform = "translate(" + Rx + "px, " + Ry + "px)";
+      b.innerHTML = "<span class='eduair-pie-ic'>" + it.icon + "</span><span class='eduair-pie-lb'>" + it.label + "</span>";
+      b.addEventListener("click", (ev) => { ev.stopPropagation(); it.act(); pieMenu.style.display = "none"; });
+      pieMenu.appendChild(b);
+    });
+    document.body.appendChild(pieMenu);
+    function openPie(x, y) {
+      lastPieX = x; lastPieY = y;
+      pieMenu.style.display = "block";
+      pieMenu.style.left = Math.max(70, Math.min(window.innerWidth - 70, x)) + "px";
+      pieMenu.style.top = Math.max(70, Math.min(window.innerHeight - 70, y)) + "px";
+      const w = window;
+      w.eduAir_pieShown = true;
+      setTimeout(() => { pieMenu.style.display = "none"; w.eduAir_pieShown = false; }, 6000);
+    }
+    window.eduAirOpenPieAt = openPie;
+    let pieHoldTimer = null, pieHoldX = 0, pieHoldY = 0;
+    document.addEventListener("pointerdown", (e) => {
+      if (e.target && e.target.closest && e.target.closest("canvas")) return;
+      if (e.target && e.target.tagName && /INPUT|TEXTAREA|SELECT|BUTTON|A/.test(e.target.tagName) && e.target.tagName !== "BUTTON") return;
+      pieHoldX = e.clientX; pieHoldY = e.clientY;
+      clearTimeout(pieHoldTimer);
+      pieHoldTimer = setTimeout(() => openPie(pieHoldX, pieHoldY), 900);
+    });
+    document.addEventListener("pointermove", (e) => {
+      if (Math.hypot(e.clientX - pieHoldX, e.clientY - pieHoldY) > 8) clearTimeout(pieHoldTimer);
+    });
+    document.addEventListener("pointerup", () => clearTimeout(pieHoldTimer));
+
     console.log("EDU-AIR Smart Surface App Fully Initialized.");
   });
+})();
+
+/* ============================================================
+   EDU-AIR GUIDE DE PRISE EN MAIN — Onboarding Walkthrough
+   ============================================================ */
+(function () {
+  "use strict";
+
+  // ── Données des étapes du guide ──────────────────────────────
+  const STEPS = [
+    {
+      target: "[data-target-view='view-dashboard']",
+      icon: "📊",
+      title: "Tableau de Bord",
+      desc: "Le <strong>cockpit central</strong> d'EDU-AIR. Accédez en un coup d'œil aux raccourcis rapides, au minuteur de classe TNI et aux statistiques de votre session.",
+      position: "right"
+    },
+    {
+      target: "#txt-cam-status",
+      icon: "📷",
+      title: "Statut Caméra & Détection",
+      desc: "Cette pastille indique l'état de la caméra et du <strong>module de détection gestuelle</strong>. Positionnez votre main devant la caméra pour activer le Pointeur Air.",
+      position: "bottom"
+    },
+    {
+      target: "[data-target-view='view-whiteboard']",
+      icon: "✨",
+      title: "Surface Intelligente (Whiteboard)",
+      desc: "Le <strong>tableau blanc interactif</strong> complet : stylo, surligneur, gomme, formes géométriques, dictée vocale et calque enseignant verrouillable.",
+      position: "right"
+    },
+    {
+      target: "[data-target-view='view-pointer']",
+      icon: "🎯",
+      title: "Pointeur Air",
+      desc: "Transformez votre doigt tendu en <strong>pointeur laser sans contact</strong>. Configurez les raccourcis gestuels (Poing = Pause, Main ouverte = Menu).",
+      position: "right"
+    },
+    {
+      target: "[data-target-view='view-draw']",
+      icon: "🎨",
+      title: "Dessin Air",
+      desc: "Un canvas de <strong>dessin libre plein écran</strong> avec gabarits pédagogiques (Mind Map, Venn, Frise…) et reconnaissance de formes automatique.",
+      position: "right"
+    },
+    {
+      target: "[data-target-view='view-air3d']",
+      icon: "🧊",
+      title: "Air 3D — Labo Holographique",
+      desc: "Manipulez des <strong>modèles 3D scientifiques</strong> interactifs : molécule H₂O, cellule végétale, système solaire, ADN, moteur thermique et plus encore.",
+      position: "right"
+    },
+    {
+      target: "[data-target-view='view-labo']",
+      icon: "🔬",
+      title: "Labo Air — Simulations",
+      desc: "Des <strong>simulations physiques en temps réel</strong> : électromagnétisme, optique géométrique, système planétaire et prochainement la chute des corps.",
+      position: "right"
+    },
+    {
+      target: "[data-target-view='view-quiz']",
+      icon: "📝",
+      title: "Quiz Air — Évaluation Interactive",
+      desc: "Lancez des <strong>quiz gestuels</strong> : les élèves répondent en levant la main dans la bonne zone. Mode Duel 2 joueurs et génération automatique de QCM disponibles.",
+      position: "right"
+    },
+    {
+      target: "[data-target-view='view-presentation']",
+      icon: "📺",
+      title: "Présentation Air — Diaporama",
+      desc: "Naviguez dans vos diapositives <strong>par gestes</strong>. Annotez en direct, activez le Spotlight ou la Loupe Zoom, et importez vos fichiers PowerPoint / PDF.",
+      position: "right"
+    },
+    {
+      target: "[data-target-view='view-profai']",
+      icon: "🤖",
+      title: "Prof IA — Assistant Pédagogique",
+      desc: "Votre <strong>assistant IA intégré</strong> génère des exercices différenciés (3 niveaux), propose des explications en langage simple (ELI5) et lit les cours à voix haute.",
+      position: "right"
+    },
+    {
+      target: "[data-target-view='view-calib']",
+      icon: "⚙️",
+      title: "Calibrage TNI",
+      desc: "Configurez votre marque de TNI (SMART, Promethean, Epson…) et lancez le <strong>Wizard de Calibrage en 4 points</strong> pour une précision optimale.",
+      position: "right"
+    },
+    {
+      target: "#app-role-select",
+      icon: "👤",
+      title: "Profils & Rôles",
+      desc: "Basculez entre les profils <strong>Enseignant</strong> (contrôle total), <strong>Élève</strong> (interactions guidées) et <strong>Technicien TNI</strong> (maintenance). Le guide est maintenant terminé !",
+      position: "bottom"
+    }
+  ];
+
+  let currentStep = 0;
+  let highlightedEl = null;
+  let isRunning = false;
+
+  // ── Éléments DOM ─────────────────────────────────────────────
+  const elWelcome   = document.getElementById("onboarding-welcome");
+  const elCard      = document.getElementById("onboarding-card");
+  const elStepBadge = document.getElementById("onb-step-badge");
+  const elIcon      = document.getElementById("onb-step-icon");
+  const elTitle     = document.getElementById("onb-card-title");
+  const elDesc      = document.getElementById("onb-card-desc");
+  const elProgress  = document.getElementById("onb-progress-fill");
+  const elDots      = document.getElementById("onb-dots");
+  const elArrow     = document.getElementById("onb-arrow");
+  const elBtnNext   = document.getElementById("onb-btn-next");
+  const elBtnPrev   = document.getElementById("onb-btn-prev");
+  const elBtnQuit   = document.getElementById("onb-btn-quit");
+  const elBtnOpen   = document.getElementById("btn-open-guide");
+  const elWelcomeStart = document.getElementById("onb-welcome-start-btn");
+  const elWelcomeSkip  = document.getElementById("onb-welcome-skip-btn");
+
+  // ── Build dots ────────────────────────────────────────────────
+  function buildDots() {
+    if (!elDots) return;
+    elDots.innerHTML = "";
+    STEPS.forEach((_, i) => {
+      const d = document.createElement("span");
+      d.className = "onb-dot";
+      d.title = STEPS[i].title;
+      d.addEventListener("click", () => goToStep(i));
+      elDots.appendChild(d);
+    });
+  }
+
+  function updateDots(idx) {
+    if (!elDots) return;
+    const dots = elDots.querySelectorAll(".onb-dot");
+    dots.forEach((d, i) => {
+      d.className = "onb-dot" + (i === idx ? " active" : i < idx ? " done" : "");
+    });
+  }
+
+  // ── Highlight element ─────────────────────────────────────────
+  function highlightTarget(el) {
+    clearHighlight();
+    if (!el) return;
+    el.classList.add("onb-highlight-pulse");
+    el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    highlightedEl = el;
+  }
+
+  function clearHighlight() {
+    if (highlightedEl) {
+      highlightedEl.classList.remove("onb-highlight-pulse");
+      highlightedEl = null;
+    }
+  }
+
+  // ── Position card near target ─────────────────────────────────
+  function positionCard(targetEl, position) {
+    if (!elCard || !targetEl) {
+      if (elCard) {
+        elCard.style.top  = "50%";
+        elCard.style.left = "50%";
+        elCard.style.transform = "translate(-50%, -50%)";
+      }
+      return;
+    }
+
+    const rect = targetEl.getBoundingClientRect();
+    const cardW = 380;
+    const cardH = elCard.offsetHeight || 320;
+    const margin = 24;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    let top, left;
+    let arrowClass = "";
+
+    if (position === "right") {
+      left = Math.min(rect.right + margin, vw - cardW - margin);
+      top  = Math.max(margin, Math.min(rect.top + rect.height / 2 - cardH / 2, vh - cardH - margin));
+      arrowClass = "arrow-left";
+    } else if (position === "left") {
+      left = Math.max(margin, rect.left - cardW - margin);
+      top  = Math.max(margin, Math.min(rect.top + rect.height / 2 - cardH / 2, vh - cardH - margin));
+      arrowClass = "arrow-right";
+    } else if (position === "bottom") {
+      top  = Math.min(rect.bottom + margin, vh - cardH - margin);
+      left = Math.max(margin, Math.min(rect.left + rect.width / 2 - cardW / 2, vw - cardW - margin));
+      arrowClass = "arrow-top";
+    } else { // top
+      top  = Math.max(margin, rect.top - cardH - margin);
+      left = Math.max(margin, Math.min(rect.left + rect.width / 2 - cardW / 2, vw - cardW - margin));
+      arrowClass = "arrow-bottom";
+    }
+
+    elCard.style.top       = top + "px";
+    elCard.style.left      = left + "px";
+    elCard.style.transform = "none";
+
+    if (elArrow) {
+      elArrow.className = "onb-arrow " + arrowClass;
+      // Ajuster la position de la flèche selon l'axe
+      if (arrowClass === "arrow-left") {
+        const arrowTop = rect.top + rect.height / 2 - top;
+        elArrow.style.top  = Math.max(20, Math.min(cardH - 20, arrowTop)) + "px";
+        elArrow.style.left = "";
+        elArrow.style.marginLeft = "";
+        elArrow.style.marginTop  = "-9px";
+      } else if (arrowClass === "arrow-right") {
+        const arrowTop = rect.top + rect.height / 2 - top;
+        elArrow.style.top  = Math.max(20, Math.min(cardH - 20, arrowTop)) + "px";
+        elArrow.style.right = "";
+        elArrow.style.marginTop = "-9px";
+      } else {
+        elArrow.style.top  = "";
+        elArrow.style.left = "";
+        elArrow.style.marginLeft = "-9px";
+        elArrow.style.marginTop  = "";
+      }
+    }
+  }
+
+  // ── Render step ────────────────────────────────────────────────
+  function goToStep(idx) {
+    if (idx < 0 || idx >= STEPS.length) { endGuide(); return; }
+    currentStep = idx;
+
+    const step = STEPS[idx];
+    const targetEl = document.querySelector(step.target);
+
+    // Mise à jour contenu
+    if (elStepBadge) elStepBadge.textContent = `Étape ${idx + 1} / ${STEPS.length}`;
+    if (elIcon)      elIcon.textContent = step.icon;
+    if (elTitle)     elTitle.textContent = step.title;
+    if (elDesc)      elDesc.innerHTML = step.desc;
+    if (elProgress)  elProgress.style.width = ((idx + 1) / STEPS.length * 100) + "%";
+
+    updateDots(idx);
+
+    // Bouton Précédent
+    if (elBtnPrev) elBtnPrev.style.display = idx === 0 ? "none" : "";
+
+    // Bouton Suivant / Terminer
+    if (elBtnNext) {
+      elBtnNext.textContent = idx === STEPS.length - 1 ? "✅ Terminer" : "Suivant ▶";
+    }
+
+    // Afficher la carte
+    if (elCard) {
+      elCard.style.display = "block";
+      elCard.classList.remove("fade-out");
+    }
+
+    // Highlight
+    highlightTarget(targetEl);
+
+    // Positionner après un micro-délai (pour que offsetHeight soit calculé)
+    requestAnimationFrame(() => {
+      positionCard(targetEl, step.position);
+    });
+
+    // Click sur le dot navigue vers la vue
+    if (targetEl && targetEl.dataset && targetEl.dataset.targetView) {
+      targetEl.click();
+    }
+  }
+
+  // ── Fin du guide ───────────────────────────────────────────────
+  function endGuide() {
+    isRunning = false;
+    clearHighlight();
+    document.body.classList.remove("onboarding-active");
+    if (elCard) {
+      elCard.classList.add("fade-out");
+      setTimeout(() => { if (elCard) elCard.style.display = "none"; }, 380);
+    }
+    try { localStorage.setItem("edu_air_onboarding_done", "1"); } catch(e) {}
+  }
+
+  // ── Démarrage du walkthrough ───────────────────────────────────
+  function startWalkthrough() {
+    isRunning = true;
+    document.body.classList.add("onboarding-active");
+    buildDots();
+    currentStep = 0;
+    goToStep(0);
+  }
+
+  // ── Masquer welcome screen ────────────────────────────────────
+  function hideWelcome() {
+    if (elWelcome) {
+      elWelcome.classList.add("hidden");
+      setTimeout(() => { if (elWelcome) elWelcome.style.display = "none"; }, 420);
+    }
+  }
+
+  // ── Vérification premier lancement ────────────────────────────
+  function checkFirstLaunch() {
+    let done = false;
+    try { done = localStorage.getItem("edu_air_onboarding_done") === "1"; } catch(e) {}
+    if (done) {
+      // Masquer directement
+      if (elWelcome) { elWelcome.style.display = "none"; }
+    } else {
+      // Afficher le bienvenue
+      if (elWelcome) elWelcome.style.display = "flex";
+    }
+  }
+
+  // ── Event Listeners ───────────────────────────────────────────
+  if (elWelcomeStart) {
+    elWelcomeStart.addEventListener("click", () => {
+      hideWelcome();
+      setTimeout(startWalkthrough, 450);
+    });
+  }
+
+  if (elWelcomeSkip) {
+    elWelcomeSkip.addEventListener("click", () => {
+      hideWelcome();
+      try { localStorage.setItem("edu_air_onboarding_done", "1"); } catch(e) {}
+    });
+  }
+
+  if (elBtnNext) {
+    elBtnNext.addEventListener("click", () => {
+      if (currentStep < STEPS.length - 1) {
+        goToStep(currentStep + 1);
+      } else {
+        endGuide();
+      }
+    });
+  }
+
+  if (elBtnPrev) {
+    elBtnPrev.addEventListener("click", () => {
+      if (currentStep > 0) goToStep(currentStep - 1);
+    });
+  }
+
+  if (elBtnQuit) {
+    elBtnQuit.addEventListener("click", endGuide);
+  }
+
+  // Bouton ❓ dans la topbar — relancer le guide
+  if (elBtnOpen) {
+    elBtnOpen.addEventListener("click", () => {
+      if (isRunning) {
+        endGuide();
+      } else {
+        startWalkthrough();
+      }
+    });
+  }
+
+  // Navigation clavier
+  document.addEventListener("keydown", (e) => {
+    if (!isRunning) return;
+    if (e.key === "ArrowRight" || e.key === "Enter") {
+      e.preventDefault();
+      if (currentStep < STEPS.length - 1) goToStep(currentStep + 1);
+      else endGuide();
+    } else if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      if (currentStep > 0) goToStep(currentStep - 1);
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      endGuide();
+    }
+  });
+
+  // Reposition on resize
+  let resizeTimer;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      if (isRunning) {
+        const step = STEPS[currentStep];
+        const targetEl = document.querySelector(step.target);
+        positionCard(targetEl, step.position);
+      }
+    }, 120);
+  });
+
+  // ── Init au chargement ────────────────────────────────────────
+  document.addEventListener("DOMContentLoaded", checkFirstLaunch);
+
 })();
