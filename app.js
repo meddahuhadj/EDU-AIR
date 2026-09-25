@@ -6325,6 +6325,48 @@ function labOptNat(v) {
     });
     document.addEventListener("pointerup", () => clearTimeout(pieHoldTimer));
 
+    // ----- Module Guide & Action Handlers -----
+    const btnOpenGuide = document.getElementById("btn-open-guide");
+    if (btnOpenGuide) {
+      btnOpenGuide.addEventListener("click", () => {
+        const guideSidebarItem = document.querySelector(".sidebar-item[data-target-view='view-guide']");
+        if (guideSidebarItem) guideSidebarItem.click();
+      });
+    }
+
+    const btnStartGuidedTour = document.getElementById("btn-start-guided-tour");
+    if (btnStartGuidedTour) {
+      btnStartGuidedTour.addEventListener("click", () => {
+        const guideSidebarItem = document.querySelector(".sidebar-item[data-target-view='view-guide']");
+        if (guideSidebarItem) guideSidebarItem.click();
+      });
+    }
+
+    const btnGuideGotoCalib = document.getElementById("btn-guide-goto-calib");
+    if (btnGuideGotoCalib) {
+      btnGuideGotoCalib.addEventListener("click", () => {
+        const calibItem = document.querySelector(".sidebar-item[data-target-view='view-calib']");
+        if (calibItem) calibItem.click();
+      });
+    }
+
+    const btnGuideStartDemo = document.getElementById("btn-guide-start-demo");
+    if (btnGuideStartDemo) {
+      btnGuideStartDemo.addEventListener("click", () => {
+        alert("🧪 Mode Démo activé : Les gestes virtuels de la main sont simulés automatiquement.");
+      });
+    }
+
+    // ----- Home View Launchers -----
+    document.querySelectorAll("[data-home-launch]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const targetViewId = btn.getAttribute("data-home-launch");
+        if (!targetViewId) return;
+        const targetItem = Array.from(document.querySelectorAll(".sidebar-item")).find(i => i.getAttribute("data-target-view") === targetViewId);
+        if (targetItem) targetItem.click();
+      });
+    });
+
     console.log("EDU-AIR Smart Surface App Fully Initialized.");
   });
 })();

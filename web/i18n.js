@@ -21,6 +21,7 @@ window.EDU_AIR_I18N = (() => {
       roleStudent: "👨‍🎓 Rôle: Élève",
       roleTech: "🔧 Rôle: Technicien TNI",
       exportTni: "📤 EXPORT TNI / ENT",
+      navHome: "Accueil",
       navDashboard: "Tableau de bord",
       navWhiteboard: "Surface Intelligente",
       navPointer: "Pointeur air",
@@ -33,6 +34,7 @@ window.EDU_AIR_I18N = (() => {
       navProfAi: "Prof IA",
       navCalib: "Calibrage",
       navHistory: "Historique",
+      navGuide: "Guide & Aide",
 
       // Module 9: Presentation
       modDiaporama: "DIAPORAMA :",
@@ -343,7 +345,60 @@ window.EDU_AIR_I18N = (() => {
       btnLoadSlides: "Charger Diaporama",
       modalSlideTitle: "➕ Ajouter une nouvelle Slide",
       labelSlideTitle: "Titre de la slide :",
-      btnAddConfirm: "Ajouter Slide"
+      btnAddConfirm: "Ajouter Slide",
+
+      // Enrichissements EDU-AIR (M1..M12)
+      btnReadyClass: "🚀 PRÊT POUR LA CLASSE (1-CLIC)",
+      dashRhythmTitle: "🧭 Rythme de Cours & Baromètre d'Attention",
+      dashGaugeLabel: "Jauge d'Attention de la Classe",
+      dashStageLabel: "Phase d'enseignement",
+      dashStatLiveLabel: "Statistiques de Session en Direct",
+      btnWbRedo: "↪ Rétablir",
+      btnWbText: "✍️ Texte / LaTeX",
+      btnWbSticky: "📌 Post-it",
+      visionTabQcm: "✅ Grille QCM papier",
+      qcmTeacherLabel: "✓ Bonnes réponses attendues :",
+      qcmMarksBtn: "🧮 Noter la copie",
+      qcmFlipBtn: "🔄 Détecter captures (feuille)",
+      visionHintQcm: "✅ Cliquez sur les cases noircies de l'élève, puis « Noter la copie »",
+      labSimGravity: "🚀 Gravité & Chute des Corps (Galilée/Newton)",
+      labSimAcoustic: "🔊 Acoustique & Ondes Sonores",
+      labSimPeriodic: "🧪 Tableau Périodique Dynamique",
+      labGravG: "⚖️ Gravité (planète)",
+      labGravMass: "🏐 Masse de la bille (g)",
+      labGravVacTime: "⏱️ Temps de chute (vide)",
+      labGravAirTime: "⏱️ Temps de chute (avec air)",
+      labGravTheory: "📐 Temps théorique t₀",
+      labGravConcl: "💡 Tous les corps tombent à la même vitesse dans le vide !",
+      labReset: "🔄 Réinitialiser",
+      labAcouFreq: "🎵 Fréquence (Hz) — curseur & micro",
+      labAcouAmp: "💥 Amplitude / niveau sonore",
+      labAcouPlay: "🔊 Jouer le son",
+      labAcouPeriod: "Période T = 1/f",
+      labAcouWave: "Longueur d'onde λ",
+      labAcouLevel: "Niveau sonore",
+      labPerioEl: "🧪 Élément du tableau périodique :",
+      labPerioBohr: "☢️ Modèle de Bohr (couches électroniques)",
+
+      // Quiz enrichi
+      btnQuizDuel: "⚔️ Mode Duel 2 Joueurs",
+      btnQuizSfx: "🎉 Son & Confettis",
+      quizGenLabel: "🤖 Générer un QCM par matière & niveau :",
+      quizGenPrim: "🏫 Primaire",
+      quizGenCollege: "📚 Collège",
+      quizGenLycee: "🎓 Lycée",
+      btnQuizGenerat: "⚡ Générer",
+      quizDuelP1: "🔵 Joueur 1 (Zone Gauche)",
+      quizDuelP2: "🟠 Joueur 2 (Zone Droite)",
+
+      // Présentation enrichie
+      btnContrast: "🌗 Contraste",
+      btnScratch: "🩹 Scratch-to-Reveal",
+      btnNotes: "📑 Volet Notes",
+
+      // Historique & Accessibilité
+      btnExportCahier: "📄 EXPORT PDF — Cahier de Cours",
+      btnA11y: "♿"
     },
     en: {
       camStatus: "Show your hand to the camera",
@@ -667,7 +722,60 @@ window.EDU_AIR_I18N = (() => {
       btnLoadSlides: "Load Presentation",
       modalSlideTitle: "➕ Add a New Slide",
       labelSlideTitle: "Slide title:",
-      btnAddConfirm: "Add Slide"
+      btnAddConfirm: "Add Slide",
+
+      // Enrichissements EDU-AIR (M1..M12)
+      btnReadyClass: "🚀 READY FOR CLASS (1-CLICK)",
+      dashRhythmTitle: "🧭 Lesson Rhythm & Attention Barometer",
+      dashGaugeLabel: "Class Attention Gauge",
+      dashStageLabel: "Teaching stage",
+      dashStatLiveLabel: "Live Session Statistics",
+      btnWbRedo: "↪ Redo",
+      btnWbText: "✍️ Text / LaTeX",
+      btnWbSticky: "📌 Sticky note",
+      visionTabQcm: "✅ Paper QCM grid",
+      qcmTeacherLabel: "✓ Expected correct answers:",
+      qcmMarksBtn: "🧮 Grade the copy",
+      qcmFlipBtn: "🔄 Detect captures (sheet)",
+      visionHintQcm: "✅ Click the darkened boxes of the student's sheet, then 'Grade the copy'",
+      labSimGravity: "🚀 Gravity & Falling Bodies (Galileo/Newton)",
+      labSimAcoustic: "🔊 Acoustics & Sound Waves",
+      labSimPeriodic: "🧪 Dynamic Periodic Table",
+      labGravG: "⚖️ Gravity (planet)",
+      labGravMass: "🏐 Ball mass (g)",
+      labGravVacTime: "⏱️ Fall time (vacuum)",
+      labGravAirTime: "⏱️ Fall time (with air)",
+      labGravTheory: "📐 Theoretical time t₀",
+      labGravConcl: "💡 All bodies fall at the same speed in a vacuum!",
+      labReset: "🔄 Reset",
+      labAcouFreq: "🎵 Frequency (Hz) — slider & mic",
+      labAcouAmp: "💥 Amplitude / sound level",
+      labAcouPlay: "🔊 Play sound",
+      labAcouPeriod: "Period T = 1/f",
+      labAcouWave: "Wavelength λ",
+      labAcouLevel: "Sound level",
+      labPerioEl: "🧪 Element of the periodic table:",
+      labPerioBohr: "☢️ Bohr model (electron shells)",
+
+      // Enhanced quiz
+      btnQuizDuel: "⚔️ 2-Player Duel Mode",
+      btnQuizSfx: "🎉 Sound & Confetti",
+      quizGenLabel: "🤖 Generate a quiz by subject & level:",
+      quizGenPrim: "🏫 Primary school",
+      quizGenCollege: "📚 Middle school",
+      quizGenLycee: "🎓 High school",
+      btnQuizGenerat: "⚡ Generate",
+      quizDuelP1: "🔵 Player 1 (Left Zone)",
+      quizDuelP2: "🟠 Player 2 (Right Zone)",
+
+      // Enhanced presentation
+      btnContrast: "🌗 Contrast",
+      btnScratch: "🩹 Scratch-to-Reveal",
+      btnNotes: "📑 Notes Panel",
+
+      // History & Accessibility
+      btnExportCahier: "📄 EXPORT PDF — Lesson Notebook",
+      btnA11y: "♿"
     },
     nl: {
       camStatus: "Toon je hand voor de camera",
@@ -991,7 +1099,60 @@ window.EDU_AIR_I18N = (() => {
       btnLoadSlides: "Laden Presentatie",
       modalSlideTitle: "➕ Nieuwe Dia Toevoegen",
       labelSlideTitle: "Titel van de dia:",
-      btnAddConfirm: "Dia Toevoegen"
+      btnAddConfirm: "Dia Toevoegen",
+
+      // EDU-AIR verrijkingen (M1..M12)
+      btnReadyClass: "🚀 KLAAR VOOR DE LES (1-KLIK)",
+      dashRhythmTitle: "🧭 Lesritme & Aandachtsbarometer",
+      dashGaugeLabel: "Aandachtsmeter van de klas",
+      dashStageLabel: "Lesfase",
+      dashStatLiveLabel: "Live sessiestatistieken",
+      btnWbRedo: "↪ Opnieuw",
+      btnWbText: "✍️ Tekst / LaTeX",
+      btnWbSticky: "📌 Plaknotitie",
+      visionTabQcm: "✅ Papieren MCQ-rooster",
+      qcmTeacherLabel: "✓ Verwachte juiste antwoorden:",
+      qcmMarksBtn: "🧮 Werk beoordelen",
+      qcmFlipBtn: "🔄 Detecteer aankruisingen",
+      visionHintQcm: "✅ Klik op de ingevulde vakjes, daarna 'Werk beoordelen'",
+      labSimGravity: "🚀 Zwaartekracht & Vrije Val (Galileo/Newton)",
+      labSimAcoustic: "🔊 Akoestiek & Geluidsgolven",
+      labSimPeriodic: "🧪 Dynamisch Periodiek Systeem",
+      labGravG: "⚖️ Zwaartekracht (planeet)",
+      labGravMass: "🏐 Massa van de bal (g)",
+      labGravVacTime: "⏱️ Valtijd (vacuüm)",
+      labGravAirTime: "⏱️ Valtijd (met lucht)",
+      labGravTheory: "📐 Theoretische tijd t₀",
+      labGravConcl: "💡 Alle lichamen vallen even snel in vacuüm!",
+      labReset: "🔄 Resetten",
+      labAcouFreq: "🎵 Frequentie (Hz) — schuif & microfoon",
+      labAcouAmp: "💥 Amplitude / geluidsniveau",
+      labAcouPlay: "🔊 Geluid afspelen",
+      labAcouPeriod: "Periode T = 1/f",
+      labAcouWave: "Golflengte λ",
+      labAcouLevel: "Geluidsniveau",
+      labPerioEl: "🧪 Element van het periodiek systeem:",
+      labPerioBohr: "☢️ Bohrmodel (elektronenschillen)",
+
+      // Uitgebreide quiz
+      btnQuizDuel: "⚔️ 2-Speler Duelmodus",
+      btnQuizSfx: "🎉 Geluid & Confetti",
+      quizGenLabel: "🤖 Genereer een toets per vak & niveau:",
+      quizGenPrim: "🏫 Basisonderwijs",
+      quizGenCollege: "📚 Middelbare school",
+      quizGenLycee: "🎓 Lyceum",
+      btnQuizGenerat: "⚡ Genereren",
+      quizDuelP1: "🔵 Speler 1 (Zone Links)",
+      quizDuelP2: "🟠 Speler 2 (Zone Rechts)",
+
+      // Uitgebreide presentatie
+      btnContrast: "🌗 Contrast",
+      btnScratch: "🩹 Krassen-tot-onthullen",
+      btnNotes: "📑 Notitiepaneel",
+
+      // Geschiedenis & Toegankelijkheid
+      btnExportCahier: "📄 EXPORT PDF — Lesnotitieboek",
+      btnA11y: "♿"
     },
     ar: {
       camStatus: "ضع يدك أمام الكاميرا",
@@ -1315,7 +1476,60 @@ window.EDU_AIR_I18N = (() => {
       btnLoadSlides: "تحميل العرض",
       modalSlideTitle: "➕ إضافة شريحة جديدة",
       labelSlideTitle: "عنوان الشريحة:",
-      btnAddConfirm: "إضافة شريحة"
+      btnAddConfirm: "إضافة شريحة",
+
+      // إثراء EDU-AIR (M1..M12)
+      btnReadyClass: "🚀 جاهز للدرس (نقرة واحدة)",
+      dashRhythmTitle: "🧭 إيقاع الدرس ومقياس الانتباه",
+      dashGaugeLabel: "مقياس انتباه الصف",
+      dashStageLabel: "مرحلة التدريس",
+      dashStatLiveLabel: "إحصائيات الجلسة المباشرة",
+      btnWbRedo: "↪ إعادة",
+      btnWbText: "✍️ نص / لاتيكس",
+      btnWbSticky: "📌 ملاحظة لاصقة",
+      visionTabQcm: "✅ شبكة أسئلة QCM ورقية",
+      qcmTeacherLabel: "✓ الإجابات الصحيحة المتوقعة:",
+      qcmMarksBtn: "🧮 تصحيح الورقة",
+      qcmFlipBtn: "🔄 اكتشاف التظليل",
+      visionHintQcm: "✅ انقر على المربعات المظللة ثم « تصحيح الورقة »",
+      labSimGravity: "🚀 الجاذبية والسقوط الحر (غاليليو/نيوتن)",
+      labSimAcoustic: "🔊 الصوتيات والموجات الصوتية",
+      labSimPeriodic: "🧪 الجدول الدوري الديناميكي",
+      labGravG: "⚖️ الجاذبية (الكوكب)",
+      labGravMass: "🏐 كتلة الكرة (غ)",
+      labGravVacTime: "⏱️ زمن السقوط (في الفراغ)",
+      labGravAirTime: "⏱️ زمن السقوط (مع الهواء)",
+      labGravTheory: "📐 الزمن النظري t₀",
+      labGravConcl: "💡 جميع الأجسام تسقط بنفس السرعة في الفراغ!",
+      labReset: "🔄 إعادة الضبط",
+      labAcouFreq: "🎵 التردد (هرتز) — المنزلق والميكروفون",
+      labAcouAmp: "💥 السعة / مستوى الصوت",
+      labAcouPlay: "🔊 تشغيل الصوت",
+      labAcouPeriod: "الدورة T = 1/f",
+      labAcouWave: "الطول الموجي λ",
+      labAcouLevel: "مستوى الصوت",
+      labPerioEl: "🧪 عنصر من الجدول الدوري:",
+      labPerioBohr: "☢️ نموذج بور (الأغلفة الإلكترونية)",
+
+      // اختبار محسّن
+      btnQuizDuel: "⚔️ وضع مبارزة لاعبَين",
+      btnQuizSfx: "🎉 صوت وقصاصات ملونة",
+      quizGenLabel: "🤖 توليد اختبار حسب المادة والمستوى:",
+      quizGenPrim: "🏫 ابتدائي",
+      quizGenCollege: "📚 متوسط",
+      quizGenLycee: "🎓 ثانوي",
+      btnQuizGenerat: "⚡ توليد",
+      quizDuelP1: "🔵 اللاعب 1 (المنطقة اليسرى)",
+      quizDuelP2: "🟠 اللاعب 2 (المنطقة اليمنى)",
+
+      // عرض محسّن
+      btnContrast: "🌗 تباين",
+      btnScratch: "🩹 خدش للإظهار",
+      btnNotes: "📑 لوحة الملاحظات",
+
+      // السجل وإمكانية الوصول
+      btnExportCahier: "📄 تصدير PDF — دفتر الدرس",
+      btnA11y: "♿"
     }
   };
 

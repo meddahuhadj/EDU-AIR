@@ -88,15 +88,10 @@ class RealPresentationDriver(PresentationDriver):
     """Sends real keyboard input through the HADJ Win32 layer."""
 
     def __init__(self) -> None:
-        from hadj_no_touch.windows import keyboard_control, window_control  # local import
+        from hadj_no_touch.windows import keyboard_control  # local import
         self._kc = keyboard_control
-        self._wc = window_control
 
     def key(self, name: str, modifiers: list[str] | None = None) -> None:
-        try:
-            self._wc.ensure_presentation_focus()
-        except Exception:
-            pass
         self._kc.tap(name, modifiers)
 
     def wheel(self, amount: int) -> None:

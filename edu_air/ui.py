@@ -30,139 +30,10 @@ from PySide6.QtCore import QObject, Qt, Signal, QTimer
 from PySide6.QtGui import QColor, QFont, QGuiApplication, QKeyEvent, QPainter, QPen
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QFrame, QHBoxLayout, QLabel, QMainWindow, QPushButton,
-    QVBoxLayout, QWidget, QGridLayout, QMessageBox, QScrollArea,
+    QVBoxLayout, QWidget, QGridLayout, QMessageBox,
 )
 
 from . import __version__, i18n
-
-# ---------------------------------------------------------------------------
-# Dark, modern control-dock theme. Palette kept as named constants so status
-# chips / env indicators (styled per-instance in Python, not pure QSS) stay
-# visually consistent with the stylesheet below.
-# ---------------------------------------------------------------------------
-BG = "#12141a"
-SURFACE = "#1b1e27"
-SURFACE_ALT = "#242833"
-BORDER = "#2e3340"
-TEXT = "#eef1f6"
-TEXT_MUTED = "#9aa2b4"
-ACCENT = "#7c6cf0"
-ACCENT_HOVER = "#8f81f5"
-ACCENT_PRESSED = "#6a5ce0"
-OK = "#34d399"
-WARN = "#f5b942"
-BAD = "#ef5b5b"
-
-DARK_QSS = f"""
-QMainWindow, QWidget#central {{
-    background: {BG};
-}}
-QLabel {{
-    color: {TEXT};
-    font-size: 13px;
-}}
-QFrame#card {{
-    background: {SURFACE};
-    border: 1px solid {BORDER};
-    border-radius: 12px;
-}}
-QLabel#cardTitle {{
-    color: {TEXT_MUTED};
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-}}
-QPushButton {{
-    background: {SURFACE_ALT};
-    color: {TEXT};
-    border: 1px solid {BORDER};
-    border-radius: 8px;
-    padding: 8px 14px;
-    font-size: 13px;
-    font-weight: 600;
-}}
-QPushButton:hover {{
-    background: #2b3040;
-    border-color: {ACCENT};
-}}
-QPushButton:pressed {{
-    background: #171922;
-}}
-QPushButton#primaryBtn {{
-    background: {ACCENT};
-    border: 1px solid {ACCENT};
-    color: #ffffff;
-}}
-QPushButton#primaryBtn:hover {{
-    background: {ACCENT_HOVER};
-    border-color: {ACCENT_HOVER};
-}}
-QPushButton#primaryBtn:pressed {{
-    background: {ACCENT_PRESSED};
-}}
-QComboBox, QCheckBox {{
-    background: {SURFACE_ALT};
-    color: {TEXT};
-    border: 1px solid {BORDER};
-    border-radius: 6px;
-    padding: 4px 8px;
-    min-height: 22px;
-}}
-QComboBox:hover {{
-    border-color: {ACCENT};
-}}
-QComboBox::drop-down {{
-    border: none;
-    width: 20px;
-}}
-QComboBox QAbstractItemView {{
-    background: {SURFACE_ALT};
-    color: {TEXT};
-    selection-background-color: {ACCENT};
-    border: 1px solid {BORDER};
-    outline: none;
-}}
-QCheckBox::indicator {{
-    width: 14px;
-    height: 14px;
-    border-radius: 3px;
-    border: 1px solid {BORDER};
-    background: {SURFACE_ALT};
-}}
-QCheckBox::indicator:checked {{
-    background: {ACCENT};
-    border-color: {ACCENT};
-}}
-QStatusBar {{
-    background: {SURFACE};
-    color: {TEXT_MUTED};
-    border-top: 1px solid {BORDER};
-}}
-QScrollArea#scrollArea, QScrollArea#scrollArea > QWidget > QWidget {{
-    background: {BG};
-    border: none;
-}}
-QScrollBar:vertical {{
-    background: {BG};
-    width: 12px;
-    margin: 0;
-}}
-QScrollBar::handle:vertical {{
-    background: {SURFACE_ALT};
-    border-radius: 5px;
-    min-height: 30px;
-}}
-QScrollBar::handle:vertical:hover {{
-    background: {BORDER};
-}}
-QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
-    height: 0;
-}}
-QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
-    background: none;
-}}
-"""
 from .classroom import ClassroomSession, RecordingBackend, DemoBackend
 from .config import SETTINGS
 from .pointer import InteractivePointer
@@ -193,25 +64,11 @@ class OverlayWindow(QWidget):
         self.settings = settings or SETTINGS
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint
                             | Qt.WindowType.WindowStaysOnTopHint
-                            | Qt.WindowType.WindowDoesNotAcceptFocus
-                            | Qt.WindowType.WindowTransparentForInput
                             | Qt.WindowType.Tool)
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
-        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
-        self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
         self._last_paint = 0.0
         self._target_screen = screen_index
-        if os.name == "nt":
-            try:
-                import ctypes
-                hwnd = int(self.winId())
-                GWL_EXSTYLE = -20
-                WS_EX_NOACTIVATE = 0x08000000
-                WS_EX_TRANSPARENT = 0x00000020
-                old_style = ctypes.windll.user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
-                ctypes.windll.user32.SetWindowLongW(hwnd, GWL_EXSTYLE, old_style | WS_EX_NOACTIVATE | WS_EX_TRANSPARENT)
-            except Exception:
-                pass
 
     def place_on_screen(self, index: int) -> None:
         screen = _pick_screen(index)
@@ -238,11 +95,8 @@ class OverlayWindow(QWidget):
         # ---- interactive pointer ---------------------------------------------
         if s.pointer.visible and s.pointer.position is not None:
             px, py = s.pointer.position
-            dwell_prog = getattr(s.pointer, "dwell_progress", 0.0)
-            in_rest = getattr(s.pointer, "in_rest_zone", False)
             self._paint_pointer(p, px, py, s.settings.annotation.pointer_size,
-                                s.settings.annotation.pointer_color,
-                                dwell_progress=dwell_prog, in_rest=in_rest)
+                                s.settings.annotation.pointer_color)
 
         # ---- quiz overlay ------------------------------------------------------
         if s.quiz.active and s.quiz.question is not None:
@@ -279,10 +133,8 @@ class OverlayWindow(QWidget):
             p.drawLine(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1])
 
     def _paint_pointer(self, p: QPainter, px: float, py: float,
-                       size: int, color: str,
-                       dwell_progress: float = 0.0,
-                       in_rest: bool = False) -> None:
-        col = QColor("#f59e0b") if in_rest else QColor(color)
+                       size: int, color: str) -> None:
+        col = QColor(color)
         size = max(10, size)
         r = size / 2
         c = QPen(col, 2)
@@ -295,20 +147,6 @@ class OverlayWindow(QWidget):
         c2 = QPen(col, 3)
         p.setPen(c2)
         p.drawEllipse(px - 2, py - 2, 4, 4)
-
-        # Dwell progress circular loading ring
-        if dwell_progress > 0.0:
-            ring_r = r + 8
-            glow_pen = QPen(QColor("#34d399"), 3)  # Emerald glow
-            p.setPen(glow_pen)
-            span_angle = int(dwell_progress * 360 * 16)
-            p.drawArc(int(px - ring_r), int(py - ring_r), int(ring_r * 2), int(ring_r * 2), 90 * 16, -span_angle)
-
-        if in_rest:
-            f = QFont("Segoe UI", 9, QFont.Weight.Bold)
-            p.setFont(f)
-            p.setPen(QColor("#f59e0b"))
-            p.drawText(int(px + r + 6), int(py + 4), "Zzz")
 
     def _paint_quiz(self, p: QPainter, quiz, labels, w: int, h: int,
                     revealed: bool) -> None:
@@ -363,7 +201,6 @@ class OverlayWindow(QWidget):
                        i18n.t("quiz.correct",
                               x=labels[q.answer_idx]))
 
-    @staticmethod
     def _tool_key(tool: str) -> str:
         """Map an annotation tool name to its i18n key."""
         return {"point": "tool.point", "draw": "tool.draw",
@@ -374,10 +211,10 @@ class OverlayWindow(QWidget):
         st = s.status
         mode_badge = QColor(90, 160, 90) if s.mode == "demo" else QColor(235, 150, 60)
         hud_x = w - 260
-        hud_y = h - 145
+        hud_y = h - 120
         p.setBrush(mode_badge)
         p.setPen(Qt.PenStyle.NoPen)
-        p.drawRoundedRect(hud_x, hud_y, 250, 135, 10, 10)
+        p.drawRoundedRect(hud_x, hud_y, 250, 110, 10, 10)
         f = QFont("Segoe UI", int(h / 60), QFont.Weight.DemiBold)
         p.setFont(f)
         p.setPen(QColor("white"))
@@ -391,194 +228,17 @@ class OverlayWindow(QWidget):
                    total=max(1, st.total_slides),
                    state=i18n.t(state_key).upper()),
             i18n.t("hud.cmd", cmd=st.last_command or "—"),
-            i18n.t("hud.tool_clock", tool=i18n.t(self._tool_key(st.annotation_tool)),
+            i18n.t("hud.tool_clock", tool=i18n.t(_tool_key(st.annotation_tool)),
                    secs=st.clock_seconds),
             i18n.t("hud.quiz",
                    state=i18n.t("quiz.on") if st.quiz_active else i18n.t("quiz.off")),
         ]
-        if getattr(s.pointer, "in_rest_zone", False):
-            lines.append("✋ Mode Repos (Main basse)")
-        if getattr(s, "auto_profile", None):
-            lines.append(f"🤖 Profil: {s.auto_profile.upper()}")
-        y = hud_y + 20
+        y = hud_y + 22
         for line in lines:
             p.drawText(hud_x + 14, y, line)
-            y += int(h / 52)
+            y += int(h / 48)
         if s.mode == "demo":
             p.drawText(hud_x + 14, y, i18n.t("hud.demo"))
-
-
-# ---------------------------------------------------------------------------
-# Floating quick toolbar: draggable, always-on-top, instant actions.
-# ---------------------------------------------------------------------------
-class FloatingToolbarWindow(QWidget):
-    """A sleek, translucent, frameless floating toolbar placed on the presenter's screen.
-    
-    Provides 1-click access to:
-      - ⏸️ Pause / Reprendre
-      - 🎯 Recalibrage Express (1-Point align)
-      - 🖍️ Mode Tableau Blanc / Dessin
-      - ⏱️ Clic Dwell (ON/OFF)
-      - ⚡ Preset de Vitesse (Normal / Doux / Rapide)
-      - 🎙️ Micro (Mute / Unmute)
-      - ▾ Réduire / Développer
-    """
-    def __init__(self, session: ClassroomSession, parent=None):
-        super().__init__(parent)
-        self.session = session
-        self.setWindowFlags(Qt.WindowType.FramelessWindowHint
-                            | Qt.WindowType.WindowStaysOnTopHint
-                            | Qt.WindowType.Tool)
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
-        self._drag_pos = None
-        self._collapsed = False
-        self._build_ui()
-        self.resize(440, 52)
-        # Position top-center of screen by default
-        screen = QGuiApplication.primaryScreen().geometry()
-        self.move(int((screen.width() - 440) / 2), 24)
-
-    def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
-            self._drag_pos = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
-            event.accept()
-
-    def mouseMoveEvent(self, event):
-        if event.buttons() == Qt.MouseButton.LeftButton and self._drag_pos is not None:
-            self.move(event.globalPosition().toPoint() - self._drag_pos)
-            event.accept()
-
-    def _build_ui(self):
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(4, 4, 4, 4)
-        layout.setSpacing(4)
-
-        self._container = QFrame()
-        self._container.setStyleSheet(f"""
-            QFrame {{
-                background-color: rgba(22, 26, 36, 0.94);
-                border: 1px solid {BORDER};
-                border-radius: 10px;
-            }}
-            QPushButton {{
-                background: {SURFACE_ALT};
-                color: {TEXT};
-                border: 1px solid {BORDER};
-                border-radius: 6px;
-                padding: 4px 8px;
-                font-size: 12px;
-                font-weight: 600;
-            }}
-            QPushButton:hover {{
-                background: #2b3040;
-                border-color: {ACCENT};
-            }}
-            QPushButton:checked {{
-                background: {ACCENT};
-                border-color: {ACCENT_HOVER};
-                color: #ffffff;
-            }}
-        """)
-        c_lay = QHBoxLayout(self._container)
-        c_lay.setContentsMargins(6, 4, 6, 4)
-        c_lay.setSpacing(6)
-
-        grip = QLabel("⠿")
-        grip.setStyleSheet("color: #717d96; font-size: 13px; font-weight: bold;")
-        grip.setToolTip("Glisser pour déplacer")
-        c_lay.addWidget(grip)
-
-        # 1. Pause/Resume
-        self.btn_pause = QPushButton("⏸️")
-        self.btn_pause.setCheckable(True)
-        self.btn_pause.setToolTip("Mettre en pause le suivi / Reprendre")
-        self.btn_pause.clicked.connect(self._toggle_pause)
-        c_lay.addWidget(self.btn_pause)
-
-        # 2. Recenter (1-point calibration)
-        self.btn_recenter = QPushButton("🎯 Centre")
-        self.btn_recenter.setToolTip("Aligner le curseur au centre (Recalibrage 1-Point)")
-        self.btn_recenter.clicked.connect(self._recenter)
-        c_lay.addWidget(self.btn_recenter)
-
-        # 3. Annotation/Draw toggle
-        self.btn_draw = QPushButton("🖍️ Tableau")
-        self.btn_draw.setCheckable(True)
-        self.btn_draw.setToolTip("Activer / Désactiver le dessin")
-        self.btn_draw.clicked.connect(self._toggle_draw)
-        c_lay.addWidget(self.btn_draw)
-
-        # 4. Dwell click toggle
-        self.btn_dwell = QPushButton("⏱️ Clic Auto")
-        self.btn_dwell.setCheckable(True)
-        self.btn_dwell.setChecked(getattr(self.session.pointer, "dwell_enabled", True))
-        self.btn_dwell.setToolTip("Activer / Désactiver le clic par temporisation (Dwell)")
-        self.btn_dwell.clicked.connect(self._toggle_dwell)
-        c_lay.addWidget(self.btn_dwell)
-
-        # 5. Preset selector button
-        self.btn_preset = QPushButton("⚡ Normal")
-        self.btn_preset.setToolTip("Changer de sensibilité : Normal -> Doux -> Rapide")
-        self.btn_preset.clicked.connect(self._cycle_preset)
-        c_lay.addWidget(self.btn_preset)
-
-        # 6. Mic mute toggle
-        self.btn_mic = QPushButton("🎙️")
-        self.btn_mic.setCheckable(True)
-        self.btn_mic.setChecked(True)
-        self.btn_mic.setToolTip("Activer / Muer le microphone")
-        self.btn_mic.clicked.connect(self._toggle_mic)
-        c_lay.addWidget(self.btn_mic)
-
-        # 7. Collapse button
-        self.btn_col = QPushButton("▾")
-        self.btn_col.setToolTip("Réduire / Développer")
-        self.btn_col.clicked.connect(self._toggle_collapse)
-        c_lay.addWidget(self.btn_col)
-
-        layout.addWidget(self._container)
-
-    def _toggle_pause(self):
-        p = self.session.pointer
-        p.set_enabled(not self.btn_pause.isChecked())
-        self.btn_pause.setText("▶️" if self.btn_pause.isChecked() else "⏸️")
-
-    def _recenter(self):
-        if hasattr(self.session.pointer, "recenter_offset"):
-            self.session.pointer.recenter_offset()
-
-    def _toggle_draw(self):
-        from .annotation import TOOL_DRAW, TOOL_POINT
-        if self.btn_draw.isChecked():
-            self.session.set_tool(TOOL_DRAW)
-        else:
-            self.session.set_tool(TOOL_POINT)
-
-    def _toggle_dwell(self):
-        p = self.session.pointer
-        p.dwell_enabled = self.btn_dwell.isChecked()
-
-    def _cycle_preset(self):
-        p = self.session.pointer
-        presets = ["normal", "smooth", "fast"]
-        current = getattr(p, "active_preset", "normal")
-        next_preset = presets[(presets.index(current) + 1) % len(presets)] if current in presets else "normal"
-        if hasattr(p, "apply_preset"):
-            p.apply_preset(next_preset)
-        labels = {"normal": "⚡ Normal", "smooth": "🌿 Doux", "fast": "🚀 Rapide"}
-        self.btn_preset.setText(labels.get(next_preset, "⚡ Normal"))
-
-    def _toggle_mic(self):
-        v = self.session.voice
-        if hasattr(v, "set_listening"):
-            v.set_listening(self.btn_mic.isChecked())
-
-    def _toggle_collapse(self):
-        self._collapsed = not self._collapsed
-        for w in (self.btn_recenter, self.btn_draw, self.btn_dwell, self.btn_preset, self.btn_mic):
-            w.setVisible(not self._collapsed)
-        self.btn_col.setText("▸" if self._collapsed else "▾")
-        self.adjustSize()
 
 
 # ---------------------------------------------------------------------------
@@ -594,8 +254,6 @@ class ClassroomWindow(QMainWindow):
         self.session.set_mode(SETTINGS.classroom.mode)
         self._overlay = OverlayWindow(self.session,
                                       screen_index=SETTINGS.classroom.projector_screen)
-        self.floating_toolbar = FloatingToolbarWindow(self.session)
-        self.floating_toolbar.show()
         self.sensitivity = AccessibilityController(AccessibilityState())
         self._buttons: dict[str, QPushButton] = {}
         self._build_ui()
@@ -604,153 +262,62 @@ class ClassroomWindow(QMainWindow):
         self._refresh_timer.timeout.connect(self.refresh)
         self._refresh_timer.start(200)
 
-    def closeEvent(self, event):
-        try:
-            if hasattr(self, "floating_toolbar") and self.floating_toolbar:
-                self.floating_toolbar.close()
-            if hasattr(self, "_overlay") and self._overlay:
-                self._overlay.close()
-        except Exception:
-            pass
-        super().closeEvent(event)
-        self._refresh_timer.start(200)
-
-    @property
-    def camera_preview(self) -> QLabel:
-        """QLabel painted with the webcam feed by the app entry point."""
-        return self._camera_lbl
-
     # ---- UI construction ----------------------------------------------------
-    def _card(self, lay: QVBoxLayout, title: str = "") -> QVBoxLayout:
-        """A rounded dark panel added to ``lay``; returns its inner layout."""
-        frame = QFrame()
-        frame.setObjectName("card")
-        inner = QVBoxLayout(frame)
-        inner.setContentsMargins(16, 14, 16, 14)
-        inner.setSpacing(10)
-        if title:
-            t = QLabel(title)
-            t.setObjectName("cardTitle")
-            inner.addWidget(t)
-        lay.addWidget(frame)
-        return inner
-
     def _build_ui(self) -> None:
         self.setWindowTitle(i18n.t("window.title"))
-        self.resize(1040, 760)
-        self.setStyleSheet(DARK_QSS)
-
+        self.resize(880, 640)
         central = QWidget()
-        central.setObjectName("central")
         lay = QVBoxLayout(central)
-        lay.setContentsMargins(20, 20, 20, 20)
-        lay.setSpacing(16)
+        self.setCentralWidget(central)
 
-        # The control dock has more content (status grid + 3 action rows +
-        # settings) than fits on short/low-res displays — scroll instead of
-        # silently clipping controls the teacher needs (e.g. slide nav).
-        scroll = QScrollArea()
-        scroll.setObjectName("scrollArea")
-        scroll.setFrameShape(QFrame.Shape.NoFrame)
-        scroll.setWidgetResizable(True)
-        scroll.setWidget(central)
-        self.setCentralWidget(scroll)
-
-        header = QHBoxLayout()
-        header.setSpacing(4)
-        title_box = QVBoxLayout()
-        title_box.setSpacing(2)
         self._title_lbl = QLabel(i18n.t("window.title"))
-        self._title_lbl.setStyleSheet(
-            f"font-size: 21px; font-weight: 700; color: {TEXT};")
-        title_box.addWidget(self._title_lbl)
+        self._title_lbl.setStyleSheet("font-size: 18px; font-weight: 700; color: #0e6bb8;")
+        lay.addWidget(self._title_lbl)
         self._sub_lbl = QLabel(i18n.t("window.subtitle"))
-        self._sub_lbl.setStyleSheet(f"color: {TEXT_MUTED}; font-size: 12px;")
-        title_box.addWidget(self._sub_lbl)
-        header.addLayout(title_box)
-        header.addStretch(1)
-        lay.addLayout(header)
+        self._sub_lbl.setStyleSheet("color: #556;")
+        lay.addWidget(self._sub_lbl)
 
-        # ---- camera card --------------------------------------------------
-        cam_box = self._card(lay)
         self._camera_lbl = QLabel(i18n.t("camera.preview"))
-        self._camera_lbl.setFixedHeight(220)
-        self._camera_lbl.setStyleSheet(
-            f"background:#05060a; color:{TEXT_MUTED};"
-            f"border:1px solid {BORDER}; border-radius:8px; font-size:13px;")
+        self._camera_lbl.setFixedHeight(200)
+        self._camera_lbl.setStyleSheet("background:#000; color:#99c;"
+                                      "border:1px solid #345; border-radius:6px;")
         self._camera_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        cam_box.addWidget(self._camera_lbl)
+        lay.addWidget(self._camera_lbl)
 
-        # ---- status card ----------------------------------------------------
-        status_box = self._card(lay, "Statut")
+        # status grid
         self._status_labels: dict[str, QLabel] = {}
         grid = QGridLayout()
-        grid.setSpacing(8)
+        grid.setSpacing(6)
         for i, key in enumerate(["mode", "presentation", "pointer", "command",
                                  "interaction", "gesture", "timer", "quiz",
                                  "tool", "strokes", "safety", "fps",
                                  "lighting", "noise", "hand"]):
             lab = QLabel(self._status_text(key, ""))
-            lab.setStyleSheet(
-                f"background:{SURFACE_ALT}; color:{TEXT}; padding:6px 10px;"
-                f"border-radius:6px; border:1px solid {BORDER};")
+            lab.setStyleSheet("background:#f2f6fb; padding:4px 8px; border-radius:4px;")
             grid.addWidget(lab, i // 2, i % 2)
             self._status_labels[key] = lab
-        status_box.addLayout(grid)
+        lay.addLayout(grid)
 
-        # ---- actions card (row 1: slide navigation, kept on its own line so
-        # it never gets pushed off-screen by the secondary actions below) ----
-        actions_box = self._card(lay, "Actions")
-        nav_row = QHBoxLayout()
-        nav_row.setSpacing(8)
-        self._prev_btn = self._add_button(nav_row, i18n.t("btn.prev_slide"), self._prev_slide)
-        self._prev_btn.setObjectName("primaryBtn")
-        self._next_btn = self._add_button(nav_row, i18n.t("btn.next_slide"), self._next_slide)
-        self._next_btn.setObjectName("primaryBtn")
-        nav_row.addStretch(1)
-        actions_box.addLayout(nav_row)
-
-        # ---- actions row 2: secondary actions ---------------------------------
-        ctrl1 = QHBoxLayout()
-        ctrl1.setSpacing(8)
-        self._mode_btn = self._add_button(ctrl1, i18n.t("btn.demo_real"),
+        # controls
+        ctrl = QHBoxLayout()
+        self._mode_btn = self._add_button(ctrl, i18n.t("btn.demo_real"),
                                           self._toggle_mode)
-        self._overlay_btn = self._add_button(ctrl1, i18n.t("btn.overlay"),
+        self._overlay_btn = self._add_button(ctrl, i18n.t("btn.overlay"),
                                              self._toggle_overlay)
-        self._calibration_btn = self._add_button(ctrl1, i18n.t("btn.calibration"),
+        self._calibration_btn = self._add_button(ctrl, i18n.t("btn.calibration"),
                                                  self._run_calibration)
-        self._export_btn = self._add_button(ctrl1, i18n.t("btn.export"), None)
-        self._export_btn.clicked.connect(self._export_board)
-        self._clear_btn = self._add_button(ctrl1, i18n.t("btn.clear"), None)
-        self._clear_btn.clicked.connect(self._clear_board)
-        ctrl1.addStretch(1)
-        actions_box.addLayout(ctrl1)
 
-        # ---- tools card (row 2) ----------------------------------------------
-        ctrl2 = QHBoxLayout()
-        ctrl2.setSpacing(8)
         self._tool_buttons: dict[str, QPushButton] = {}
         for tool in [TOOL_POINT, TOOL_DRAW, TOOL_HIGHLIGHT, TOOL_ERASE]:
             self._tool_buttons[tool] = self._add_button(
-                ctrl2, i18n.t(f"tool.{tool}"), None)
+                ctrl, i18n.t(f"tool.{tool}"), None)
             self._tool_buttons[tool].clicked.connect(
                 lambda _=False, t=tool: self._select_tool(t))
-        ctrl2.addStretch(1)
-        actions_box.addLayout(ctrl2)
+        self._clear_btn = self._add_button(ctrl, i18n.t("btn.clear"), None)
+        self._clear_btn.clicked.connect(self._clear_board)
+        lay.addLayout(ctrl)
 
-        # ---- settings card ----------------------------------------------------
-        settings_box = self._card(lay, "Réglages")
         row2 = QHBoxLayout()
-        row2.setSpacing(8)
-        self._cam_lbl = QLabel(i18n.t("label.camera"))
-        self.camera_combo = QComboBox()
-        self.camera_combo.addItems(["Camera 0", "Camera 1", "Camera 2", "Camera 3"])
-        cur_cam_idx = SETTINGS.camera.index if hasattr(SETTINGS, "camera") else 0
-        self.camera_combo.setCurrentIndex(min(3, max(0, cur_cam_idx)))
-        self.camera_combo.currentIndexChanged.connect(self._change_camera_index)
-        row2.addWidget(self._cam_lbl)
-        row2.addWidget(self.camera_combo)
-
         self._sens_lbl = QLabel(i18n.t("label.sensitivity"))
         self.sensitivity_combo = QComboBox()
         self.sensitivity_combo.addItems([
@@ -768,10 +335,9 @@ class ClassroomWindow(QMainWindow):
         row2.addWidget(self._voice_lbl)
         row2.addWidget(self.lang_combo)
         row2.addStretch(1)
-        settings_box.addLayout(row2)
+        lay.addLayout(row2)
 
         row3 = QHBoxLayout()
-        row3.setSpacing(8)
         self._perf_lbl = QLabel(i18n.t("label.performance"))
         self._perf_check = QCheckBox()
         self._perf_check.setChecked(SETTINGS.classroom.performance_mode)
@@ -788,15 +354,14 @@ class ClassroomWindow(QMainWindow):
         row3.addWidget(self._extapp_lbl)
         row3.addWidget(self._extapp_combo)
         row3.addStretch(1)
-        settings_box.addLayout(row3)
+        lay.addLayout(row3)
 
         self._hint_lbl = QLabel(i18n.t("hint.keyboard"))
-        self._hint_lbl.setStyleSheet(f"color:{TEXT_MUTED}; font-size:11px;")
+        self._hint_lbl.setStyleSheet("color:#677; font-size:11px;")
         lay.addWidget(self._hint_lbl)
 
         self._hint_label = QLabel("")
         lay.addWidget(self._hint_label)
-        lay.addStretch(1)
 
     def _add_button(self, layout, text, onclick):
         key = text
@@ -836,11 +401,11 @@ class ClassroomWindow(QMainWindow):
     @staticmethod
     def _env_style(state: str) -> str:
         """Traffic-light chip style for classroom-environment indicators."""
-        ok = f"background:#173226; color:{OK};"
-        warn = f"background:#332a12; color:{WARN};"
-        bad = f"background:#331a1a; color:{BAD};"
-        dim = f"background:{SURFACE_ALT}; color:{TEXT_MUTED};"
-        base = f"padding:6px 10px; border-radius:6px; font-weight:600; border:1px solid {BORDER};"
+        ok = "background:#e4f7e6; color:#14532d;"
+        warn = "background:#fdf3d8; color:#7c4a03;"
+        bad = "background:#fde8e8; color:#7f1d1d;"
+        dim = "background:#eef1f4; color:#3b4a5a;"
+        base = "padding:2px 8px; border-radius:4px; font-weight:600;"
         if state in ("good", "ok"):
             return ok + base
         if state in ("low", "bright", "loud"):
@@ -863,18 +428,8 @@ class ClassroomWindow(QMainWindow):
 
     def _show_overlay(self) -> None:
         self._overlay.place_on_screen(SETTINGS.classroom.projector_screen)
-        self._overlay.show()
-        if os.name == "nt":
-            try:
-                import ctypes
-                hwnd = int(self._overlay.winId())
-                GWL_EXSTYLE = -20
-                WS_EX_NOACTIVATE = 0x08000000
-                WS_EX_TRANSPARENT = 0x00000020
-                old_style = ctypes.windll.user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
-                ctypes.windll.user32.SetWindowLongW(hwnd, GWL_EXSTYLE, old_style | WS_EX_NOACTIVATE | WS_EX_TRANSPARENT)
-            except Exception:
-                pass
+        self._overlay.showFullScreen()
+        self._overlay.raise_()
 
     def _select_tool(self, tool: str) -> None:
         self.session.annotation.set_tool(tool)
@@ -891,55 +446,6 @@ class ClassroomWindow(QMainWindow):
             return
         self.session.execute(ci.ClassroomIntent(ci.ANNOTATION_CLEAR, source="ui"))
         self.refresh()
-
-    def _export_board(self) -> None:
-        """Export current whiteboard annotations/canvas to PNG image."""
-        try:
-            from PySide6.QtWidgets import QFileDialog
-            from PySide6.QtGui import QImage, QPainter, QPen, QColor
-            from PySide6.QtCore import Qt
-            import os, time
-            default_name = f"EDU_AIR_Notes_{time.strftime('%Y%m%d_%H%M%S')}.png"
-            path, _ = QFileDialog.getSaveFileName(
-                self, i18n.t("btn.export"), default_name,
-                "Images (*.png *.jpg);;All Files (*.*)")
-            if not path:
-                return
-            w, h = 1280, 720
-            img = QImage(w, h, QImage.Format.Format_RGB32)
-            img.fill(QColor(255, 255, 255))
-            painter = QPainter(img)
-            geom = self.session.annotation.geometry(w, h)
-            for item in geom:
-                pts = item["points"]
-                col = item["color"]
-                width = item["width"]
-                hl = item["highlight"]
-                if not pts:
-                    continue
-                pen = QPen(QColor(col), max(1.0, width))
-                if hl:
-                    pen.setWidthF(pen.widthF() * 2)
-                pen.setCapStyle(Qt.PenCapStyle.RoundCap)
-                pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
-                painter.setPen(pen)
-                if len(pts) == 1:
-                    r = max(2.0, pen.widthF() / 2)
-                    painter.drawEllipse(pts[0][0] - r, pts[0][1] - r, r * 2, r * 2)
-                else:
-                    for i in range(len(pts) - 1):
-                        painter.drawLine(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1])
-            painter.end()
-            img.save(path)
-            self.show_log(i18n.t("export.success", path=os.path.basename(path)))
-        except Exception as exc:
-            self.show_log(f"Export error: {exc}")
-
-    def _change_camera_index(self, index: int) -> None:
-        SETTINGS.camera.index = max(0, index)
-        if hasattr(self, "_pipeline") and self._pipeline:
-            self._pipeline.request_camera_index(max(0, index))
-        SETTINGS.save()
 
     def _change_sensitivity(self, value: str) -> None:
         reverse = {i18n.t(f"sens.{k}"): k for k in ("low", "medium", "high")}
@@ -965,7 +471,6 @@ class ClassroomWindow(QMainWindow):
         i18n.set_language(value)
         self.session.set_language(value)
         SETTINGS.classroom.language = value
-        SETTINGS.save()
         self._apply_language()
 
     def _apply_language(self) -> None:
@@ -1006,22 +511,10 @@ class ClassroomWindow(QMainWindow):
         self._mode_btn.setText(i18n.t("btn.demo_real"))
         self._overlay_btn.setText(i18n.t("btn.overlay"))
         self._calibration_btn.setText(i18n.t("btn.calibration"))
-        self._export_btn.setText(i18n.t("btn.export"))
         self._clear_btn.setText(i18n.t("btn.clear"))
-        self._prev_btn.setText(i18n.t("btn.prev_slide"))
-        self._next_btn.setText(i18n.t("btn.next_slide"))
-        self._cam_lbl.setText(i18n.t("label.camera"))
         for tool, btn in self._tool_buttons.items():
             btn.setText(i18n.t(f"tool.{tool}"))
         # status labels refresh themselves on next refresh() call
-        self.refresh()
-
-    def _next_slide(self) -> None:
-        self.session.execute(ci.ClassroomIntent(ci.NEXT_SLIDE, source="ui"))
-        self.refresh()
-
-    def _prev_slide(self) -> None:
-        self.session.execute(ci.ClassroomIntent(ci.PREV_SLIDE, source="ui"))
         self.refresh()
 
     def _run_calibration(self) -> None:
@@ -1115,36 +608,35 @@ class ClassroomWindow(QMainWindow):
 
     # ---- keyboard fallback -----------------------------------------------------
     def keyPressEvent(self, event: QKeyEvent) -> None:  # noqa: N802
-        """Direct action dispatch — never routed through the language-specific
-        voice-text parser, so these shortcuts work regardless of the current
-        voice recognition language."""
         key = event.key()
         mods = event.modifiers()
         ctrl = bool(mods & Qt.KeyboardModifier.ControlModifier)
-
-        def run(action: str, params: dict | None = None) -> None:
-            self.session.execute(ci.ClassroomIntent(action, params or {}, source="ui"))
-
         if key == Qt.Key.Key_F5:
-            run(ci.PRESENTATION_START)
+            self.session.handle_voice_text("start presentation")
         elif key == Qt.Key.Key_Escape:
-            run(ci.PRESENTATION_STOP)
-        elif key in (Qt.Key.Key_Right, Qt.Key.Key_PageDown, Qt.Key.Key_Space):
-            run(ci.NEXT_SLIDE)
-        elif key in (Qt.Key.Key_Left, Qt.Key.Key_PageUp):
-            run(ci.PREV_SLIDE)
+            self.session.handle_voice_text("stop presentation")
+        elif key == Qt.Key.Key_Right:
+            self.session.handle_voice_text("next slide")
+        elif key == Qt.Key.Key_Left:
+            self.session.handle_voice_text("previous slide")
         elif key == Qt.Key.Key_B:
-            run(ci.PAUSE_PRESENTATION)
+            self.session.handle_voice_text("pause presentation")
         elif ctrl and key == Qt.Key.Key_Plus:
-            run(ci.ZOOM_IN)
+            self.session.handle_voice_text("zoom in")
         elif ctrl and key == Qt.Key.Key_Minus:
-            run(ci.ZOOM_OUT)
+            self.session.handle_voice_text("zoom out")
+        elif key == Qt.Key.Key_PageDown:
+            self.session.handle_voice_text("scroll down")
+        elif key == Qt.Key.Key_PageUp:
+            self.session.handle_voice_text("scroll up")
         elif key == Qt.Key.Key_Delete:
-            run(ci.ANNOTATION_CLEAR)
-        elif key in (Qt.Key.Key_A, Qt.Key.Key_C, Qt.Key.Key_D):
+            self.session.execute(ci.ClassroomIntent(ci.ANNOTATION_CLEAR, source="ui"))
+        elif key in (Qt.Key.Key_A, Qt.Key.Key_B, Qt.Key.Key_C, Qt.Key.Key_D):
             letter = chr(key)
-            idx = {"A": 0, "C": 2, "D": 3}[letter]
-            run(ci.QUIZ_ANSWER, {"letter": letter.lower(), "answer_index": idx})
+            idx = {"A": 0, "B": 1, "C": 2, "D": 3}[letter]
+            self.session.execute(ci.ClassroomIntent(
+                ci.QUIZ_ANSWER, {"letter": letter.lower(), "answer_index": idx},
+                source="ui"))
         else:
             super().keyPressEvent(event)
         self.refresh()
@@ -1161,61 +653,10 @@ def _camera_backend(cv2_mod) -> int:
     return getattr(cv2_mod, "CAP_ANY", 0)
 
 
-class _CameraReader:
-    """Runs ``cam.read()`` on its own thread.
-
-    DirectShow "fails fast" most of the time, but a contended or flaky
-    webcam driver can still make ``read()`` block indefinitely (no timeout
-    of its own). That used to happen inside the main pipeline loop, so one
-    stuck read froze gesture handling, voice routing and the classroom
-    clock together — the window kept answering Windows' ping (different
-    thread), which made it look "responsive but doing nothing" instead of
-    visibly crashed. Isolating the read here means a hang only ever stales
-    the camera frame; the existing 4s watchdog in the pipeline loop still
-    detects and recovers from that via ``_fallback_from_camera``.
-    """
-
-    def __init__(self, cam) -> None:
-        self._cam = cam
-        self._lock = threading.Lock()
-        self._frame = None
-        self._ts = 0.0
-        self._running = threading.Event()
-        self._running.set()
-        self._thread = threading.Thread(
-            target=self._loop, name="edu_air_camreader", daemon=True)
-        self._thread.start()
-
-    def _loop(self) -> None:
-        while self._running.is_set():
-            try:
-                ok, frame = self._cam.read()
-            except Exception:
-                ok, frame = False, None
-            if ok and frame is not None:
-                with self._lock:
-                    self._frame = frame
-                    self._ts = time.monotonic()
-            else:
-                time.sleep(0.01)
-
-    def latest(self):
-        """Returns ``(frame_or_None, age_seconds)``."""
-        with self._lock:
-            frame, ts = self._frame, self._ts
-        age = (time.monotonic() - ts) if ts else float("inf")
-        return frame, age
-
-    def stop(self) -> None:
-        self._running.clear()
-        self._thread.join(timeout=1.0)
-
-
 class ClassroomPipeline(QObject):
     frame_ready = Signal(object)
     voice_ready = Signal(str)
     log_line = Signal(str)
-    camera_state = Signal(str)  # "on" | "off" | "demo"
 
     def __init__(self, session: ClassroomSession, parent=None):
         super().__init__(parent)
@@ -1232,10 +673,6 @@ class ClassroomPipeline(QObject):
         self._last_frame = None
         self._demo_fallback = session.mode == "demo"
         self._camera_fallback = False   # webcam unusable -> synthetic pointer
-        self._requested_camera_index: int | None = None
-
-    def request_camera_index(self, index: int) -> None:
-        self._requested_camera_index = index
 
     # ---- lifecycle ------------------------------------------------------------
     def start(self) -> None:
@@ -1317,10 +754,6 @@ class ClassroomPipeline(QObject):
             return
         self._camera_fallback = True
         try:
-            self.camera_state.emit("off")
-        except Exception:
-            pass
-        try:
             self.session.set_environment(hand_visible=False)
         except Exception:
             pass
@@ -1342,22 +775,15 @@ class ClassroomPipeline(QObject):
         cam = None
         cap_w, cap_h = self.session.settings.classroom.capture_size()
         if not self._demo_fallback and cv2 is not None:
+            # DirectShow fails fast (and returns "no frame") on a busy/broken
+            # camera, whereas the default MSMF backend can hang forever on
+            # Windows. Whatever happens below, a watchdog falls back to
+            # synthetic pointers so the app never sticks at "starting…".
             try:
-                from hadj_no_touch.camera.camera_config import resolve_camera, apply_exposure
-                cam_idx, backend = resolve_camera(preferred=0, max_index=4)
-                if cam_idx >= 0:
-                    backend_arg = backend if backend is not None else _camera_backend(cv2)
-                    cam = cv2.VideoCapture(cam_idx, backend_arg)
-                    if cam.isOpened():
-                        cam.set(cv2.CAP_PROP_FRAME_WIDTH, cap_w)
-                        cam.set(cv2.CAP_PROP_FRAME_HEIGHT, cap_h)
-                        apply_exposure(cam)
-                        ok_test, test_frame = cam.read()
-                        if not ok_test or test_frame is None or test_frame.size == 0:
-                            # Re-open at native resolution if resolution change broke output
-                            cam.release()
-                            cam = cv2.VideoCapture(cam_idx, backend_arg)
-                            apply_exposure(cam)
+                cam = cv2.VideoCapture(0, _camera_backend(cv2))
+                if cam.isOpened():
+                    cam.set(cv2.CAP_PROP_FRAME_WIDTH, cap_w)
+                    cam.set(cv2.CAP_PROP_FRAME_HEIGHT, cap_h)
             except Exception:
                 try:
                     if cam is not None:
@@ -1366,35 +792,8 @@ class ClassroomPipeline(QObject):
                     pass
                 cam = None
 
-            if (cam is None or not cam.isOpened()) and cv2 is not None:
-                try:
-                    cam = cv2.VideoCapture(0, _camera_backend(cv2))
-                    if cam.isOpened():
-                        cam.set(cv2.CAP_PROP_FRAME_WIDTH, cap_w)
-                        cam.set(cv2.CAP_PROP_FRAME_HEIGHT, cap_h)
-                except Exception:
-                    try:
-                        if cam is not None:
-                            cam.release()
-                    except Exception:
-                        pass
-                    cam = None
-
-        if self._demo_fallback:
-            self.camera_state.emit("demo")
-        else:
-            self.camera_state.emit(
-                "on" if cam is not None and cam.isOpened() else "off")
-
         self.tracker = HandTracker()
         self.gesture_engine = ge.GestureEngine()
-
-        # cam.read() itself has no timeout, and some Windows camera drivers
-        # (DirectShow included, under contention) can stall on it forever.
-        # Isolate the read on its own thread so a stuck driver only ever
-        # stales the frame instead of freezing gestures/voice/the classroom
-        # clock — see _CameraReader.
-        reader = _CameraReader(cam) if cam is not None else None
 
         cursor_fps = 0.0
         t0 = time.monotonic()
@@ -1411,9 +810,9 @@ class ClassroomPipeline(QObject):
             every = self.session.settings.classroom.tracking_interval()
 
             real_hands: list = []
-            if reader is not None:
-                frame, age = reader.latest()
-                if frame is not None and age < 4.0:
+            if cam is not None:
+                ok, frame = cam.read()
+                if ok:
                     camera_dead_at = None
                     self._last_frame = frame
                     if frame_idx % every == 0:
@@ -1428,8 +827,6 @@ class ClassroomPipeline(QObject):
                         camera_dead_at = now
                     elif now - camera_dead_at >= 4.0:
                         self._fallback_from_camera()
-                        reader.stop()
-                        reader = None
                         if cam is not None:
                             cam.release()
                         cam = None
@@ -1464,8 +861,6 @@ class ClassroomPipeline(QObject):
             # keep the loop gentle on CPU: ~30 fps (or ~15 in performance mode)
             time.sleep(0.033 if every == 1 else 0.066)
 
-        if reader is not None:
-            reader.stop()
         if cam is not None:
             cam.release()
         self.tracker.close()
@@ -1509,3 +904,42 @@ def make_session(mode: str = "real") -> ClassroomSession:
     sess = ClassroomSession(settings=settings)
     sess.set_mode("real")
     return sess
+
+
+class _CameraReader:
+    """Non-blocking camera frame reader thread."""
+
+    def __init__(self, camera=None):
+        import threading
+        self.camera = camera
+        self.running = True
+        self._frame = None
+        self._timestamp = 0.0
+        self._lock = threading.Lock()
+        self._thread = threading.Thread(target=self._run, daemon=True)
+        self._thread.start()
+
+    def _run(self):
+        import time
+        while self.running and self.camera:
+            try:
+                res = self.camera.read()
+                if isinstance(res, tuple) and len(res) == 2:
+                    ret, frame = res
+                    if ret:
+                        with self._lock:
+                            self._frame = frame
+                            self._timestamp = time.time()
+            except Exception:
+                pass
+            time.sleep(0.01)
+
+    def latest(self):
+        import time
+        with self._lock:
+            if self._frame is None:
+                return None, float("inf")
+            return self._frame, time.time() - self._timestamp
+
+    def stop(self):
+        self.running = False

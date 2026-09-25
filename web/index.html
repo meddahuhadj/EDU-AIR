@@ -71,6 +71,9 @@
 
     <!-- SIDEBAR NAVIGATION -->
     <aside class="app-sidebar" id="app-sidebar">
+      <button class="sidebar-item active" data-target-view="view-home">
+        <span class="ic">🏠</span> <span data-i18n="navHome">Accueil</span>
+      </button>
       <button class="sidebar-item" data-target-view="view-dashboard">
         <span class="ic">📊</span> <span data-i18n="navDashboard">Tableau de bord</span>
       </button>
@@ -95,7 +98,7 @@
       <button class="sidebar-item" data-target-view="view-quiz">
         <span class="ic">📝</span> <span data-i18n="navQuiz">Quiz air</span>
       </button>
-      <button class="sidebar-item active" data-target-view="view-presentation">
+      <button class="sidebar-item" data-target-view="view-presentation">
         <span class="ic">📺</span> <span data-i18n="navPresentation">Présentation air</span>
       </button>
       <button class="sidebar-item" data-target-view="view-profai">
@@ -107,13 +110,179 @@
       <button class="sidebar-item" data-target-view="view-history">
         <span class="ic">📜</span> <span data-i18n="navHistory">Historique</span>
       </button>
+      <button class="sidebar-item" data-target-view="view-guide">
+        <span class="ic">📖</span> <span data-i18n="navGuide">Guide de prise en main</span>
+      </button>
     </aside>
 
     <!-- MAIN VIEWPORT CONTAINER -->
     <main class="app-main-viewport" id="app-main-viewport">
 
-      <!-- ================= MODULE 9: PRÉSENTATION AIR (DEFAULT ACTIVE VIEW) ================= -->
-      <div class="module-view active-view" id="view-presentation">
+      <!-- ================= PAGE D'ACCUEIL ÉLÉGANTE (HERO VIEW) ================= -->
+      <div class="module-view active-view" id="view-home">
+        
+        <!-- HERO BANNER -->
+        <div style="background: linear-gradient(135deg, rgba(10,20,38,0.95) 0%, rgba(6,9,18,0.98) 100%); border: 1px solid rgba(126,195,255,0.25); border-radius: 20px; padding: 2.2rem; margin-bottom: 1.8rem; box-shadow: 0 16px 40px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.1); backdrop-filter: blur(16px); position: relative; overflow: hidden;">
+          <!-- Glowing Background Accent -->
+          <div style="position: absolute; top: -100px; right: -100px; width: 320px; height: 320px; background: radial-gradient(circle, rgba(0,242,254,0.18) 0%, rgba(139,123,255,0.05) 60%, transparent 100%); pointer-events: none; border-radius: 50%;"></div>
+          
+          <div style="position: relative; z-index: 2; max-width: 900px;">
+            <div style="display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(0,242,254,0.12); border: 1px solid rgba(0,242,254,0.3); padding: 0.35rem 0.9rem; border-radius: 50px; font-size: 0.8rem; font-weight: 600; color: #00f2fe; margin-bottom: 1rem;">
+              <span>✨</span> <span>SURFACE INTERACTIVE SANS CONTACT v4.0</span>
+            </div>
+
+            <h1 style="font-size: 2.4rem; font-weight: 800; line-height: 1.15; margin: 0 0 1rem 0; background: linear-gradient(135deg, #ffffff 0%, #00f2fe 50%, #4cc9ff 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+              EDU-AIR SMART SURFACE
+            </h1>
+
+            <p style="font-size: 1.05rem; color: #9fb0cf; line-height: 1.6; margin: 0 0 1.8rem 0; max-width: 780px;">
+              Transformez votre ordinateur, votre webcam et votre vidéoprojecteur en un **Tableau Numérique Interactif (TNI) augmenté**. Pilotez vos cours du bout des doigts, annotez vos diaporamas à distance, et captivez votre classe avec des outils 3D et l'assistant IA.
+            </p>
+
+            <!-- Hero Action Buttons -->
+            <div style="display: flex; gap: 0.8rem; flex-wrap: wrap; align-items: center;">
+              <button type="button" class="btn-app btn-app-primary" data-home-launch="view-presentation" style="padding: 0.75rem 1.4rem; font-size: 0.92rem; font-weight: 700; gap: 0.5rem;">
+                🚀 Lancer la Classe (Diaporama)
+              </button>
+              <button type="button" class="btn-app btn-app-ghost" data-home-launch="view-whiteboard" style="padding: 0.75rem 1.3rem; font-size: 0.9rem; border-color: rgba(0,242,254,0.4); color: #00f2fe;">
+                ✨ Surface TNI Infini
+              </button>
+              <button type="button" class="btn-app btn-app-ghost" data-home-launch="view-guide" style="padding: 0.75rem 1.2rem; font-size: 0.9rem;">
+                📖 Guide & Gestes
+              </button>
+              <button type="button" class="btn-app btn-app-ghost" data-home-launch="view-calib" style="padding: 0.75rem 1.2rem; font-size: 0.9rem;">
+                ⚙️ Calibrage Caméra
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- STATS & FEATURES BAR -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.8rem;">
+          <div style="background: rgba(10,20,38,0.7); border: 1px solid rgba(126,195,255,0.18); border-radius: 14px; padding: 1.1rem; display: flex; align-items: center; gap: 1rem;">
+            <div style="font-size: 2rem; background: rgba(0,242,254,0.12); width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #00f2fe;">✋</div>
+            <div>
+              <div style="font-size: 1.25rem; font-weight: 800; color: #fff;">100% Sans Contact</div>
+              <div style="font-size: 0.8rem; color: #9fb0cf;">Aucun écran tactile requis</div>
+            </div>
+          </div>
+
+          <div style="background: rgba(10,20,38,0.7); border: 1px solid rgba(126,195,255,0.18); border-radius: 14px; padding: 1.1rem; display: flex; align-items: center; gap: 1rem;">
+            <div style="font-size: 2rem; background: rgba(61,220,151,0.12); width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #3ddc97;">🎙️</div>
+            <div>
+              <div style="font-size: 1.25rem; font-weight: 800; color: #fff;">Voix Trilingue</div>
+              <div style="font-size: 0.8rem; color: #9fb0cf;">Français, Anglais, Arabe</div>
+            </div>
+          </div>
+
+          <div style="background: rgba(10,20,38,0.7); border: 1px solid rgba(126,195,255,0.18); border-radius: 14px; padding: 1.1rem; display: flex; align-items: center; gap: 1rem;">
+            <div style="font-size: 2rem; background: rgba(255,184,77,0.12); width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #ffb84d;">🧩</div>
+            <div>
+              <div style="font-size: 1.25rem; font-weight: 800; color: #fff;">12 Modules TNI</div>
+              <div style="font-size: 0.8rem; color: #9fb0cf;">Whiteboard, 3D, Quiz & IA</div>
+            </div>
+          </div>
+
+          <div style="background: rgba(10,20,38,0.7); border: 1px solid rgba(126,195,255,0.18); border-radius: 14px; padding: 1.1rem; display: flex; align-items: center; gap: 1rem;">
+            <div style="font-size: 2rem; background: rgba(139,123,255,0.12); width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #8b7bff;">🛡️</div>
+            <div>
+              <div style="font-size: 1.25rem; font-weight: 800; color: #fff;">Filtre Sûr Gate</div>
+              <div style="font-size: 0.8rem; color: #9fb0cf;">Protection anti-fausses manœuvres</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- QUICK ACCESS MODULE CARDS GRID -->
+        <h3 style="color: #00f2fe; font-size: 1.15rem; font-weight: 700; margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
+          <span>🚀</span> Module Launcher — Accès Rapide aux Espaces de Classe
+        </h3>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.2rem; margin-bottom: 2rem;">
+
+          <!-- Card 1: Présentation -->
+          <div class="home-mod-card" data-home-launch="view-presentation" style="background: rgba(10,20,38,0.8); border: 1px solid rgba(126,195,255,0.2); border-radius: 16px; padding: 1.3rem; cursor: pointer; transition: all 0.25s ease;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.8rem;">
+              <span style="font-size: 2.2rem;">📺</span>
+              <span style="background: rgba(0,242,254,0.15); color: #00f2fe; border: 1px solid rgba(0,242,254,0.3); padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.72rem; font-weight: 700;">MODULE 9</span>
+            </div>
+            <h4 style="margin: 0 0 0.4rem 0; font-size: 1.1rem; color: #fff;">Présentation Air & Diaporamas</h4>
+            <p style="margin: 0 0 1rem 0; font-size: 0.85rem; color: #9fb0cf;">Pilotez vos cours PowerPoint, PDF et Google Slides. Pointeur laser, surligneur et loupe zoom sans contact.</p>
+            <div style="display: flex; align-items: center; color: #00f2fe; font-size: 0.82rem; font-weight: 600; gap: 0.3rem;">
+              <span>Lancer le Diaporama</span> <span>→</span>
+            </div>
+          </div>
+
+          <!-- Card 2: Whiteboard -->
+          <div class="home-mod-card" data-home-launch="view-whiteboard" style="background: rgba(10,20,38,0.8); border: 1px solid rgba(126,195,255,0.2); border-radius: 16px; padding: 1.3rem; cursor: pointer; transition: all 0.25s ease;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.8rem;">
+              <span style="font-size: 2.2rem;">✨</span>
+              <span style="background: rgba(0,242,254,0.15); color: #00f2fe; border: 1px solid rgba(0,242,254,0.3); padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.72rem; font-weight: 700;">MODULE 2</span>
+            </div>
+            <h4 style="margin: 0 0 0.4rem 0; font-size: 1.1rem; color: #fff;">Surface Intelligente (Whiteboard)</h4>
+            <p style="margin: 0 0 1rem 0; font-size: 0.85rem; color: #9fb0cf;">Tableau blanc infini avec dessin au doigt, post-it virtuels, formes géométriques et exportations TNI/ENT.</p>
+            <div style="display: flex; align-items: center; color: #00f2fe; font-size: 0.82rem; font-weight: 600; gap: 0.3rem;">
+              <span>Ouvrir le Tableau Blanc</span> <span>→</span>
+            </div>
+          </div>
+
+          <!-- Card 3: Air 3D -->
+          <div class="home-mod-card" data-home-launch="view-air3d" style="background: rgba(10,20,38,0.8); border: 1px solid rgba(126,195,255,0.2); border-radius: 16px; padding: 1.3rem; cursor: pointer; transition: all 0.25s ease;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.8rem;">
+              <span style="font-size: 2.2rem;">🧊</span>
+              <span style="background: rgba(0,242,254,0.15); color: #00f2fe; border: 1px solid rgba(0,242,254,0.3); padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.72rem; font-weight: 700;">MODULE 5</span>
+            </div>
+            <h4 style="margin: 0 0 0.4rem 0; font-size: 1.1rem; color: #fff;">Air 3D Holo-Pédagogique</h4>
+            <p style="margin: 0 0 1rem 0; font-size: 0.85rem; color: #9fb0cf;">Manipulez et faites pivoter des objets 3D (cœur anatomique, molécule, engrenage) à deux mains dans l'air.</p>
+            <div style="display: flex; align-items: center; color: #00f2fe; font-size: 0.82rem; font-weight: 600; gap: 0.3rem;">
+              <span>Explorer en 3D</span> <span>→</span>
+            </div>
+          </div>
+
+          <!-- Card 4: Quiz Air -->
+          <div class="home-mod-card" data-home-launch="view-quiz" style="background: rgba(10,20,38,0.8); border: 1px solid rgba(126,195,255,0.2); border-radius: 16px; padding: 1.3rem; cursor: pointer; transition: all 0.25s ease;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.8rem;">
+              <span style="font-size: 2.2rem;">📝</span>
+              <span style="background: rgba(0,242,254,0.15); color: #00f2fe; border: 1px solid rgba(0,242,254,0.3); padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.72rem; font-weight: 700;">MODULE 8</span>
+            </div>
+            <h4 style="margin: 0 0 0.4rem 0; font-size: 1.1rem; color: #fff;">Quiz Air & Vote Collaboratif</h4>
+            <p style="margin: 0 0 1rem 0; font-size: 0.85rem; color: #9fb0cf;">Évaluez la classe en temps réel par réponse vocale ou via scan QR Code smartphone pour les élèves.</p>
+            <div style="display: flex; align-items: center; color: #00f2fe; font-size: 0.82rem; font-weight: 600; gap: 0.3rem;">
+              <span>Lancer un Quiz</span> <span>→</span>
+            </div>
+          </div>
+
+          <!-- Card 5: Labo Air -->
+          <div class="home-mod-card" data-home-launch="view-labo" style="background: rgba(10,20,38,0.8); border: 1px solid rgba(126,195,255,0.2); border-radius: 16px; padding: 1.3rem; cursor: pointer; transition: all 0.25s ease;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.8rem;">
+              <span style="font-size: 2.2rem;">🔬</span>
+              <span style="background: rgba(0,242,254,0.15); color: #00f2fe; border: 1px solid rgba(0,242,254,0.3); padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.72rem; font-weight: 700;">MODULE 7</span>
+            </div>
+            <h4 style="margin: 0 0 0.4rem 0; font-size: 1.1rem; color: #fff;">Labo Air (Simulations)</h4>
+            <p style="margin: 0 0 1rem 0; font-size: 0.85rem; color: #9fb0cf;">Expériences scientifiques virtuelles de physique-chimie (circuits électriques, pendule, réflexions optiques).</p>
+            <div style="display: flex; align-items: center; color: #00f2fe; font-size: 0.82rem; font-weight: 600; gap: 0.3rem;">
+              <span>Ouvrir le Labo</span> <span>→</span>
+            </div>
+          </div>
+
+          <!-- Card 6: Prof IA -->
+          <div class="home-mod-card" data-home-launch="view-profai" style="background: rgba(10,20,38,0.8); border: 1px solid rgba(126,195,255,0.2); border-radius: 16px; padding: 1.3rem; cursor: pointer; transition: all 0.25s ease;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.8rem;">
+              <span style="font-size: 2.2rem;">🤖</span>
+              <span style="background: rgba(0,242,254,0.15); color: #00f2fe; border: 1px solid rgba(0,242,254,0.3); padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.72rem; font-weight: 700;">MODULE 10</span>
+            </div>
+            <h4 style="margin: 0 0 0.4rem 0; font-size: 1.1rem; color: #fff;">Professeur IA Virtuel</h4>
+            <p style="margin: 0 0 1rem 0; font-size: 0.85rem; color: #9fb0cf;">Assistant virtuel IA pour générer des exercices différenciés, expliquer des concepts complexes et lire les cours.</p>
+            <div style="display: flex; align-items: center; color: #00f2fe; font-size: 0.82rem; font-weight: 600; gap: 0.3rem;">
+              <span>Consulter Prof IA</span> <span>→</span>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- ================= MODULE 9: PRÉSENTATION AIR ================= -->
+      <div class="module-view" id="view-presentation">
         
         <!-- Diaporama Header Toolbar -->
         <div class="mod-header-bar">
@@ -1078,6 +1247,121 @@
             </tbody>
           </table>
         </div>
+      </div>
+
+      <!-- ================= MODULE 13: GUIDE DE PRISE EN MAIN & AIDE ================= -->
+      <div class="module-view" id="view-guide">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap:wrap; gap:0.8rem;">
+          <div>
+            <h2 style="color: #00f2fe; margin:0;" data-i18n="guideTitle">📖 Guide de Prise en Main & Aide</h2>
+            <p style="color: #9fb0cf; font-size: 0.9rem; margin: 0.2rem 0 0 0;" data-i18n="guideSubtitle">
+              Maîtrisez EDU-AIR SMART SURFACE en quelques minutes : gestes aériens, commandes vocales et modules de classe.
+            </p>
+          </div>
+          <div style="display:flex; gap:0.6rem; flex-wrap:wrap;">
+            <button type="button" class="btn-app btn-app-primary" id="btn-start-guided-tour">🚀 Lancer le Tutoriel Interactif</button>
+            <button type="button" class="btn-app btn-app-ghost" id="btn-guide-goto-calib">⚙️ Calibrage Caméra</button>
+          </div>
+        </div>
+
+        <!-- CARDS GRID -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); gap: 1.2rem; margin-bottom: 1.5rem;">
+          
+          <!-- Card 1: Gestes de la Main -->
+          <div style="background: rgba(10,20,38,0.85); border: 1px solid rgba(126,195,255,0.25); border-radius: 14px; padding: 1.25rem;">
+            <h3 style="color: #4cc9ff; margin-top: 0; display: flex; align-items: center; gap: 0.5rem; font-size: 1.05rem;">
+              <span>✋</span> Lexique des Gestes Sans Contact
+            </h3>
+            <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.7rem; font-size: 0.88rem;">
+              <li style="display:flex; justify-content:space-between; border-bottom: 1px dashed rgba(126,195,255,0.15); padding-bottom: 0.4rem;">
+                <strong>☝️ Index tendu</strong>
+                <span style="color: #3ddc97;">Pointeur / Déplacement</span>
+              </li>
+              <li style="display:flex; justify-content:space-between; border-bottom: 1px dashed rgba(126,195,255,0.15); padding-bottom: 0.4rem;">
+                <strong>🤏 Pincement Pouce+Index</strong>
+                <span style="color: #00f2fe;">Clic gauche / Sélection</span>
+              </li>
+              <li style="display:flex; justify-content:space-between; border-bottom: 1px dashed rgba(126,195,255,0.15); padding-bottom: 0.4rem;">
+                <strong>🤏↔️ Pincement glissé</strong>
+                <span style="color: #ffb84d;">Dessiner / Glisser</span>
+              </li>
+              <li style="display:flex; justify-content:space-between; border-bottom: 1px dashed rgba(126,195,255,0.15); padding-bottom: 0.4rem;">
+                <strong>✋ Paume ouverte (mouvement v.)</strong>
+                <span style="color: #c9bfff;">Défilement (Scroll)</span>
+              </li>
+              <li style="display:flex; justify-content:space-between; border-bottom: 1px dashed rgba(126,195,255,0.15); padding-bottom: 0.4rem;">
+                <strong>👈 / 👉 Swipe Gauche / Droite</strong>
+                <span style="color: #4cc9ff;">Diapositive préc. / suiv.</span>
+              </li>
+              <li style="display:flex; justify-content:space-between;">
+                <strong>✊ Poing fermé</strong>
+                <span style="color: #ff5d5d;">Menu radial (Pie Menu)</span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Card 2: Commandes Vocales -->
+          <div style="background: rgba(10,20,38,0.85); border: 1px solid rgba(126,195,255,0.25); border-radius: 14px; padding: 1.25rem;">
+            <h3 style="color: #3ddc97; margin-top: 0; display: flex; align-items: center; gap: 0.5rem; font-size: 1.05rem;">
+              <span>🎙️</span> Commandes Vocales (FR / EN / AR)
+            </h3>
+            <div style="display: flex; flex-direction: column; gap: 0.6rem; font-size: 0.88rem;">
+              <div style="background: rgba(6,9,18,0.6); padding: 0.6rem 0.8rem; border-radius: 8px;">
+                <strong style="color: #00f2fe;">Diaporama :</strong><br>
+                « Diapositive suivante », « Diapositive précédente », « Pause »
+              </div>
+              <div style="background: rgba(6,9,18,0.6); padding: 0.6rem 0.8rem; border-radius: 8px;">
+                <strong style="color: #ffb84d;">Annotation :</strong><br>
+                « Mode laser », « Crayon rouge », « Surligneur », « Effacer tout »
+              </div>
+              <div style="background: rgba(6,9,18,0.6); padding: 0.6rem 0.8rem; border-radius: 8px;">
+                <strong style="color: #3ddc97;">Quiz & Classe :</strong><br>
+                « Lancer le quiz », « Option A/B/C/D », « Chrono 5 minutes »
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3: Étape de démarrage -->
+          <div style="background: rgba(10,20,38,0.85); border: 1px solid rgba(126,195,255,0.25); border-radius: 14px; padding: 1.25rem;">
+            <h3 style="color: #ffb84d; margin-top: 0; display: flex; align-items: center; gap: 0.5rem; font-size: 1.05rem;">
+              <span>⚙️</span> Démarrage & Calibrage Caméra
+            </h3>
+            <ol style="padding-left: 1.2rem; margin: 0; font-size: 0.88rem; display: flex; flex-direction: column; gap: 0.5rem; color: #e8effc;">
+              <li>Placer la webcam face à la surface de projection.</li>
+              <li>Lancer le <strong>Wizard de Calibrage</strong> (5 points).</li>
+              <li>Pointez du doigt les coins affichés pour ajuster la caméra.</li>
+              <li>Vérifier l'indicateur de lumière <em>Lighting</em> sur le cockpit.</li>
+            </ol>
+            <div style="margin-top: 1rem; text-align: center;">
+              <button type="button" class="btn-app btn-app-ghost" id="btn-guide-start-demo" style="width: 100%;">
+                🧪 Tester le Mode Démo Sans Caméra
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Modules Cheat Sheet -->
+        <div style="background: rgba(10,20,38,0.85); border: 1px solid rgba(126,195,255,0.25); border-radius: 14px; padding: 1.25rem;">
+          <h3 style="color: #00f2fe; margin-top: 0; font-size: 1.05rem;">
+            🧩 Présentation des 12 Modules Pédagogiques
+          </h3>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.8rem; font-size: 0.85rem;">
+            <div style="padding: 0.5rem; background: rgba(6,9,18,0.5); border-radius: 8px;"><strong>1. Tableau de bord :</strong> Suivi classe & minuteur</div>
+            <div style="padding: 0.5rem; background: rgba(6,9,18,0.5); border-radius: 8px;"><strong>2. Surface Intelligente :</strong> TNI infini & post-it</div>
+            <div style="padding: 0.5rem; background: rgba(6,9,18,0.5); border-radius: 8px;"><strong>3. Pointeur air :</strong> Pointeur laser phosphorescent</div>
+            <div style="padding: 0.5rem; background: rgba(6,9,18,0.5); border-radius: 8px;"><strong>4. Dessin air :</strong> Formes géométriques & dessin</div>
+            <div style="padding: 0.5rem; background: rgba(6,9,18,0.5); border-radius: 8px;"><strong>5. Air 3D :</strong> Manipulation d'objets 3D</div>
+            <div style="padding: 0.5rem; background: rgba(6,9,18,0.5); border-radius: 8px;"><strong>6. Vision air :</strong> OCR & capture d'exercices</div>
+            <div style="padding: 0.5rem; background: rgba(6,9,18,0.5); border-radius: 8px;"><strong>7. Labo air :</strong> Simulations scientifiques</div>
+            <div style="padding: 0.5rem; background: rgba(6,9,18,0.5); border-radius: 8px;"><strong>8. Quiz air :</strong> Votes en direct & QR code</div>
+            <div style="padding: 0.5rem; background: rgba(6,9,18,0.5); border-radius: 8px;"><strong>9. Présentation air :</strong> Diaporamas PPTX / PDF</div>
+            <div style="padding: 0.5rem; background: rgba(6,9,18,0.5); border-radius: 8px;"><strong>10. Prof IA :</strong> Assistant pédagogique IA</div>
+            <div style="padding: 0.5rem; background: rgba(6,9,18,0.5); border-radius: 8px;"><strong>11. Calibrage :</strong> Alignement webcam 5 points</div>
+            <div style="padding: 0.5rem; background: rgba(6,9,18,0.5); border-radius: 8px;"><strong>12. Historique :</strong> Exportations ENT SCORM/IWB</div>
+          </div>
+        </div>
+
       </div>
 
     </main>

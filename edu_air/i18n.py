@@ -121,8 +121,6 @@ STRINGS: dict[str, dict[str, str]] = {
     "btn.calibration": {"en": "Calibration", "fr": "Calibrage",
                         "ar": "المعايرة", "nl": "Calibratie"},
     "btn.clear": {"en": "Clear", "fr": "Effacer", "ar": "مسح", "nl": "Wissen"},
-    "btn.next_slide": {"en": "Next ▶", "fr": "Suivante ▶", "ar": "التالية ▶", "nl": "Volgende ▶"},
-    "btn.prev_slide": {"en": "◀ Prev", "fr": "◀ Précédente", "ar": "◀ السابقة", "nl": "◀ Vorige"},
     "btn.window": {"en": "Window", "fr": "Fenêtre", "ar": "النافذة",
                    "nl": "Venster"},
     "btn.help": {"en": "Help", "fr": "Aide", "ar": "مساعدة", "nl": "Help"},
@@ -136,12 +134,6 @@ STRINGS: dict[str, dict[str, str]] = {
                    "nl": "Wissen"},
 
     # ---- controls ---------------------------------------------------------
-    "btn.export": {"en": "Export PDF/Image", "fr": "Exporter PDF/Image",
-                   "ar": "تصدير PDF/صورة", "nl": "Exporteer PDF/Image"},
-    "label.camera": {"en": "Webcam:", "fr": "Caméra :", "ar": "الكاميرا :",
-                     "nl": "Webcam:"},
-    "export.success": {"en": "Board exported to {path}", "fr": "Tableau exporté sous {path}",
-                       "ar": "تم تصدير اللوحة إلى {path}", "nl": "Bord geëxporteerd naar {path}"},
     "label.sensitivity": {
         "en": "Pointer sensitivity:", "fr": "Sensibilité du pointeur :",
         "ar": "حساسية المؤشر:", "nl": "Gevoeligheid aanwijzer:"},

@@ -117,6 +117,16 @@
       });
     });
 
+    // --- Home View Launcher Cards & Buttons ---
+    $$("[data-home-launch]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const targetViewId = btn.getAttribute("data-home-launch");
+        if (!targetViewId) return;
+        const targetItem = Array.from(sidebarItems).find(i => i.getAttribute("data-target-view") === targetViewId);
+        if (targetItem) targetItem.click();
+      });
+    });
+
     // ============================================================
     // TOPBAR & ROLE SWITCHER
     // ============================================================
@@ -6669,14 +6679,40 @@ function labOptNat(v) {
     elBtnQuit.addEventListener("click", endGuide);
   }
 
-  // Bouton ❓ dans la topbar — relancer le guide
+  // Bouton ❓ dans la topbar — ouvrir le guide
   if (elBtnOpen) {
     elBtnOpen.addEventListener("click", () => {
-      if (isRunning) {
+      const guideSidebarItem = document.querySelector(".sidebar-item[data-target-view='view-guide']");
+      if (guideSidebarItem) {
+        guideSidebarItem.click();
+      } else if (isRunning) {
         endGuide();
       } else {
         startWalkthrough();
       }
+    });
+  }
+
+  // Boutons d'action dans le module View Guide
+  const btnStartGuidedTour = document.getElementById("btn-start-guided-tour");
+  if (btnStartGuidedTour) {
+    btnStartGuidedTour.addEventListener("click", () => {
+      startWalkthrough();
+    });
+  }
+
+  const btnGuideGotoCalib = document.getElementById("btn-guide-goto-calib");
+  if (btnGuideGotoCalib) {
+    btnGuideGotoCalib.addEventListener("click", () => {
+      const calibItem = document.querySelector(".sidebar-item[data-target-view='view-calib']");
+      if (calibItem) calibItem.click();
+    });
+  }
+
+  const btnGuideStartDemo = document.getElementById("btn-guide-start-demo");
+  if (btnGuideStartDemo) {
+    btnGuideStartDemo.addEventListener("click", () => {
+      alert("🧪 Mode Démo activé : Les gestes virtuels de la main sont simulés automatiquement.");
     });
   }
 

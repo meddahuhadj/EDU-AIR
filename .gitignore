@@ -32,3 +32,4 @@ web/downloads/
 edu_air_web/
 
 .vercel
+.env*
