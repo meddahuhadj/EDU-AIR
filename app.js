@@ -117,6 +117,16 @@
       });
     });
 
+    // --- Home View Launcher Cards & Buttons ---
+    $$("[data-home-launch]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const targetViewId = btn.getAttribute("data-home-launch");
+        if (!targetViewId) return;
+        const targetItem = Array.from(sidebarItems).find(i => i.getAttribute("data-target-view") === targetViewId);
+        if (targetItem) targetItem.click();
+      });
+    });
+
     // ============================================================
     // TOPBAR & ROLE SWITCHER
     // ============================================================
@@ -6325,48 +6335,417 @@ function labOptNat(v) {
     });
     document.addEventListener("pointerup", () => clearTimeout(pieHoldTimer));
 
-    // ----- Module Guide & Action Handlers -----
-    const btnOpenGuide = document.getElementById("btn-open-guide");
-    if (btnOpenGuide) {
-      btnOpenGuide.addEventListener("click", () => {
-        const guideSidebarItem = document.querySelector(".sidebar-item[data-target-view='view-guide']");
-        if (guideSidebarItem) guideSidebarItem.click();
-      });
-    }
-
-    const btnStartGuidedTour = document.getElementById("btn-start-guided-tour");
-    if (btnStartGuidedTour) {
-      btnStartGuidedTour.addEventListener("click", () => {
-        const guideSidebarItem = document.querySelector(".sidebar-item[data-target-view='view-guide']");
-        if (guideSidebarItem) guideSidebarItem.click();
-      });
-    }
-
-    const btnGuideGotoCalib = document.getElementById("btn-guide-goto-calib");
-    if (btnGuideGotoCalib) {
-      btnGuideGotoCalib.addEventListener("click", () => {
-        const calibItem = document.querySelector(".sidebar-item[data-target-view='view-calib']");
-        if (calibItem) calibItem.click();
-      });
-    }
-
-    const btnGuideStartDemo = document.getElementById("btn-guide-start-demo");
-    if (btnGuideStartDemo) {
-      btnGuideStartDemo.addEventListener("click", () => {
-        alert("🧪 Mode Démo activé : Les gestes virtuels de la main sont simulés automatiquement.");
-      });
-    }
-
-    // ----- Home View Launchers -----
-    document.querySelectorAll("[data-home-launch]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const targetViewId = btn.getAttribute("data-home-launch");
-        if (!targetViewId) return;
-        const targetItem = Array.from(document.querySelectorAll(".sidebar-item")).find(i => i.getAttribute("data-target-view") === targetViewId);
-        if (targetItem) targetItem.click();
-      });
-    });
-
     console.log("EDU-AIR Smart Surface App Fully Initialized.");
   });
+})();
+
+/* ============================================================
+   EDU-AIR GUIDE DE PRISE EN MAIN — Onboarding Walkthrough
+   ============================================================ */
+(function () {
+  "use strict";
+
+  // ── Données des étapes du guide ──────────────────────────────
+  const STEPS = [
+    {
+      target: "[data-target-view='view-dashboard']",
+      icon: "📊",
+      title: "Tableau de Bord",
+      desc: "Le <strong>cockpit central</strong> d'EDU-AIR. Accédez en un coup d'œil aux raccourcis rapides, au minuteur de classe TNI et aux statistiques de votre session.",
+      position: "right"
+    },
+    {
+      target: "#txt-cam-status",
+      icon: "📷",
+      title: "Statut Caméra & Détection",
+      desc: "Cette pastille indique l'état de la caméra et du <strong>module de détection gestuelle</strong>. Positionnez votre main devant la caméra pour activer le Pointeur Air.",
+      position: "bottom"
+    },
+    {
+      target: "[data-target-view='view-whiteboard']",
+      icon: "✨",
+      title: "Surface Intelligente (Whiteboard)",
+      desc: "Le <strong>tableau blanc interactif</strong> complet : stylo, surligneur, gomme, formes géométriques, dictée vocale et calque enseignant verrouillable.",
+      position: "right"
+    },
+    {
+      target: "[data-target-view='view-pointer']",
+      icon: "🎯",
+      title: "Pointeur Air",
+      desc: "Transformez votre doigt tendu en <strong>pointeur laser sans contact</strong>. Configurez les raccourcis gestuels (Poing = Pause, Main ouverte = Menu).",
+      position: "right"
+    },
+    {
+      target: "[data-target-view='view-draw']",
+      icon: "🎨",
+      title: "Dessin Air",
+      desc: "Un canvas de <strong>dessin libre plein écran</strong> avec gabarits pédagogiques (Mind Map, Venn, Frise…) et reconnaissance de formes automatique.",
+      position: "right"
+    },
+    {
+      target: "[data-target-view='view-air3d']",
+      icon: "🧊",
+      title: "Air 3D — Labo Holographique",
+      desc: "Manipulez des <strong>modèles 3D scientifiques</strong> interactifs : molécule H₂O, cellule végétale, système solaire, ADN, moteur thermique et plus encore.",
+      position: "right"
+    },
+    {
+      target: "[data-target-view='view-labo']",
+      icon: "🔬",
+      title: "Labo Air — Simulations",
+      desc: "Des <strong>simulations physiques en temps réel</strong> : électromagnétisme, optique géométrique, système planétaire et prochainement la chute des corps.",
+      position: "right"
+    },
+    {
+      target: "[data-target-view='view-quiz']",
+      icon: "📝",
+      title: "Quiz Air — Évaluation Interactive",
+      desc: "Lancez des <strong>quiz gestuels</strong> : les élèves répondent en levant la main dans la bonne zone. Mode Duel 2 joueurs et génération automatique de QCM disponibles.",
+      position: "right"
+    },
+    {
+      target: "[data-target-view='view-presentation']",
+      icon: "📺",
+      title: "Présentation Air — Diaporama",
+      desc: "Naviguez dans vos diapositives <strong>par gestes</strong>. Annotez en direct, activez le Spotlight ou la Loupe Zoom, et importez vos fichiers PowerPoint / PDF.",
+      position: "right"
+    },
+    {
+      target: "[data-target-view='view-profai']",
+      icon: "🤖",
+      title: "Prof IA — Assistant Pédagogique",
+      desc: "Votre <strong>assistant IA intégré</strong> génère des exercices différenciés (3 niveaux), propose des explications en langage simple (ELI5) et lit les cours à voix haute.",
+      position: "right"
+    },
+    {
+      target: "[data-target-view='view-calib']",
+      icon: "⚙️",
+      title: "Calibrage TNI",
+      desc: "Configurez votre marque de TNI (SMART, Promethean, Epson…) et lancez le <strong>Wizard de Calibrage en 4 points</strong> pour une précision optimale.",
+      position: "right"
+    },
+    {
+      target: "#app-role-select",
+      icon: "👤",
+      title: "Profils & Rôles",
+      desc: "Basculez entre les profils <strong>Enseignant</strong> (contrôle total), <strong>Élève</strong> (interactions guidées) et <strong>Technicien TNI</strong> (maintenance). Le guide est maintenant terminé !",
+      position: "bottom"
+    }
+  ];
+
+  let currentStep = 0;
+  let highlightedEl = null;
+  let isRunning = false;
+
+  // ── Éléments DOM ─────────────────────────────────────────────
+  const elWelcome   = document.getElementById("onboarding-welcome");
+  const elCard      = document.getElementById("onboarding-card");
+  const elStepBadge = document.getElementById("onb-step-badge");
+  const elIcon      = document.getElementById("onb-step-icon");
+  const elTitle     = document.getElementById("onb-card-title");
+  const elDesc      = document.getElementById("onb-card-desc");
+  const elProgress  = document.getElementById("onb-progress-fill");
+  const elDots      = document.getElementById("onb-dots");
+  const elArrow     = document.getElementById("onb-arrow");
+  const elBtnNext   = document.getElementById("onb-btn-next");
+  const elBtnPrev   = document.getElementById("onb-btn-prev");
+  const elBtnQuit   = document.getElementById("onb-btn-quit");
+  const elBtnOpen   = document.getElementById("btn-open-guide");
+  const elWelcomeStart = document.getElementById("onb-welcome-start-btn");
+  const elWelcomeSkip  = document.getElementById("onb-welcome-skip-btn");
+
+  // ── Build dots ────────────────────────────────────────────────
+  function buildDots() {
+    if (!elDots) return;
+    elDots.innerHTML = "";
+    STEPS.forEach((_, i) => {
+      const d = document.createElement("span");
+      d.className = "onb-dot";
+      d.title = STEPS[i].title;
+      d.addEventListener("click", () => goToStep(i));
+      elDots.appendChild(d);
+    });
+  }
+
+  function updateDots(idx) {
+    if (!elDots) return;
+    const dots = elDots.querySelectorAll(".onb-dot");
+    dots.forEach((d, i) => {
+      d.className = "onb-dot" + (i === idx ? " active" : i < idx ? " done" : "");
+    });
+  }
+
+  // ── Highlight element ─────────────────────────────────────────
+  function highlightTarget(el) {
+    clearHighlight();
+    if (!el) return;
+    el.classList.add("onb-highlight-pulse");
+    el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    highlightedEl = el;
+  }
+
+  function clearHighlight() {
+    if (highlightedEl) {
+      highlightedEl.classList.remove("onb-highlight-pulse");
+      highlightedEl = null;
+    }
+  }
+
+  // ── Position card near target ─────────────────────────────────
+  function positionCard(targetEl, position) {
+    if (!elCard || !targetEl) {
+      if (elCard) {
+        elCard.style.top  = "50%";
+        elCard.style.left = "50%";
+        elCard.style.transform = "translate(-50%, -50%)";
+      }
+      return;
+    }
+
+    const rect = targetEl.getBoundingClientRect();
+    const cardW = 380;
+    const cardH = elCard.offsetHeight || 320;
+    const margin = 24;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    let top, left;
+    let arrowClass = "";
+
+    if (position === "right") {
+      left = Math.min(rect.right + margin, vw - cardW - margin);
+      top  = Math.max(margin, Math.min(rect.top + rect.height / 2 - cardH / 2, vh - cardH - margin));
+      arrowClass = "arrow-left";
+    } else if (position === "left") {
+      left = Math.max(margin, rect.left - cardW - margin);
+      top  = Math.max(margin, Math.min(rect.top + rect.height / 2 - cardH / 2, vh - cardH - margin));
+      arrowClass = "arrow-right";
+    } else if (position === "bottom") {
+      top  = Math.min(rect.bottom + margin, vh - cardH - margin);
+      left = Math.max(margin, Math.min(rect.left + rect.width / 2 - cardW / 2, vw - cardW - margin));
+      arrowClass = "arrow-top";
+    } else { // top
+      top  = Math.max(margin, rect.top - cardH - margin);
+      left = Math.max(margin, Math.min(rect.left + rect.width / 2 - cardW / 2, vw - cardW - margin));
+      arrowClass = "arrow-bottom";
+    }
+
+    elCard.style.top       = top + "px";
+    elCard.style.left      = left + "px";
+    elCard.style.transform = "none";
+
+    if (elArrow) {
+      elArrow.className = "onb-arrow " + arrowClass;
+      // Ajuster la position de la flèche selon l'axe
+      if (arrowClass === "arrow-left") {
+        const arrowTop = rect.top + rect.height / 2 - top;
+        elArrow.style.top  = Math.max(20, Math.min(cardH - 20, arrowTop)) + "px";
+        elArrow.style.left = "";
+        elArrow.style.marginLeft = "";
+        elArrow.style.marginTop  = "-9px";
+      } else if (arrowClass === "arrow-right") {
+        const arrowTop = rect.top + rect.height / 2 - top;
+        elArrow.style.top  = Math.max(20, Math.min(cardH - 20, arrowTop)) + "px";
+        elArrow.style.right = "";
+        elArrow.style.marginTop = "-9px";
+      } else {
+        elArrow.style.top  = "";
+        elArrow.style.left = "";
+        elArrow.style.marginLeft = "-9px";
+        elArrow.style.marginTop  = "";
+      }
+    }
+  }
+
+  // ── Render step ────────────────────────────────────────────────
+  function goToStep(idx) {
+    if (idx < 0 || idx >= STEPS.length) { endGuide(); return; }
+    currentStep = idx;
+
+    const step = STEPS[idx];
+    const targetEl = document.querySelector(step.target);
+
+    // Mise à jour contenu
+    if (elStepBadge) elStepBadge.textContent = `Étape ${idx + 1} / ${STEPS.length}`;
+    if (elIcon)      elIcon.textContent = step.icon;
+    if (elTitle)     elTitle.textContent = step.title;
+    if (elDesc)      elDesc.innerHTML = step.desc;
+    if (elProgress)  elProgress.style.width = ((idx + 1) / STEPS.length * 100) + "%";
+
+    updateDots(idx);
+
+    // Bouton Précédent
+    if (elBtnPrev) elBtnPrev.style.display = idx === 0 ? "none" : "";
+
+    // Bouton Suivant / Terminer
+    if (elBtnNext) {
+      elBtnNext.textContent = idx === STEPS.length - 1 ? "✅ Terminer" : "Suivant ▶";
+    }
+
+    // Afficher la carte
+    if (elCard) {
+      elCard.style.display = "block";
+      elCard.classList.remove("fade-out");
+    }
+
+    // Highlight
+    highlightTarget(targetEl);
+
+    // Positionner après un micro-délai (pour que offsetHeight soit calculé)
+    requestAnimationFrame(() => {
+      positionCard(targetEl, step.position);
+    });
+
+    // Click sur le dot navigue vers la vue
+    if (targetEl && targetEl.dataset && targetEl.dataset.targetView) {
+      targetEl.click();
+    }
+  }
+
+  // ── Fin du guide ───────────────────────────────────────────────
+  function endGuide() {
+    isRunning = false;
+    clearHighlight();
+    document.body.classList.remove("onboarding-active");
+    if (elCard) {
+      elCard.classList.add("fade-out");
+      setTimeout(() => { if (elCard) elCard.style.display = "none"; }, 380);
+    }
+    try { localStorage.setItem("edu_air_onboarding_done", "1"); } catch(e) {}
+  }
+
+  // ── Démarrage du walkthrough ───────────────────────────────────
+  function startWalkthrough() {
+    isRunning = true;
+    document.body.classList.add("onboarding-active");
+    buildDots();
+    currentStep = 0;
+    goToStep(0);
+  }
+
+  // ── Masquer welcome screen ────────────────────────────────────
+  function hideWelcome() {
+    if (elWelcome) {
+      elWelcome.classList.add("hidden");
+      setTimeout(() => { if (elWelcome) elWelcome.style.display = "none"; }, 420);
+    }
+  }
+
+  // ── Vérification premier lancement ────────────────────────────
+  function checkFirstLaunch() {
+    let done = false;
+    try { done = localStorage.getItem("edu_air_onboarding_done") === "1"; } catch(e) {}
+    if (done) {
+      // Masquer directement
+      if (elWelcome) { elWelcome.style.display = "none"; }
+    } else {
+      // Afficher le bienvenue
+      if (elWelcome) elWelcome.style.display = "flex";
+    }
+  }
+
+  // ── Event Listeners ───────────────────────────────────────────
+  if (elWelcomeStart) {
+    elWelcomeStart.addEventListener("click", () => {
+      hideWelcome();
+      setTimeout(startWalkthrough, 450);
+    });
+  }
+
+  if (elWelcomeSkip) {
+    elWelcomeSkip.addEventListener("click", () => {
+      hideWelcome();
+      try { localStorage.setItem("edu_air_onboarding_done", "1"); } catch(e) {}
+    });
+  }
+
+  if (elBtnNext) {
+    elBtnNext.addEventListener("click", () => {
+      if (currentStep < STEPS.length - 1) {
+        goToStep(currentStep + 1);
+      } else {
+        endGuide();
+      }
+    });
+  }
+
+  if (elBtnPrev) {
+    elBtnPrev.addEventListener("click", () => {
+      if (currentStep > 0) goToStep(currentStep - 1);
+    });
+  }
+
+  if (elBtnQuit) {
+    elBtnQuit.addEventListener("click", endGuide);
+  }
+
+  // Bouton ❓ dans la topbar — ouvrir le guide
+  if (elBtnOpen) {
+    elBtnOpen.addEventListener("click", () => {
+      const guideSidebarItem = document.querySelector(".sidebar-item[data-target-view='view-guide']");
+      if (guideSidebarItem) {
+        guideSidebarItem.click();
+      } else if (isRunning) {
+        endGuide();
+      } else {
+        startWalkthrough();
+      }
+    });
+  }
+
+  // Boutons d'action dans le module View Guide
+  const btnStartGuidedTour = document.getElementById("btn-start-guided-tour");
+  if (btnStartGuidedTour) {
+    btnStartGuidedTour.addEventListener("click", () => {
+      startWalkthrough();
+    });
+  }
+
+  const btnGuideGotoCalib = document.getElementById("btn-guide-goto-calib");
+  if (btnGuideGotoCalib) {
+    btnGuideGotoCalib.addEventListener("click", () => {
+      const calibItem = document.querySelector(".sidebar-item[data-target-view='view-calib']");
+      if (calibItem) calibItem.click();
+    });
+  }
+
+  const btnGuideStartDemo = document.getElementById("btn-guide-start-demo");
+  if (btnGuideStartDemo) {
+    btnGuideStartDemo.addEventListener("click", () => {
+      alert("🧪 Mode Démo activé : Les gestes virtuels de la main sont simulés automatiquement.");
+    });
+  }
+
+  // Navigation clavier
+  document.addEventListener("keydown", (e) => {
+    if (!isRunning) return;
+    if (e.key === "ArrowRight" || e.key === "Enter") {
+      e.preventDefault();
+      if (currentStep < STEPS.length - 1) goToStep(currentStep + 1);
+      else endGuide();
+    } else if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      if (currentStep > 0) goToStep(currentStep - 1);
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      endGuide();
+    }
+  });
+
+  // Reposition on resize
+  let resizeTimer;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      if (isRunning) {
+        const step = STEPS[currentStep];
+        const targetEl = document.querySelector(step.target);
+        positionCard(targetEl, step.position);
+      }
+    }, 120);
+  });
+
+  // ── Init au chargement ────────────────────────────────────────
+  document.addEventListener("DOMContentLoaded", checkFirstLaunch);
+
 })();

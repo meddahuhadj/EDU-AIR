@@ -54,6 +54,7 @@
         <button type="button" class="btn-app btn-app-ghost" id="btn-toggle-a11y" title="Contraste élevé & police dyslexie" data-i18n="btnA11y">♿</button>
         <button type="button" class="btn-app btn-app-ghost" id="btn-toggle-fullscreen" title="Mode Plein Écran (TNI)">⛶</button>
         <button type="button" class="btn-app btn-app-ghost" id="btn-toggle-audio" title="Commandes vocales">🎤</button>
+        <button type="button" class="btn-app btn-app-ghost" id="btn-open-guide" title="Guide de prise en main EDU-AIR">❓</button>
       </div>
 
       <div class="lang-switch-pills">
@@ -1486,6 +1487,52 @@
     <div class="air-cursor-dot"></div>
     <div class="air-cursor-ring"></div>
     <div class="air-cursor-label" id="air-cursor-label">Pointeur Air ☝️</div>
+  </div>
+
+  <!-- ================= GUIDE DE PRISE EN MAIN — ONBOARDING ================= -->
+
+  <!-- ÉCRAN DE BIENVENUE -->
+  <div id="onboarding-welcome">
+    <div class="onb-welcome-box">
+      <span class="onb-welcome-logo">✈️</span>
+      <h2 class="onb-welcome-title">Bienvenue sur <span>EDU-AIR</span></h2>
+      <p class="onb-welcome-subtitle">
+        Votre surface interactive intelligente sans contact pour la classe.<br>
+        Ce guide vous présente les <strong style="color:#00f2fe">12 modules</strong> en 2 minutes.
+      </p>
+      <div class="onb-welcome-features">
+        <div class="onb-welcome-feature"><span>✋</span><span>Contrôle gestuel sans contact via votre caméra</span></div>
+        <div class="onb-welcome-feature"><span>✨</span><span>Tableau blanc interactif avec outils d'annotation</span></div>
+        <div class="onb-welcome-feature"><span>📝</span><span>Quiz air, diaporamas, labo 3D et Prof IA intégrés</span></div>
+        <div class="onb-welcome-feature"><span>⚙️</span><span>Calibrage et profils pour votre marque de TNI</span></div>
+      </div>
+      <div class="onb-welcome-actions">
+        <button class="onb-welcome-start" id="onb-welcome-start-btn">🚀 Démarrer le guide</button>
+        <button class="onb-welcome-skip" id="onb-welcome-skip-btn">Passer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CARTE TOOLTIP WALKTHROUGH -->
+  <div id="onboarding-card" style="display:none;">
+    <div class="onb-arrow" id="onb-arrow"></div>
+    <div class="onb-header">
+      <span class="onb-logo">EDU-AIR Guide</span>
+      <span class="onb-step-badge" id="onb-step-badge">Étape 1 / 12</span>
+    </div>
+    <span class="onb-step-icon" id="onb-step-icon">📊</span>
+    <div class="onb-progress-bar">
+      <div class="onb-progress-fill" id="onb-progress-fill" style="width: 8%"></div>
+    </div>
+    <div class="onb-dots" id="onb-dots"></div>
+    <div class="onb-title" id="onb-card-title">Tableau de Bord</div>
+    <div class="onb-desc" id="onb-card-desc">Votre cockpit central.</div>
+    <div class="onb-actions">
+      <button class="onb-btn-skip" id="onb-btn-quit">✕ Terminer</button>
+      <button class="onb-btn-prev" id="onb-btn-prev">◀ Préc.</button>
+      <button class="onb-btn-next" id="onb-btn-next">Suivant ▶</button>
+    </div>
+    <div class="onb-keyboard-hint"><kbd>←</kbd> <kbd>→</kbd> pour naviguer · <kbd>Échap</kbd> pour quitter</div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
